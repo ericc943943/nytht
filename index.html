@@ -65,6 +65,9 @@ button,input,select,textarea{font:inherit;color:inherit}
 .items li span:last-child{color:var(--gold);font-weight:700;white-space:nowrap}
 .chips{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:0;padding:0}
 .chips li{background:var(--gold-soft);color:var(--ink);border-radius:999px;padding:4px 14px;font-size:.95rem}
+.chips.row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.chips.row li{text-align:center;padding:5px 4px;white-space:nowrap}
+.lampprice{font-weight:700;color:var(--gold);margin:-4px 0 12px;font-size:1.05rem}
 .lamppick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .lamppick .pickcard{padding:12px 14px}
 .lamppick .pickcard b{font-size:1rem}
@@ -212,7 +215,8 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
       <article class="formcard">
         <div class="eyebrow">點燈</div>
         <h2 id="lampTitle"></h2>
-        <ul class="chips" id="lampChips"></ul>
+        <div class="lampprice" id="lampPrice"></div>
+        <ul class="chips row" id="lampChips"></ul>
         <p class="desc">為家人點燈祈福、安奉太歲。每一位可以點一盞或多盞燈。請準備每位的生日，農曆或國曆都可以。</p>
         <button class="btn primary block" data-start="lamp" id="lampBtn" type="button">點燈報名</button>
         <p class="note" data-resume="lamp" hidden>您上次填到一半的資料還在，按上面的按鈕會接著填。<button class="linkbtn" data-clear="lamp" type="button">清除重填</button></p>
@@ -223,7 +227,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
         <h2>法會報名</h2>
         <p class="desc">各場法會都用同一張報名表，可報名以下項目：</p>
         <ul class="items">
-          <li><span>超渡（亡者、歷代祖先、冤親債主、地基主、水子靈等）</span><span id="pChaodu"></span></li>
+          <li><span>超渡牌位（往生者、歷代祖先、冤親債主、地基主、水子靈等）</span><span id="pChaodu"></span></li>
           <li><span>祈福消災點燈・蓮花福慧燈</span><span id="pLotus"></span></li>
           <li><span>供齋（供養十方孤魂）</span><span>功德金隨喜</span></li>
         </ul>
@@ -288,10 +292,10 @@ const CONFIG = {
     title: "啟點光明燈暨安奉太歲",
     // price：每盞金額（美元）；留 null 則不顯示金額
     types: [
-      {k:"guangming", name:"個人光明燈", price:120},
-      {k:"taisui",    name:"太歲燈",     price:120},
-      {k:"caishen",   name:"五路財神燈", price:120},
-      {k:"wenchang",  name:"文昌燈",     price:120},
+      {k:"guangming", name:"個人光明燈", short:"光明燈", price:120},
+      {k:"taisui",    name:"太歲燈",     short:"太歲燈", price:120},
+      {k:"caishen",   name:"五路財神燈", short:"財神燈", price:120},
+      {k:"wenchang",  name:"文昌燈",     short:"文昌燈", price:120},
     ],
   },
   // 法會場次的預設值。正式使用時，開放哪些項目由後台「報名項目設定」決定，會蓋過這裡的設定。
@@ -309,7 +313,7 @@ const ZODIAC = ["鼠","牛","虎","兔","龍","蛇","馬","羊","猴","雞","狗
 const LMONTH = ["正月","二月","三月","四月","五月","六月","七月","八月","九月","十月","十一月","十二月"];
 const LDAY = (()=>{const a=[],n="一二三四五六七八九十";for(let d=1;d<=30;d++){a.push(d<=10?"初"+n[d-1]:d<20?"十"+n[d-11]:d===20?"二十":d<30?"廿"+n[d-21]:"三十")}return a})();
 const HOURS = [["子","23–1點"],["丑","1–3點"],["寅","3–5點"],["卯","5–7點"],["辰","7–9點"],["巳","9–11點"],["午","11–13點"],["未","13–15點"],["申","15–17點"],["酉","17–19點"],["戌","19–21點"],["亥","21–23點"]];
-const SOULS = ["亡者","歷代祖先","冤親債主","地基主","水子靈"];
+const SOULS = ["往生者","歷代祖先","冤親債主","地基主","水子靈"];
 const hasLunar = typeof window.Solar !== "undefined";
 const NOW_Y = new Date().getFullYear();
 const curLunarYear = (()=>{try{ if(hasLunar){const d=new Date();return Solar.fromYmd(d.getFullYear(),d.getMonth()+1,d.getDate()).getLunar().getYear()} }catch(e){} return NOW_Y })();
@@ -320,8 +324,8 @@ const uid = () => Math.random().toString(36).slice(2,9);
 
 /* ================= 狀態 ================= */
 const blankDate = () => ({cal:"lunar", y:"", m:"", leap:false, d:"", h:""});
-const newLamp = () => ({id:uid(), name:"", birth:blankDate(), types:{}});
-const newSoul = () => ({id:uid(), type:"亡者", name:"", title:"", birth:blankDate(), death:blankDate(), age:"", sponsor:""});
+const newLamp = () => ({id:uid(), name:"", gender:"", birth:blankDate(), types:{}});
+const newSoul = () => ({id:uid(), type:"往生者", name:"", title:"", birth:blankDate(), death:blankDate(), age:"", sponsor:""});
 const newMeal = () => ({id:uid(), name:"", amount:""});
 function freshState(form, eventId){ return {form, eventId: eventId||null, contact:{name:"",phone:"",address:""}, want:{lamp:false,chaodu:false,meal:false}, lamps:[newLamp()], souls:[newSoul()], meals:[newMeal()], note:"", step:0}; }
 let S = freshState("lamp");
@@ -369,7 +373,7 @@ function steps(){
   if(isLampForm()) return [{k:"contact",t:"聯絡人"},{k:"lamp",t:"點燈名單"},{k:"review",t:"核對送出"}];
   const s=[{k:"contact",t:"聯絡人"},{k:"pick",t:"選擇項目"}];
   if(S.want.lamp) s.push({k:"lamp",t:"點燈"});
-  if(S.want.chaodu) s.push({k:"chaodu",t:"超渡"});
+  if(S.want.chaodu) s.push({k:"chaodu",t:"超渡牌位"});
   if(S.want.meal) s.push({k:"meal",t:"供齋"});
   s.push({k:"review",t:"核對送出"});
   return s;
@@ -431,7 +435,7 @@ const VIEWS = {
     return `<h2>要報名哪些項目？</h2><p class="lead">可以勾選一項或多項。</p>
     <div class="pick" data-err="want">
       ${card("lamp","祈福消災點燈・蓮花福慧燈",`每位 $${CONFIG.prices.lamp}`)}
-      ${card("chaodu","超渡",`每牌位 $${CONFIG.prices.chaodu}`)}
+      ${card("chaodu","超渡牌位",`每牌位 $${CONFIG.prices.chaodu}`)}
       ${card("meal","供齋（供養十方孤魂）","功德金隨喜")}
     </div>`; },
 
@@ -440,6 +444,11 @@ const VIEWS = {
       <div class="entry-head"><h3>第 ${i+1} 位</h3>${S.lamps.length>1?`<button class="linkbtn" data-del="lamps:${p.id}" type="button">刪除這位</button>`:""}</div>
       ${text(`lamps.${p.id}.name`,"姓名",p.name)}
       ${i===0&&!p.name&&S.contact.name?`<p style="margin:-10px 0 16px"><button class="fillme" type="button" data-fill="${p.id}">填入聯絡人：${esc(S.contact.name)}</button></p>`:""}
+      <div class="field" data-err="lamps.${p.id}.gender"><span class="legend">性別</span>
+        <div class="seg" role="radiogroup" aria-label="性別">
+          <label><input type="radio" name="g-${p.id}" value="男" data-path="lamps.${p.id}.gender"${p.gender==="男"?" checked":""}>男（信士）</label>
+          <label><input type="radio" name="g-${p.id}" value="女" data-path="lamps.${p.id}.gender"${p.gender==="女"?" checked":""}>女（信女）</label>
+        </div></div>
       ${dateBlock(`lamps.${p.id}.birth`, p.birth, "出生日期")}
       <div class="derived" id="dv-${p.id}"></div>
       ${LF?`<div class="field" data-err="lamps.${p.id}.types" style="margin:18px 0 0"><span class="legend">要點的燈（可複選）</span>
@@ -448,12 +457,12 @@ const VIEWS = {
     <button class="btn add" data-add="lamps" type="button">＋ 再加一位</button>`; },
 
   chaodu(){ return `<h2>超渡牌位</h2><p class="lead">每牌位 $${CONFIG.prices.chaodu}。日期請盡量填農曆，不清楚的可以空白。</p>
-    ${S.souls.map((p,i)=>{ const dead=p.type==="亡者"; return `<div class="entry">
+    ${S.souls.map((p,i)=>{ const dead=p.type==="往生者"; return `<div class="entry">
       <div class="entry-head"><h3>第 ${i+1} 個牌位</h3>${S.souls.length>1?`<button class="linkbtn" data-del="souls:${p.id}" type="button">刪除</button>`:""}</div>
       <div class="field"><label for="f-souls.${p.id}.type">超渡對象</label>
         <select id="f-souls.${p.id}.type" data-path="souls.${p.id}.type" data-rerender="1">${opt(SOULS.map(x=>[x,x]),p.type)}</select></div>
       ${dead
-        ? text(`souls.${p.id}.name`,"亡者姓名",p.name) + text(`souls.${p.id}.title`,"稱謂",p.title,{hint:"例：先父、先母、祖父、祖母"})
+        ? text(`souls.${p.id}.name`,"往生者姓名",p.name) + text(`souls.${p.id}.title`,"稱謂",p.title,{hint:"例：先父、先母、祖父、祖母"})
         : text(`souls.${p.id}.name`,"牌位寫法",p.name,{optional:true,hint: p.type==="歷代祖先"?"例：陳氏歷代祖先":p.type==="地基主"?"可填地址，例：本宅地基主":"空白則由堂裡統一書寫"})}
       ${dead ? dateBlock(`souls.${p.id}.birth`, p.birth, "出生日期",{optional:true}) + dateBlock(`souls.${p.id}.death`, p.death, "往生日期",{optional:true})
              + text(`souls.${p.id}.age`,"享年歲數",p.age,{type:"number",optional:true,attrs:'inputmode="numeric" min="0" max="130"',hint:"填好出生和往生年份會自動算出，可自行修改"}) : ""}
@@ -495,16 +504,16 @@ function summaryHTML(editable){
   if(!isLampForm()){ const ev=curEvent(); h=`<div class="sum"><h3>報名法會</h3><ul><li>${esc(ev.name)}${ev.date?`<span class="sub">${esc(ev.date)}</span>`:""}</li></ul></div>`+h; }
   if(isLampForm()){ const T2=totals();
     h+=`<div class="sum"><h3>點燈名單（${S.lamps.length} 位）${go("lamp")}</h3><ul>${S.lamps.map(p=>{const L=toLunar(p.birth);
-      return `<li>${esc(p.name)}・生肖${L?zodiacOf(L.y):""}・虛歲 ${L?curLunarYear-L.y+1:""}<span class="sub">點：${lampTypeNames(p).join("、")}</span><span class="sub">農曆 ${lunarText(L)}${p.birth.cal==="solar"?`（${solarText(p.birth)}）`:""}</span></li>`}).join("")}</ul></div>`;
+      return `<li>${esc(p.name)}（${p.gender}）・生肖${L?zodiacOf(L.y):""}・${L?curLunarYear-L.y+1:""} 歲<span class="sub">點：${lampTypeNames(p).join("、")}</span><span class="sub">農曆 ${lunarText(L)}${p.birth.cal==="solar"?`（${solarText(p.birth)}）`:""}</span></li>`}).join("")}</ul></div>`;
     h+=`<div class="sum"><ul style="margin:8px 0">${Object.values(T2.byType).filter(x=>x.count).map(x=>`<li class="amt-line"><span>${x.name}</span><span>${x.count} 盞${x.amount!=null?`・$${x.amount.toLocaleString()}`:""}</span></li>`).join("")}</ul></div>`;
     if(T2.all!=null) h+=`<div class="total"><span>合計</span><span class="amt">$${T2.all.toLocaleString()}</span></div>`;
     return h; }
   if(S.want.lamp) h+=`<div class="sum"><h3>點燈・蓮花福慧燈（${S.lamps.length} 位）${go("lamp")}</h3><ul>${S.lamps.map(p=>{const L=toLunar(p.birth);
-      return `<li>${esc(p.name)}・生肖${L?zodiacOf(L.y):""}・虛歲 ${L?curLunarYear-L.y+1:""}<span class="sub">農曆 ${lunarText(L)}${p.birth.cal==="solar"?`（${solarText(p.birth)}）`:""}</span></li>`}).join("")}</ul></div>`;
-  if(S.want.chaodu) h+=`<div class="sum"><h3>超渡（${S.souls.length} 個牌位）${go("chaodu")}</h3><ul>${S.souls.map(p=>{
+      return `<li>${esc(p.name)}（${p.gender}）・生肖${L?zodiacOf(L.y):""}・${L?curLunarYear-L.y+1:""} 歲<span class="sub">農曆 ${lunarText(L)}${p.birth.cal==="solar"?`（${solarText(p.birth)}）`:""}</span></li>`}).join("")}</ul></div>`;
+  if(S.want.chaodu) h+=`<div class="sum"><h3>超渡牌位（${S.souls.length} 個）${go("chaodu")}</h3><ul>${S.souls.map(p=>{
       const b=toLunar(p.birth), d=toLunar(p.death);
-      const nm = p.type==="亡者" ? `${esc(p.title)} ${esc(p.name)}` : (esc(p.name)||p.type);
-      const sub = p.type==="亡者" ? [b?"生 "+lunarText(b):"", d?"歿 "+lunarText(d):"", p.age?"享年 "+esc(p.age)+" 歲":""].filter(Boolean).join("・") : p.type;
+      const nm = p.type==="往生者" ? `${esc(p.title)} ${esc(p.name)}` : (esc(p.name)||p.type);
+      const sub = p.type==="往生者" ? [b?"生 "+lunarText(b):"", d?"歿 "+lunarText(d):"", p.age?"享年 "+esc(p.age)+" 歲":""].filter(Boolean).join("・") : p.type;
       return `<li>${nm}<span class="sub">${sub}${sub?"・":""}陽世報恩人：${esc(p.sponsor)}</span></li>`}).join("")}</ul></div>`;
   if(S.want.meal) h+=`<div class="sum"><h3>供齋（${S.meals.length} 位）${go("meal")}</h3><ul>${S.meals.map(m=>`<li class="amt-line"><span>${esc(m.name)}</span><span>$${(+m.amount||0).toLocaleString()}</span></li>`).join("")}</ul></div>`;
   h+=`<div class="sum"><ul style="margin:8px 0">
@@ -516,13 +525,13 @@ function summaryHTML(editable){
   return h;
 }
 
-/* ---------- 自動顯示生肖、虛歲、享年 ---------- */
+/* ---------- 自動顯示生肖、年齡、享年 ---------- */
 function find(coll,id){ return S[coll].find(x=>x.id===id); }
 function updDerived(kind,id){
   const el=$("dv-"+id); if(!el) return;
   if(kind==="lamp"){ const p=find("lamps",id); const L=toLunar(p.birth);
-    el.innerHTML = L ? `<span>生肖 <b>${zodiacOf(L.y)}</b></span><span>今年虛歲 <b>${curLunarYear-L.y+1}</b></span>${p.birth.cal==="solar"?`<span>農曆 ${lunarText(L)}</span>`:""}` : "";
-  } else { const p=find("souls",id); if(p.type!=="亡者"){el.innerHTML="";return}
+    el.innerHTML = L ? `<span>生肖 <b>${zodiacOf(L.y)}</b></span><span><b>${curLunarYear-L.y+1}</b> 歲</span>${p.birth.cal==="solar"?`<span>農曆 ${lunarText(L)}</span>`:""}` : "";
+  } else { const p=find("souls",id); if(p.type!=="往生者"){el.innerHTML="";return}
     const b=toLunar(p.birth), d=toLunar(p.death);
     if(b&&d){ const a=d.y-b.y+1; const inp=document.querySelector(`[data-path="souls.${id}.age"]`);
       if(inp && (!p.age || p._autoAge)){ p.age=String(a); p._autoAge=true; inp.value=a; } }
@@ -574,9 +583,9 @@ function validate(k){
     need("contact.phone","請填聯絡電話。",c.phone.replace(/\D/g,"").length>=7);
     need("contact.address","請填住址。",c.address.trim()); }
   if(k==="pick") need("want","請至少勾選一個項目。",S.want.lamp||S.want.chaodu||S.want.meal);
-  if(k==="lamp") S.lamps.forEach(p=>{ need(`lamps.${p.id}.name`,"請填姓名。",p.name.trim()); dateOK(`lamps.${p.id}.birth`,p.birth,true); if(isLampForm()) need(`lamps.${p.id}.types`,"請至少勾選一盞燈。",lampTypeNames(p).length); });
+  if(k==="lamp") S.lamps.forEach(p=>{ need(`lamps.${p.id}.name`,"請填姓名。",p.name.trim()); need(`lamps.${p.id}.gender`,"請選性別。",p.gender); dateOK(`lamps.${p.id}.birth`,p.birth,true); if(isLampForm()) need(`lamps.${p.id}.types`,"請至少勾選一盞燈。",lampTypeNames(p).length); });
   if(k==="chaodu") S.souls.forEach(p=>{
-    if(p.type==="亡者"){ need(`souls.${p.id}.name`,"請填亡者姓名。",p.name.trim()); dateOK(`souls.${p.id}.birth`,p.birth,false); dateOK(`souls.${p.id}.death`,p.death,false); }
+    if(p.type==="往生者"){ need(`souls.${p.id}.name`,"請填往生者姓名。",p.name.trim()); dateOK(`souls.${p.id}.birth`,p.birth,false); dateOK(`souls.${p.id}.death`,p.death,false); }
     need(`souls.${p.id}.sponsor`,"請填陽世報恩人。",p.sponsor.trim()); });
   if(k==="meal") S.meals.forEach(m=>{ need(`meals.${m.id}.name`,"請填姓名。",m.name.trim()); need(`meals.${m.id}.amount`,"請填功德金金額。",+m.amount>0); });
   return errs;
@@ -632,7 +641,7 @@ function payload(ref){
   return {
     ref, paid:false, form:S.form, eventId:S.eventId, formTitle:formTitle(), submittedAt:new Date().toISOString(),
     contact:{...S.contact}, note:S.note,
-    lamps: (isLampForm()||S.want.lamp) ? S.lamps.map(p=>{const L=toLunar(p.birth); return {name:p.name.trim(), birth:dateOut(p.birth), zodiac:L?zodiacOf(L.y):"", age_xu:L?curLunarYear-L.y+1:null, lampTypes: isLampForm()?lampTypeNames(p):["蓮花福慧燈"]};}) : [],
+    lamps: (isLampForm()||S.want.lamp) ? S.lamps.map(p=>{const L=toLunar(p.birth); return {name:p.name.trim(), gender:p.gender, birth:dateOut(p.birth), zodiac:L?zodiacOf(L.y):"", age_xu:L?curLunarYear-L.y+1:null, lampTypes: isLampForm()?lampTypeNames(p):["蓮花福慧燈"]};}) : [],
     chaodu: isLampForm() ? [] : S.want.chaodu ? S.souls.map(p=>({type:p.type, name:p.name.trim(), title:p.title.trim(), birth:dateOut(p.birth), death:dateOut(p.death), age:p.age?+p.age:null, sponsor:p.sponsor.trim()})) : [],
     meals: !isLampForm() && S.want.meal ? S.meals.map(m=>({name:m.name.trim(), amount:+m.amount})) : [],
     totals: totals(),
@@ -701,7 +710,9 @@ loadSettings().then(()=>{ renderEvents(); renderLampBtn(); renderMySlips(); refr
   const h=location.hash.slice(1); if(h && isOpen(h) && $("home").hidden===false){ const [f,ev]=keyToForm(h); S=load(h)||freshState(f,ev); show("form"); render(); }
 });
 $("lampTitle").textContent=CONFIG.lampForm.title;
-$("lampChips").innerHTML=CONFIG.lampForm.types.map(t=>`<li>${t.name}${t.price?` $${t.price}`:""}</li>`).join("");
+{ const TT=CONFIG.lampForm.types, same=TT.every(t=>t.price&&t.price===TT[0].price);
+  $("lampPrice").textContent = same ? `每盞 $${TT[0].price}` : "";
+  $("lampChips").innerHTML=TT.map(t=>`<li>${t.short||t.name}${!same&&t.price?` $${t.price}`:""}</li>`).join(""); }
 $("pChaodu").textContent=`每牌位 $${CONFIG.prices.chaodu}`; $("pLotus").textContent=`每位 $${CONFIG.prices.lamp}`;
 $("telNo").textContent=CONFIG.phone; $("faxNo").textContent=CONFIG.fax;
 

@@ -286,25 +286,25 @@ function sampleData(){
   return [
     {ref:"L261018-2041", sample:true, paid:true, paidAt:t(20), form:"lamp", formTitle:CONFIG.lampTitle, submittedAt:t(52),
      contact:{name:"王秀英",phone:"(718) 555-0142",address:"範例地址"},
-     lamps:[{name:"王秀英",birth:B(1958,8,12,"辰"),zodiac:"狗",age_xu:69,lampTypes:["個人光明燈","太歲燈"]},
-            {name:"李建國",birth:B(1955,3,3),zodiac:"羊",age_xu:72,lampTypes:["個人光明燈"]}],
+     lamps:[{name:"王秀英",gender:"女",birth:B(1958,8,12,"辰"),zodiac:"狗",age_xu:69,lampTypes:["個人光明燈","太歲燈"]},
+            {name:"李建國",gender:"男",birth:B(1955,3,3),zodiac:"羊",age_xu:72,lampTypes:["個人光明燈"]}],
      chaodu:[],meals:[],totals:{all:360}},
     {ref:"L261019-5528", sample:true, paid:false, form:"lamp", formTitle:CONFIG.lampTitle, submittedAt:t(30),
      contact:{name:"張雅婷",phone:"(347) 555-0198",address:"範例地址"},
-     lamps:[{name:"張雅婷",birth:B(1986,11,2,"午"),zodiac:"虎",age_xu:41,lampTypes:["五路財神燈"]},
-            {name:"陳柏宇",birth:B(2012,6,18),zodiac:"龍",age_xu:15,lampTypes:["文昌燈","個人光明燈"]},
-            {name:"陳品妍",birth:B(2015,1,9),zodiac:"羊",age_xu:12,lampTypes:["文昌燈"]}],
+     lamps:[{name:"張雅婷",gender:"女",birth:B(1986,11,2,"午"),zodiac:"虎",age_xu:41,lampTypes:["五路財神燈"]},
+            {name:"陳柏宇",gender:"男",birth:B(2012,6,18),zodiac:"龍",age_xu:15,lampTypes:["文昌燈","個人光明燈"]},
+            {name:"陳品妍",gender:"女",birth:B(2015,1,9),zodiac:"羊",age_xu:12,lampTypes:["文昌燈"]}],
      chaodu:[],meals:[],totals:{all:480}},
     {ref:"F261019-0377", sample:true, paid:false, form:"fahui", eventId:"2027-zhongyuan", formTitle:CONFIG.events[0].name, submittedAt:t(26),
      contact:{name:"林美華",phone:"(917) 555-0111",address:"範例地址"},
-     lamps:[{name:"林美華",birth:B(1963,2,20),zodiac:"兔",age_xu:64,lampTypes:["蓮花福慧燈"]}],
-     chaodu:[{type:"亡者",name:"林德福",title:"先父",birth:B(1930,5,1),death:B(2019,9,9),age:90,sponsor:"林美華"},
+     lamps:[{name:"林美華",gender:"女",birth:B(1963,2,20),zodiac:"兔",age_xu:64,lampTypes:["蓮花福慧燈"]}],
+     chaodu:[{type:"往生者",name:"林德福",title:"先父",birth:B(1930,5,1),death:B(2019,9,9),age:90,sponsor:"林美華"},
              {type:"歷代祖先",name:"林氏歷代祖先",title:"",birth:null,death:null,age:null,sponsor:"林美華"}],
      meals:[{name:"林美華",amount:50}], totals:{all:430}},
     {ref:"F261020-8812", sample:true, paid:true, paidAt:t(2), form:"fahui", eventId:"2027-spring-lidou", formTitle:CONFIG.events[1].name, submittedAt:t(6),
      contact:{name:"黃志強",phone:"(718) 555-0175",address:"範例地址"},
-     lamps:[{name:"黃志強",birth:B(1972,7,7),zodiac:"鼠",age_xu:55,lampTypes:["蓮花福慧燈"]},
-            {name:"黃淑芬",birth:B(1975,10,30),zodiac:"兔",age_xu:52,lampTypes:["蓮花福慧燈"]}],
+     lamps:[{name:"黃志強",gender:"男",birth:B(1972,7,7),zodiac:"鼠",age_xu:55,lampTypes:["蓮花福慧燈"]},
+            {name:"黃淑芬",gender:"女",birth:B(1975,10,30),zodiac:"兔",age_xu:52,lampTypes:["蓮花福慧燈"]}],
      chaodu:[],meals:[],totals:{all:120}},
   ];
 }
@@ -368,12 +368,12 @@ API.userOp = async function(op, data){
 /* ================= 狀態 ================= */
 let ROWS = [], F = {q:"", paid:"all", form:"all", item:"all"}, confirming = null;
 const LAMP_TYPES = ["個人光明燈","太歲燈","五路財神燈","文昌燈"];
-const FAHUI_ITEMS = ["超渡","蓮花福慧燈","供齋"];
+const FAHUI_ITEMS = ["超渡牌位","蓮花福慧燈","供齋"];
 const inTab = (r,tab) => tab==="all" || (tab==="lamp" ? r.form==="lamp" : r.form!=="lamp" && r.eventId===tab);
 function hasItem(r,item){
   if(item==="all") return true;
   if(LAMP_TYPES.includes(item)) return (r.lamps||[]).some(p=>(p.lampTypes||[]).includes(item));
-  if(item==="超渡") return (r.chaodu||[]).length>0;
+  if(item==="超渡牌位") return (r.chaodu||[]).length>0;
   if(item==="蓮花福慧燈") return r.form!=="lamp" && (r.lamps||[]).length>0;
   if(item==="供齋") return (r.meals||[]).length>0;
   return true;
@@ -382,12 +382,12 @@ function hasItem(r,item){
 function itemUnits(rows,item){
   let n=0; rows.forEach(r=>{
     if(LAMP_TYPES.includes(item)) n+=(r.lamps||[]).filter(p=>(p.lampTypes||[]).includes(item)).length;
-    else if(item==="超渡") n+=(r.chaodu||[]).length;
+    else if(item==="超渡牌位") n+=(r.chaodu||[]).length;
     else if(item==="蓮花福慧燈") n+=r.form!=="lamp"?(r.lamps||[]).length:0;
     else if(item==="供齋") n+=(r.meals||[]).length;
   }); return n;
 }
-const UNIT = item => LAMP_TYPES.includes(item)?"盞":item==="超渡"?"個牌位":"位";
+const UNIT = item => LAMP_TYPES.includes(item)?"盞":item==="超渡牌位"?"個牌位":"位";
 
 /* ================= 搜尋 ================= */
 // 回傳 null（不符合）或 {hits:Set(人名)}：電話比數字、編號忽略大小寫與「-」、姓名比所有出現的名字
@@ -422,10 +422,10 @@ function cardHTML(r, m){
   const q=F.q, paid=!!r.paid;
   const secDim = name => FAHUI_ITEMS.includes(F.item) && F.item!==name ? " dim" : "";
   const lampSec = (r.lamps||[]).length ? `<div class="sec${r.form==="lamp"?"":secDim("蓮花福慧燈")}"><h3>${r.form==="lamp"?"點燈":"蓮花福慧燈"}</h3>${r.lamps.map(p=>`
-      <div class="person${LAMP_TYPES.includes(F.item)&&!(p.lampTypes||[]).includes(F.item)?" dim":""}"><span class="nm">${hl(p.name,q)}</span><span class="info">${p.gender?esc(p.gender)+"・":""}${esc(p.zodiac)}・虛歲 ${p.age_xu??""}・${lunarText(p.birth)}</span>
+      <div class="person${LAMP_TYPES.includes(F.item)&&!(p.lampTypes||[]).includes(F.item)?" dim":""}"><span class="nm">${hl(p.name,q)}</span><span class="info">${p.gender?esc(p.gender)+"・":""}${esc(p.zodiac)}・${p.age_xu??""} 歲・${lunarText(p.birth)}</span>
       ${r.form==="lamp"?`<div class="chips">${(p.lampTypes||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>`:""}</div>`).join("")}</div>` : "";
-  const soulSec = (r.chaodu||[]).length ? `<div class="sec${secDim("超渡")}"><h3>超渡</h3>${r.chaodu.map(c=>`
-      <div class="person"><span class="nm">${c.type==="亡者"?`${esc(c.title)} ${hl(c.name,q)}`:hl(c.name||c.type,q)}</span><span class="info">陽世報恩人 ${hl(c.sponsor,q)}</span></div>`).join("")}</div>` : "";
+  const soulSec = (r.chaodu||[]).length ? `<div class="sec${secDim("超渡牌位")}"><h3>超渡牌位</h3>${r.chaodu.map(c=>`
+      <div class="person"><span class="nm">${c.type==="往生者"?`${esc(c.title)} ${hl(c.name,q)}`:hl(c.name||c.type,q)}</span><span class="info">陽世報恩人 ${hl(c.sponsor,q)}</span></div>`).join("")}</div>` : "";
   const mealSec = (r.meals||[]).length ? `<div class="sec${secDim("供齋")}"><h3>供齋</h3>${r.meals.map(x=>`
       <div class="person"><span class="nm">${hl(x.name,q)}</span><span class="info">${money(x.amount)}</span></div>`).join("")}</div>` : "";
   const total = r.totals ? r.totals.all : null;
