@@ -43,6 +43,12 @@ button,input,select,textarea{font:inherit;color:inherit}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
 .logo{background:#fff;border-radius:8px;padding:4px 8px;display:flex}
 .logo img{height:44px;width:auto;display:block}
+.langbtn{font-weight:700}
+/* 英文介面：英文字較長，選燈改成一欄、繳費單標題字距縮小 */
+html[lang="en"] .lamppick{grid-template-columns:1fr}
+.lamppick .pickcard small{display:block}
+html[lang="en"] .slip-head .doc{letter-spacing:.03em;font-size:1.1rem}
+.en-sub{display:block;font-size:.82rem;color:var(--muted);font-weight:500}
 .sizebtn{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 16px;cursor:pointer;font-size:.9rem;white-space:nowrap}
 @media (max-width:460px){ .logo img{height:32px} .sizebtn{padding:5px 10px;font-size:.8rem} .top{gap:8px} }
 
@@ -198,51 +204,51 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
 <div class="wrap">
   <header class="top">
     <a class="logo" href="#" id="homeLink" aria-label="回到報名首頁"><img alt="紐約花蓮慈惠堂 New York Hua Lian Tsu Hui Temple" src="data:image/jpeg;base64,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"></a>
-    <div style="display:flex;gap:8px;align-items:center"><button class="sizebtn" id="sizeBtn" type="button" aria-pressed="false">字放大</button></div>
+    <div style="display:flex;gap:8px;align-items:center"><button class="sizebtn langbtn" id="langBtn" type="button"></button><button class="sizebtn" id="sizeBtn" type="button" aria-pressed="false">字放大</button></div>
   </header>
 
   <!-- ===== 入口頁 ===== -->
   <main id="home">
     <section class="hero">
-      <div class="eyebrow">紐約花蓮慈惠堂</div>
+      <div class="eyebrow" data-en="New York Hua Lian Tsu Hui Temple">紐約花蓮慈惠堂</div>
       <h1 id="heroTitle">線上點燈和法會報名</h1>
-      <p>請選擇要報名的表單。一張報名表限同一住址的家人使用。</p>
+      <p data-en="Please choose a form. Each form is for one household (family members at the same address).">請選擇要報名的表單。一張報名表限同一住址的家人使用。</p>
     </section>
 
     <section class="myslips" id="mySlips" hidden></section>
 
     <section class="services" aria-label="報名表單">
       <article class="formcard">
-        <div class="eyebrow">點燈</div>
+        <div class="eyebrow" data-en="LAMP LIGHTING">點燈</div>
         <h2 id="lampTitle"></h2>
         <div class="lampprice" id="lampPrice"></div>
         <ul class="chips row" id="lampChips"></ul>
-        <p class="desc">為家人點燈祈福、安奉太歲。每一位可以點一盞或多盞燈。請準備每位的生日，農曆或國曆都可以。</p>
+        <p class="desc" data-en="Light lamps to pray for your family's blessings and Tai Sui protection. Each person can have one or more lamps. Please have each person's birthday ready — either the lunar or the Western calendar is fine.">為家人點燈祈福、安奉太歲。每一位可以點一盞或多盞燈。請準備每位的生日，農曆或國曆都可以。</p>
         <button class="btn primary block" data-start="lamp" id="lampBtn" type="button">點燈報名</button>
-        <p class="note" data-resume="lamp" hidden>您上次填到一半的資料還在，按上面的按鈕會接著填。<button class="linkbtn" data-clear="lamp" type="button">清除重填</button></p>
+        <p class="note" data-resume="lamp" hidden><span data-en="Your unfinished form has been saved. Press the button above to continue. ">您上次填到一半的資料還在，按上面的按鈕會接著填。</span><button class="linkbtn" data-clear="lamp" type="button" data-en="Start over">清除重填</button></p>
       </article>
 
       <article class="formcard" id="fahuiCard">
-        <div class="eyebrow">法會</div>
-        <h2>法會報名</h2>
-        <p class="desc">各場法會都用同一張報名表，可報名以下項目：</p>
+        <div class="eyebrow" data-en="CEREMONIES">法會</div>
+        <h2 data-en="Ceremony Registration">法會報名</h2>
+        <p class="desc" data-en="All ceremonies use the same form. You can register for:">各場法會都用同一張報名表，可報名以下項目：</p>
         <ul class="items">
-          <li><span>超渡牌位（往生者、歷代祖先、冤親債主、地基主、水子靈等）</span><span id="pChaodu"></span></li>
-          <li><span>祈福消災點燈・蓮花福慧燈</span><span id="pLotus"></span></li>
-          <li><span>供齋（供養十方孤魂）</span><span>功德金隨喜</span></li>
+          <li><span data-en="Memorial tablets for deliverance (deceased family, ancestors, karmic creditors, land guardian spirit, unborn child spirits)">超渡牌位（往生者、歷代祖先、冤親債主、地基主、水子靈等）</span><span id="pChaodu"></span></li>
+          <li><span data-en="Lotus Blessing Lamp (for blessings and protection)">祈福消災點燈・蓮花福慧燈</span><span id="pLotus"></span></li>
+          <li><span data-en="Food offering for wandering spirits">供齋（供養十方孤魂）</span><span data-en="Any amount">功德金隨喜</span></li>
         </ul>
-        <div class="legend" style="margin-top:6px">法會場次</div>
+        <div class="legend" style="margin-top:6px" data-en="Ceremonies">法會場次</div>
         <div class="events" id="eventList"></div>
       </article>
     </section>
 
     <section class="howto">
-      <h2>報名步驟</h2>
+      <h2 data-en="How it works">報名步驟</h2>
       <ol>
-        <li>填寫聯絡人的姓名、電話、住址。</li>
-        <li>依序填寫每一位的資料。</li>
-        <li>核對無誤後送出，畫面會出現一張繳費單。</li>
-        <li>帶著繳費單到慈惠堂繳交現金。</li>
+        <li data-en="Enter the contact person's name, phone number and address.">填寫聯絡人的姓名、電話、住址。</li>
+        <li data-en="Fill in the details for each person.">依序填寫每一位的資料。</li>
+        <li data-en="Review and submit. A payment slip will appear on the screen.">核對無誤後送出，畫面會出現一張繳費單。</li>
+        <li data-en="Bring the payment slip to the temple and pay in cash.">帶著繳費單到慈惠堂繳交現金。</li>
       </ol>
     </section>
   </main>
@@ -260,28 +266,28 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
 
   <!-- ===== 完成 ===== -->
   <main id="done" hidden>
-    <p class="donemsg" id="doneMsg">報名已送出。請帶這張繳費單到慈惠堂繳交現金。可以截圖存在手機，或按下方「列印繳費單」。</p>
+    <p class="donemsg" id="doneMsg" data-en="Your registration has been submitted. Please bring this payment slip to the temple and pay in cash. You can take a screenshot, or press &quot;Print payment slip&quot; below.">報名已送出。請帶這張繳費單到慈惠堂繳交現金。可以截圖存在手機，或按下方「列印繳費單」。</p>
     <article class="slip" id="slip">
-      <div class="slip-head"><img id="slipLogo" alt="紐約花蓮慈惠堂"><span class="doc">繳費單</span></div>
+      <div class="slip-head"><img id="slipLogo" alt="紐約花蓮慈惠堂"><span class="doc" data-en="Payment Slip">繳費單</span></div>
       <div class="slip-title" id="slipTitle"></div>
       <div class="slip-main">
-        <div><span class="lbl">報名編號</span><div class="refno" id="refNo"></div><span class="lbl">報名日期</span><div id="slipDate"></div></div>
+        <div><span class="lbl" data-en="Registration No.">報名編號</span><div class="refno" id="refNo"></div><span class="lbl" data-en="Date">報名日期</span><div id="slipDate"></div></div>
         <div class="qr" id="slipQR" aria-hidden="true"></div>
       </div>
       <div class="slip-who" id="slipWho"></div>
       <ul class="slip-items" id="slipItems"></ul>
-      <div class="slip-total"><span>應繳金額（現金）</span><span id="slipTotal"></span></div>
-      <div class="slip-status"><span class="stamp">待繳費</span><div class="paid-box">堂裡收款：□ 已繳清<br>經手人＿＿＿＿　日期＿＿＿＿</div></div>
-      <p class="slip-note">請攜帶此單（手機畫面或紙本）至慈惠堂繳交現金，告知報名編號即可。洽詢電話 <span id="slipTel"></span></p>
+      <div class="slip-total"><span data-en="Amount due (cash)">應繳金額（現金）</span><span id="slipTotal"></span></div>
+      <div class="slip-status"><span class="stamp" data-en="UNPAID">待繳費</span><div class="paid-box">堂裡收款：□ 已繳清<span data-en="（For temple use）"></span><br>經手人＿＿＿＿　日期＿＿＿＿</div></div>
+      <p class="slip-note"><span data-en="Bring this slip (on your phone or printed) to the temple and pay in cash — just give your registration number. Questions: ">請攜帶此單（手機畫面或紙本）至慈惠堂繳交現金，告知報名編號即可。洽詢電話 </span><span id="slipTel"></span></p>
     </article>
-    <details class="full"><summary>查看完整報名資料</summary><div id="doneSummary"></div></details>
+    <details class="full"><summary data-en="View full registration details">查看完整報名資料</summary><div id="doneSummary"></div></details>
     <div class="nav">
-      <button class="btn primary" id="printBtn" type="button">列印繳費單</button>
-      <button class="btn ghost" id="againBtn" type="button">再填一份</button>
+      <button class="btn primary" id="printBtn" type="button" data-en="Print payment slip">列印繳費單</button>
+      <button class="btn ghost" id="againBtn" type="button" data-en="Fill in another form">再填一份</button>
     </div>
   </main>
 
-  <footer>紐約花蓮慈惠堂 New York Hua Lian Tsu Hui Temple<br>報名與洽詢電話：<span id="telNo"></span>｜傳真：<span id="faxNo"></span></footer>
+  <footer>紐約花蓮慈惠堂 New York Hua Lian Tsu Hui Temple<br><span data-en="Phone: ">報名與洽詢電話：</span><span id="telNo"></span>｜<span data-en="Fax: ">傳真：</span><span id="faxNo"></span></footer>
 </div>
 
 <script>
@@ -290,12 +296,13 @@ const CONFIG = {
   phone: "718-961-1996", fax: "718-961-1992",
   lampForm: {
     title: "啟點光明燈暨安奉太歲",
-    // price：每盞金額（美元）；留 null 則不顯示金額
+    titleEn: "Blessing Lamps & Tai Sui Offering",
+    // price：每盞金額（美元）；留 null 則不顯示金額。en／enDesc：英文介面用的名稱和說明
     types: [
-      {k:"guangming", name:"個人光明燈", short:"光明燈", price:120},
-      {k:"taisui",    name:"太歲燈",     short:"太歲燈", price:120},
-      {k:"caishen",   name:"五路財神燈", short:"財神燈", price:120},
-      {k:"wenchang",  name:"文昌燈",     short:"文昌燈", price:120},
+      {k:"guangming", name:"個人光明燈", short:"光明燈", price:120, en:"Guangming Lamp", enDesc:"Personal blessing lamp for peace, health and a bright year"},
+      {k:"taisui",    name:"太歲燈",     short:"太歲燈", price:120, en:"Tai Sui Lamp",   enDesc:"Honors this year's Tai Sui for protection, especially if your zodiac sign clashes with the year"},
+      {k:"caishen",   name:"五路財神燈", short:"財神燈", price:120, en:"Wealth God Lamp", enDesc:"For prosperity in work and business"},
+      {k:"wenchang",  name:"文昌燈",     short:"文昌燈", price:120, en:"Wen Chang Lamp", enDesc:"For studies, exams and career"},
     ],
   },
   // 法會場次的預設值。正式使用時，開放哪些項目由後台「報名項目設定」決定，會蓋過這裡的設定。
@@ -304,6 +311,12 @@ const CONFIG = {
     {id:"2027-spring-lidou", name:"春季祈安禮斗法會", date:"", open:false},
     {id:"2027-autumn-lidou", name:"秋季祈安禮斗法會", date:"", open:false},
   ],
+  // 法會的英文名稱（英文介面用）；後台新增的場次沒有英文名稱時，英文介面就顯示中文名稱
+  eventsEn: {
+    "2027-zhongyuan": "Golden Mother Birthday Blessing & Universal Deliverance Ceremony",
+    "2027-spring-lidou": "Spring Blessing Ceremony (Li Dou)",
+    "2027-autumn-lidou": "Autumn Blessing Ceremony (Li Dou)",
+  },
   prices: { chaodu: 160, lamp: 60 },
   submitUrl: "",            // Google Apps Script 網址；留空 = 測試模式，不會真的送出
 };
@@ -314,6 +327,23 @@ const LMONTH = ["正月","二月","三月","四月","五月","六月","七月","
 const LDAY = (()=>{const a=[],n="一二三四五六七八九十";for(let d=1;d<=30;d++){a.push(d<=10?"初"+n[d-1]:d<20?"十"+n[d-11]:d===20?"二十":d<30?"廿"+n[d-21]:"三十")}return a})();
 const HOURS = [["子","23–1點"],["丑","1–3點"],["寅","3–5點"],["卯","5–7點"],["辰","7–9點"],["巳","9–11點"],["午","11–13點"],["未","13–15點"],["申","15–17點"],["酉","17–19點"],["戌","19–21點"],["亥","21–23點"]];
 const SOULS = ["往生者","歷代祖先","冤親債主","地基主","水子靈"];
+
+/* ================= 語言（中文／English） ================= */
+// 英文介面只換畫面上的文字；送出的資料（性別、燈種、超渡對象）一律存中文，後台照常使用
+let LANG = (()=>{ try{ const q=new URLSearchParams(location.search).get("lang"); if(q==="en"||q==="zh") return q; return localStorage.getItem("tsuhui-lang")==="en"?"en":"zh"; }catch(e){ return "zh"; } })();
+const EN = () => LANG==="en";
+const t = (zh,en) => EN() ? en : zh;
+const ZODIAC_EN = {鼠:"Rat",牛:"Ox",虎:"Tiger",兔:"Rabbit",龍:"Dragon",蛇:"Snake",馬:"Horse",羊:"Goat",猴:"Monkey",雞:"Rooster",狗:"Dog",豬:"Pig"};
+const zText = z => z ? (EN() ? `${ZODIAC_EN[z]||""} ${z}` : z) : "";
+const HOURS_EN = {子:["Zi","11pm–1am"],丑:["Chou","1–3am"],寅:["Yin","3–5am"],卯:["Mao","5–7am"],辰:["Chen","7–9am"],巳:["Si","9–11am"],午:["Wu","11am–1pm"],未:["Wei","1–3pm"],申:["Shen","3–5pm"],酉:["You","5–7pm"],戌:["Xu","7–9pm"],亥:["Hai","9–11pm"]};
+const SOUL_EN = {往生者:"Deceased family member",歷代祖先:"Ancestors",冤親債主:"Karmic creditors",地基主:"Land guardian spirit of the home",水子靈:"Unborn child spirits"};
+const soulText = x => EN() ? `${SOUL_EN[x]||x}（${x}）` : x;
+const MONTH_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const ord = n => n + ((n%100>=11&&n%100<=13) ? "th" : ({1:"st",2:"nd",3:"rd"}[n%10]||"th"));
+const genderText = g => EN() ? ({男:"Male",女:"Female"}[g]||"") : g;
+const lampName = tp => EN() ? `${tp.en}（${tp.short||tp.name}）` : tp.name;
+const lampNameByZh = zh => { const tp=CONFIG.lampForm.types.find(x=>x.name===zh); return tp ? lampName(tp) : zh; };
+const eventName = e => EN() && CONFIG.eventsEn[e.id] ? CONFIG.eventsEn[e.id] : e.name;
 const hasLunar = typeof window.Solar !== "undefined";
 const NOW_Y = new Date().getFullYear();
 const curLunarYear = (()=>{try{ if(hasLunar){const d=new Date();return Solar.fromYmd(d.getFullYear(),d.getMonth()+1,d.getDate()).getLunar().getYear()} }catch(e){} return NOW_Y })();
@@ -346,7 +376,8 @@ async function loadSettings(){
 const isOpen = key => key==="lamp" ? SETTINGS.lamp.status==="open" : (EVENTS().find(e=>"fahui-"+e.id===key)||{}).status==="open";
 const curEvent = () => EVENTS().find(e=>e.id===S.eventId) || {name:"法會", date:""};
 const isLampForm = () => S.form==="lamp";
-const formTitle = () => isLampForm() ? CONFIG.lampForm.title : curEvent().name;
+const formTitleZh = () => isLampForm() ? CONFIG.lampForm.title : curEvent().name;   // 存檔用，一律中文
+const formTitle = () => isLampForm() ? t(CONFIG.lampForm.title, CONFIG.lampForm.titleEn) : eventName(curEvent());
 function save(){ try{localStorage.setItem(KEY(draftKey(S)), JSON.stringify(S))}catch(e){} }
 function load(k){ const [f,ev]=keyToForm(k); try{const v=localStorage.getItem(KEY(k)); const d=v?JSON.parse(v):null; return d&&d.contact?Object.assign(freshState(f,ev),d,{form:f,eventId:ev}):null}catch(e){return null} }
 function clearSaved(k){ try{localStorage.removeItem(KEY(k))}catch(e){} }
@@ -361,21 +392,23 @@ function toLunar(b){
   try{ const l=Solar.fromYmd(+b.y,+b.m,+b.d).getLunar(); const mm=l.getMonth();
        return {y:l.getYear(), m:Math.abs(mm), leap:mm<0, d:l.getDay(), h:b.h}; }catch(e){ return null; }
 }
-function lunarText(L){ if(!L) return ""; return `${L.y}年（${roc(L.y)}）${L.leap?"閏":""}${LMONTH[L.m-1]}${LDAY[L.d-1]}${L.h?" "+L.h+"時":""}`; }
+function lunarText(L){ if(!L) return "";
+  if(EN()) return `${L.y}, ${L.leap?"leap ":""}${ord(L.m)} lunar month, day ${L.d}${L.h&&HOURS_EN[L.h]?`, ${HOURS_EN[L.h][1]}`:""}`;
+  return `${L.y}年（${roc(L.y)}）${L.leap?"閏":""}${LMONTH[L.m-1]}${LDAY[L.d-1]}${L.h?" "+L.h+"時":""}`; }
 function lunarValid(b){
   if(b.cal!=="lunar"||!hasLunar) return true;
   try{ const L=Lunar.fromYmd(+b.y, b.leap?-b.m:+b.m, +b.d); return L.getDay()===+b.d; }catch(e){ return false; }
 }
-function solarText(b){ return `國曆 ${b.y}年${b.m}月${b.d}日`; }
+function solarText(b){ return EN() ? `${MONTH_EN[b.m-1]} ${b.d}, ${b.y}` : `國曆 ${b.y}年${b.m}月${b.d}日`; }
 
 /* ================= 步驟 ================= */
 function steps(){
-  if(isLampForm()) return [{k:"contact",t:"聯絡人"},{k:"lamp",t:"點燈名單"},{k:"review",t:"核對送出"}];
-  const s=[{k:"contact",t:"聯絡人"},{k:"pick",t:"選擇項目"}];
-  if(S.want.lamp) s.push({k:"lamp",t:"點燈"});
-  if(S.want.chaodu) s.push({k:"chaodu",t:"超渡牌位"});
-  if(S.want.meal) s.push({k:"meal",t:"供齋"});
-  s.push({k:"review",t:"核對送出"});
+  if(isLampForm()) return [{k:"contact",t:t("聯絡人","Contact")},{k:"lamp",t:t("點燈名單","Lamp list")},{k:"review",t:t("核對送出","Review")}];
+  const s=[{k:"contact",t:t("聯絡人","Contact")},{k:"pick",t:t("選擇項目","Choose items")}];
+  if(S.want.lamp) s.push({k:"lamp",t:t("點燈","Lotus lamps")});
+  if(S.want.chaodu) s.push({k:"chaodu",t:t("超渡牌位","Memorial tablets")});
+  if(S.want.meal) s.push({k:"meal",t:t("供齋","Food offering")});
+  s.push({k:"review",t:t("核對送出","Review")});
   return s;
 }
 
@@ -386,9 +419,9 @@ function render(){
   const st=steps(); if(S.step>=st.length) S.step=st.length-1;
   const cur=st[S.step];
   $("stepBar").innerHTML = st.map((x,i)=>`<span class="${i<=S.step?"on":""}"></span>`).join("");
-  $("stepInfo").textContent = `${formTitle()}｜第 ${S.step+1} 步，共 ${st.length} 步・${cur.t}`;
-  $("prevBtn").textContent = S.step===0 ? "回首頁" : "上一步";
-  $("nextBtn").textContent = cur.k==="review" ? "確認送出" : "下一步";
+  $("stepInfo").textContent = t(`${formTitle()}｜第 ${S.step+1} 步，共 ${st.length} 步・${cur.t}`, `${formTitle()} | Step ${S.step+1} of ${st.length} · ${cur.t}`);
+  $("prevBtn").textContent = S.step===0 ? t("回首頁","Home") : t("上一步","Back");
+  $("nextBtn").textContent = cur.k==="review" ? t("確認送出","Submit") : t("下一步","Next");
   $("panel").innerHTML = `<section class="panel">${VIEWS[cur.k]()}</section>`;
   if(cur.k==="lamp") S.lamps.forEach(p=>updDerived("lamp",p.id));
   if(cur.k==="chaodu") S.souls.forEach(p=>updDerived("soul",p.id));
@@ -398,26 +431,28 @@ function render(){
 function opt(list, sel){ return list.map(([v,t])=>`<option value="${esc(v)}"${String(v)===String(sel)?" selected":""}>${esc(t)}</option>`).join(""); }
 function dateBlock(path, b, label, opts={}){
   const yrs=[]; const minY=opts.minY||1910;
-  for(let y=NOW_Y;y>=minY;y--) yrs.push([y, b.cal==="lunar" ? `${y}（${roc(y)}・${zodiacOf(y)}）` : `${y}（${roc(y)}）`]);
-  const months = b.cal==="lunar" ? LMONTH.map((t,i)=>[i+1,t]) : Array.from({length:12},(_,i)=>[i+1,(i+1)+"月"]);
-  const days = b.cal==="lunar" ? LDAY.map((t,i)=>[i+1,t]) : Array.from({length:31},(_,i)=>[i+1,(i+1)+"日"]);
-  const calSeg = hasLunar ? `<div class="seg" role="radiogroup" aria-label="${label}的曆法">
-      <label><input type="radio" name="${path}.cal" value="lunar" data-path="${path}.cal"${b.cal==="lunar"?" checked":""}>農曆</label>
-      <label><input type="radio" name="${path}.cal" value="solar" data-path="${path}.cal"${b.cal==="solar"?" checked":""}>國曆</label></div>` : "";
+  for(let y=NOW_Y;y>=minY;y--) yrs.push([y, EN() ? (b.cal==="lunar" ? `${y} (${ZODIAC_EN[zodiacOf(y)]})` : `${y}`)
+                                             : (b.cal==="lunar" ? `${y}（${roc(y)}・${zodiacOf(y)}）` : `${y}（${roc(y)}）`)]);
+  const months = b.cal==="lunar" ? LMONTH.map((x,i)=>[i+1, EN()?`${ord(i+1)} month（${x}）`:x]) : Array.from({length:12},(_,i)=>[i+1, EN()?MONTH_EN[i]:(i+1)+"月"]);
+  const days = b.cal==="lunar" ? LDAY.map((x,i)=>[i+1, EN()?`${i+1}（${x}）`:x]) : Array.from({length:31},(_,i)=>[i+1, EN()?String(i+1):(i+1)+"日"]);
+  const hours = HOURS.map(([z,r])=>[z, EN()?`${HOURS_EN[z][1]}（${z}時）`:`${z}時 ${r}`]);
+  const calSeg = hasLunar ? `<div class="seg" role="radiogroup" aria-label="${label}">
+      <label><input type="radio" name="${path}.cal" value="lunar" data-path="${path}.cal"${b.cal==="lunar"?" checked":""}>${t("農曆","Lunar calendar")}</label>
+      <label><input type="radio" name="${path}.cal" value="solar" data-path="${path}.cal"${b.cal==="solar"?" checked":""}>${t("國曆","Western calendar")}</label></div>` : "";
   return `<div class="field" data-err="${path}">
-    <span class="legend">${label}${opts.optional?'<span class="hint">（不清楚可空白）</span>':""}</span>
+    <span class="legend">${label}${opts.optional?`<span class="hint">${t("（不清楚可空白）"," (optional — leave blank if unsure)")}</span>`:""}</span>
     ${calSeg}
     <div class="row">
-      <select class="wide" data-path="${path}.y" aria-label="${label}年"><option value="">年</option>${opt(yrs,b.y)}</select>
-      <select data-path="${path}.m" aria-label="${label}月"><option value="">月</option>${opt(months,b.m)}</select>
-      <select data-path="${path}.d" aria-label="${label}日"><option value="">日</option>${opt(days,b.d)}</select>
-      <select class="wide" data-path="${path}.h" aria-label="${label}時辰"><option value="">時辰（不知道可空白）</option>${opt(HOURS.map(([z,r])=>[z,`${z}時 ${r}`]),b.h)}</select>
+      <select class="wide" data-path="${path}.y" aria-label="${label} ${t("年","year")}"><option value="">${t("年","Year")}</option>${opt(yrs,b.y)}</select>
+      <select data-path="${path}.m" aria-label="${label} ${t("月","month")}"><option value="">${t("月","Month")}</option>${opt(months,b.m)}</select>
+      <select data-path="${path}.d" aria-label="${label} ${t("日","day")}"><option value="">${t("日","Day")}</option>${opt(days,b.d)}</select>
+      <select class="wide" data-path="${path}.h" aria-label="${label} ${t("時辰","birth hour")}"><option value="">${t("時辰（不知道可空白）","Birth hour (optional)")}</option>${opt(hours,b.h)}</select>
     </div>
-    ${b.cal==="lunar"?`<label class="check"><input type="checkbox" data-path="${path}.leap"${b.leap?" checked":""}>是閏月</label>`:""}
+    ${b.cal==="lunar"?`<label class="check"><input type="checkbox" data-path="${path}.leap"${b.leap?" checked":""}>${t("是閏月","Leap month")}</label>`:""}
   </div>`;
 }
 function text(path, label, val, o={}){
-  return `<div class="field" data-err="${path}"><label for="f-${path}">${label}${o.optional?'<span class="hint">（選填）</span>':""}</label>
+  return `<div class="field" data-err="${path}"><label for="f-${path}">${label}${o.optional?`<span class="hint">${t("（選填）"," (optional)")}</span>`:""}</label>
     ${o.hint?`<span class="hint">${o.hint}</span>`:""}
     <input id="f-${path}" type="${o.type||"text"}" data-path="${path}" value="${esc(val)}" ${o.attrs||""}></div>`;
 }
@@ -425,68 +460,71 @@ function text(path, label, val, o={}){
 /* ---------- 各步驟畫面 ---------- */
 const VIEWS = {
   contact(){ const c=S.contact; return `
-    <h2>主要聯絡人</h2><p class="lead">堂裡需要聯絡您時會用到。本表限同一住址使用。</p>
-    ${text("contact.name","聯絡人姓名",c.name,{attrs:'autocomplete="name"'})}
-    ${text("contact.phone","聯絡電話",c.phone,{type:"tel",attrs:'autocomplete="tel" inputmode="tel"'})}
-    <div class="field" data-err="contact.address"><label for="f-contact.address">住址</label>
+    <h2>${t("主要聯絡人","Contact person")}</h2><p class="lead">${t("堂裡需要聯絡您時會用到。本表限同一住址使用。","The temple will use this to reach you. One form per household (same address).")}</p>
+    ${text("contact.name",t("聯絡人姓名","Full name"),c.name,{attrs:'autocomplete="name"'})}
+    ${text("contact.phone",t("聯絡電話","Phone number"),c.phone,{type:"tel",attrs:'autocomplete="tel" inputmode="tel"'})}
+    <div class="field" data-err="contact.address"><label for="f-contact.address">${t("住址","Address")}</label>
       <textarea id="f-contact.address" data-path="contact.address" autocomplete="street-address">${esc(c.address)}</textarea></div>`; },
 
-  pick(){ const w=S.want; const card=(k,t,s)=>`<label class="pickcard"><input type="checkbox" data-path="want.${k}"${w[k]?" checked":""}><span><b>${t}</b><small>${s}</small></span></label>`;
-    return `<h2>要報名哪些項目？</h2><p class="lead">可以勾選一項或多項。</p>
+  pick(){ const w=S.want; const card=(k,ti,sm)=>`<label class="pickcard"><input type="checkbox" data-path="want.${k}"${w[k]?" checked":""}><span><b>${ti}</b><small>${sm}</small></span></label>`;
+    return `<h2>${t("要報名哪些項目？","What would you like to register for?")}</h2><p class="lead">${t("可以勾選一項或多項。","Choose one or more.")}</p>
     <div class="pick" data-err="want">
-      ${card("lamp","祈福消災點燈・蓮花福慧燈",`每位 $${CONFIG.prices.lamp}`)}
-      ${card("chaodu","超渡牌位",`每牌位 $${CONFIG.prices.chaodu}`)}
-      ${card("meal","供齋（供養十方孤魂）","功德金隨喜")}
+      ${card("lamp",t("祈福消災點燈・蓮花福慧燈","Lotus Blessing Lamp（蓮花福慧燈）"),t(`每位 $${CONFIG.prices.lamp}`,`$${CONFIG.prices.lamp} per person`))}
+      ${card("chaodu",t("超渡牌位","Memorial tablet for deliverance（超渡牌位）"),t(`每牌位 $${CONFIG.prices.chaodu}`,`$${CONFIG.prices.chaodu} per tablet`))}
+      ${card("meal",t("供齋（供養十方孤魂）","Food offering for wandering spirits（供齋）"),t("功德金隨喜","Donation of any amount"))}
     </div>`; },
 
-  lamp(){ const LF=isLampForm(); return `<h2>點燈名單</h2><p class="lead">${LF?"請填每一位要點燈的人，並勾選要點哪幾盞燈。":`蓮花福慧燈每位 $${CONFIG.prices.lamp}。請填每一位要點燈的人。`}生日用農曆或國曆都可以，堂裡會依生肖與年紀辦理制改。</p>
+  lamp(){ const LF=isLampForm(); return `<h2>${t("點燈名單","Who is the lamp for?")}</h2><p class="lead">${LF
+      ? t("請填每一位要點燈的人，並勾選要點哪幾盞燈。","Enter each person who will have a lamp, and check which lamps.")
+      : t(`蓮花福慧燈每位 $${CONFIG.prices.lamp}。請填每一位要點燈的人。`,`Lotus Blessing Lamp: $${CONFIG.prices.lamp} per person. Enter each person.`)}${t("生日用農曆或國曆都可以，堂裡會依生肖與年紀辦理制改。",
+      " The birthday can be on the lunar or the Western calendar. The temple uses each person's zodiac sign and age for the ceremony. Ages are counted the traditional Chinese way (everyone is 1 at birth and a year older each Lunar New Year).")}</p>
     ${S.lamps.map((p,i)=>`<div class="entry">
-      <div class="entry-head"><h3>第 ${i+1} 位</h3>${S.lamps.length>1?`<button class="linkbtn" data-del="lamps:${p.id}" type="button">刪除這位</button>`:""}</div>
-      ${text(`lamps.${p.id}.name`,"姓名",p.name)}
-      ${i===0&&!p.name&&S.contact.name?`<p style="margin:-10px 0 16px"><button class="fillme" type="button" data-fill="${p.id}">填入聯絡人：${esc(S.contact.name)}</button></p>`:""}
-      <div class="field" data-err="lamps.${p.id}.gender"><span class="legend">性別</span>
-        <div class="seg" role="radiogroup" aria-label="性別">
-          <label><input type="radio" name="g-${p.id}" value="男" data-path="lamps.${p.id}.gender"${p.gender==="男"?" checked":""}>男（信士）</label>
-          <label><input type="radio" name="g-${p.id}" value="女" data-path="lamps.${p.id}.gender"${p.gender==="女"?" checked":""}>女（信女）</label>
+      <div class="entry-head"><h3>${t(`第 ${i+1} 位`,`Person ${i+1}`)}</h3>${S.lamps.length>1?`<button class="linkbtn" data-del="lamps:${p.id}" type="button">${t("刪除這位","Remove")}</button>`:""}</div>
+      ${text(`lamps.${p.id}.name`,t("姓名","Full name"),p.name,{hint:t("","Chinese name if you have one, otherwise English")})}
+      ${i===0&&!p.name&&S.contact.name?`<p style="margin:-10px 0 16px"><button class="fillme" type="button" data-fill="${p.id}">${t("填入聯絡人：","Same as contact: ")}${esc(S.contact.name)}</button></p>`:""}
+      <div class="field" data-err="lamps.${p.id}.gender"><span class="legend">${t("性別","Gender")}</span>
+        <div class="seg" role="radiogroup" aria-label="${t("性別","Gender")}">
+          <label><input type="radio" name="g-${p.id}" value="男" data-path="lamps.${p.id}.gender"${p.gender==="男"?" checked":""}>${t("男（信士）","Male")}</label>
+          <label><input type="radio" name="g-${p.id}" value="女" data-path="lamps.${p.id}.gender"${p.gender==="女"?" checked":""}>${t("女（信女）","Female")}</label>
         </div></div>
-      ${dateBlock(`lamps.${p.id}.birth`, p.birth, "出生日期")}
+      ${dateBlock(`lamps.${p.id}.birth`, p.birth, t("出生日期","Date of birth"))}
       <div class="derived" id="dv-${p.id}"></div>
-      ${LF?`<div class="field" data-err="lamps.${p.id}.types" style="margin:18px 0 0"><span class="legend">要點的燈（可複選）</span>
-        <div class="lamppick">${CONFIG.lampForm.types.map(t=>`<label class="pickcard"><input type="checkbox" data-path="lamps.${p.id}.types.${t.k}"${p.types&&p.types[t.k]?" checked":""}><span><b>${t.name}</b>${t.price?`<small>$${t.price}</small>`:""}</span></label>`).join("")}</div></div>`:""}
+      ${LF?`<div class="field" data-err="lamps.${p.id}.types" style="margin:18px 0 0"><span class="legend">${t("要點的燈（可複選）","Lamps (check one or more)")}</span>
+        <div class="lamppick">${CONFIG.lampForm.types.map(tp=>`<label class="pickcard"><input type="checkbox" data-path="lamps.${p.id}.types.${tp.k}"${p.types&&p.types[tp.k]?" checked":""}><span><b>${EN()?esc(tp.en):tp.name}</b>${EN()?`<small>${tp.short||tp.name}・${esc(tp.enDesc||"")}</small>`:""}${tp.price?`<small>$${tp.price}</small>`:""}</span></label>`).join("")}</div></div>`:""}
     </div>`).join("")}
-    <button class="btn add" data-add="lamps" type="button">＋ 再加一位</button>`; },
+    <button class="btn add" data-add="lamps" type="button">${t("＋ 再加一位","＋ Add another person")}</button>`; },
 
-  chaodu(){ return `<h2>超渡牌位</h2><p class="lead">每牌位 $${CONFIG.prices.chaodu}。日期請盡量填農曆，不清楚的可以空白。</p>
+  chaodu(){ return `<h2>${t("超渡牌位","Memorial tablets")}</h2><p class="lead">${t(`每牌位 $${CONFIG.prices.chaodu}。日期請盡量填農曆，不清楚的可以空白。`,`$${CONFIG.prices.chaodu} per tablet. Lunar calendar dates are preferred; leave blank if unsure. The temple will write the tablets in Chinese.`)}</p>
     ${S.souls.map((p,i)=>{ const dead=p.type==="往生者"; return `<div class="entry">
-      <div class="entry-head"><h3>第 ${i+1} 個牌位</h3>${S.souls.length>1?`<button class="linkbtn" data-del="souls:${p.id}" type="button">刪除</button>`:""}</div>
-      <div class="field"><label for="f-souls.${p.id}.type">超渡對象</label>
-        <select id="f-souls.${p.id}.type" data-path="souls.${p.id}.type" data-rerender="1">${opt(SOULS.map(x=>[x,x]),p.type)}</select></div>
+      <div class="entry-head"><h3>${t(`第 ${i+1} 個牌位`,`Tablet ${i+1}`)}</h3>${S.souls.length>1?`<button class="linkbtn" data-del="souls:${p.id}" type="button">${t("刪除","Remove")}</button>`:""}</div>
+      <div class="field"><label for="f-souls.${p.id}.type">${t("超渡對象","For whom")}</label>
+        <select id="f-souls.${p.id}.type" data-path="souls.${p.id}.type" data-rerender="1">${opt(SOULS.map(x=>[x,soulText(x)]),p.type)}</select></div>
       ${dead
-        ? text(`souls.${p.id}.name`,"往生者姓名",p.name) + text(`souls.${p.id}.title`,"稱謂",p.title,{hint:"例：先父、先母、祖父、祖母"})
-        : text(`souls.${p.id}.name`,"牌位寫法",p.name,{optional:true,hint: p.type==="歷代祖先"?"例：陳氏歷代祖先":p.type==="地基主"?"可填地址，例：本宅地基主":"空白則由堂裡統一書寫"})}
-      ${dead ? dateBlock(`souls.${p.id}.birth`, p.birth, "出生日期",{optional:true}) + dateBlock(`souls.${p.id}.death`, p.death, "往生日期",{optional:true})
-             + text(`souls.${p.id}.age`,"享年歲數",p.age,{type:"number",optional:true,attrs:'inputmode="numeric" min="0" max="130"',hint:"填好出生和往生年份會自動算出，可自行修改"}) : ""}
-      ${text(`souls.${p.id}.sponsor`,"陽世報恩人",p.sponsor,{hint:"為這個牌位報名的家人姓名"})}
-      ${!p.sponsor&&S.contact.name?`<p style="margin:-10px 0 4px"><button class="fillme" type="button" data-fillsp="${p.id}">填入聯絡人：${esc(S.contact.name)}</button></p>`:""}
+        ? text(`souls.${p.id}.name`,t("往生者姓名","Name of the deceased"),p.name) + text(`souls.${p.id}.title`,t("稱謂","Relationship to you"),p.title,{hint:t("例：先父、先母、祖父、祖母","e.g. father, mother, grandfather")})
+        : text(`souls.${p.id}.name`,t("牌位寫法","How to write the tablet"),p.name,{optional:true,hint: p.type==="歷代祖先"?t("例：陳氏歷代祖先","e.g. Chen family ancestors"):p.type==="地基主"?t("可填地址，例：本宅地基主","You may enter the home address"):t("空白則由堂裡統一書寫","Leave blank and the temple will write it")})}
+      ${dead ? dateBlock(`souls.${p.id}.birth`, p.birth, t("出生日期","Date of birth"),{optional:true}) + dateBlock(`souls.${p.id}.death`, p.death, t("往生日期","Date of passing"),{optional:true})
+             + text(`souls.${p.id}.age`,t("享年歲數","Age at passing"),p.age,{type:"number",optional:true,attrs:'inputmode="numeric" min="0" max="130"',hint:t("填好出生和往生年份會自動算出，可自行修改","Filled in automatically from the two dates; you can change it")}) : ""}
+      ${text(`souls.${p.id}.sponsor`,t("陽世報恩人","Registered by (living family member)"),p.sponsor,{hint:t("為這個牌位報名的家人姓名","Name of the family member registering this tablet")})}
+      ${!p.sponsor&&S.contact.name?`<p style="margin:-10px 0 4px"><button class="fillme" type="button" data-fillsp="${p.id}">${t("填入聯絡人：","Same as contact: ")}${esc(S.contact.name)}</button></p>`:""}
       <div class="derived" id="dv-${p.id}"></div>
     </div>`}).join("")}
-    <button class="btn add" data-add="souls" type="button">＋ 再加一個牌位</button>`; },
+    <button class="btn add" data-add="souls" type="button">${t("＋ 再加一個牌位","＋ Add another tablet")}</button>`; },
 
-  meal(){ return `<h2>供齋</h2><p class="lead">供養十方孤魂。功德金隨喜。</p>
+  meal(){ return `<h2>${t("供齋","Food offering")}</h2><p class="lead">${t("供養十方孤魂。功德金隨喜。","An offering of food for wandering spirits. Donate any amount.")}</p>
     ${S.meals.map((p,i)=>`<div class="entry">
-      <div class="entry-head"><h3>第 ${i+1} 位</h3>${S.meals.length>1?`<button class="linkbtn" data-del="meals:${p.id}" type="button">刪除</button>`:""}</div>
-      ${text(`meals.${p.id}.name`,"姓名",p.name)}
-      ${i===0&&!p.name&&S.contact.name?`<p style="margin:-10px 0 16px"><button class="fillme" type="button" data-fillmeal="${p.id}">填入聯絡人：${esc(S.contact.name)}</button></p>`:""}
-      ${text(`meals.${p.id}.amount`,"功德金（美元）",p.amount,{type:"number",attrs:'inputmode="decimal" min="1" step="1"'})}
+      <div class="entry-head"><h3>${t(`第 ${i+1} 位`,`Person ${i+1}`)}</h3>${S.meals.length>1?`<button class="linkbtn" data-del="meals:${p.id}" type="button">${t("刪除","Remove")}</button>`:""}</div>
+      ${text(`meals.${p.id}.name`,t("姓名","Full name"),p.name)}
+      ${i===0&&!p.name&&S.contact.name?`<p style="margin:-10px 0 16px"><button class="fillme" type="button" data-fillmeal="${p.id}">${t("填入聯絡人：","Same as contact: ")}${esc(S.contact.name)}</button></p>`:""}
+      ${text(`meals.${p.id}.amount`,t("功德金（美元）","Donation (US$)"),p.amount,{type:"number",attrs:'inputmode="decimal" min="1" step="1"'})}
     </div>`).join("")}
-    <button class="btn add" data-add="meals" type="button">＋ 再加一位</button>`; },
+    <button class="btn add" data-add="meals" type="button">${t("＋ 再加一位","＋ Add another person")}</button>`; },
 
-  review(){ return `<h2>請核對資料</h2><p class="lead">確認無誤後按「確認送出」。要修改可按各項目旁的「修改」。</p>
+  review(){ return `<h2>${t("請核對資料","Please review")}</h2><p class="lead">${t("確認無誤後按「確認送出」。要修改可按各項目旁的「修改」。","If everything is correct, press \"Submit\". To change something, press \"Edit\" next to it.")}</p>
     ${summaryHTML(true)}
-    <div class="field" style="margin-top:18px"><label for="f-note">備註<span class="hint">（選填）</span></label>
+    <div class="field" style="margin-top:18px"><label for="f-note">${t("備註","Notes")}<span class="hint">${t("（選填）"," (optional)")}</span></label>
       <textarea id="f-note" data-path="note">${esc(S.note)}</textarea></div>
-    <p class="note">繳款方式請依堂裡通知辦理。</p>
-    ${CONFIG.submitUrl?"":`<div class="testbar">測試版：目前尚未連接資料庫，按「確認送出」只會顯示結果，不會真的送出。</div>`}`; },
+    <p class="note">${t("繳款方式請依堂裡通知辦理。","Please pay as instructed by the temple.")}</p>
+    ${CONFIG.submitUrl?"":`<div class="testbar">${t("測試版：目前尚未連接資料庫，按「確認送出」只會顯示結果，不會真的送出。","Test version: nothing is actually sent yet.")}</div>`}`; },
 };
 
 function totals(){
@@ -499,29 +537,36 @@ function totals(){
   return {lamp, chaodu, meal, all: lamp+chaodu+meal};
 }
 function summaryHTML(editable){
-  const T=totals(); const st=steps(); const go=k=>editable?`<button class="linkbtn" type="button" data-goto="${st.findIndex(x=>x.k===k)}">修改</button>`:"";
-  let h=`<div class="sum"><h3>聯絡人 ${go("contact")}</h3><ul><li>${esc(S.contact.name)}・${esc(S.contact.phone)}<span class="sub">${esc(S.contact.address)}</span></li></ul></div>`;
-  if(!isLampForm()){ const ev=curEvent(); h=`<div class="sum"><h3>報名法會</h3><ul><li>${esc(ev.name)}${ev.date?`<span class="sub">${esc(ev.date)}</span>`:""}</li></ul></div>`+h; }
-  if(isLampForm()){ const T2=totals();
-    h+=`<div class="sum"><h3>點燈名單（${S.lamps.length} 位）${go("lamp")}</h3><ul>${S.lamps.map(p=>{const L=toLunar(p.birth);
-      return `<li>${esc(p.name)}（${p.gender}）・生肖${L?zodiacOf(L.y):""}・${L?curLunarYear-L.y+1:""} 歲<span class="sub">點：${lampTypeNames(p).join("、")}</span><span class="sub">農曆 ${lunarText(L)}${p.birth.cal==="solar"?`（${solarText(p.birth)}）`:""}</span></li>`}).join("")}</ul></div>`;
-    h+=`<div class="sum"><ul style="margin:8px 0">${Object.values(T2.byType).filter(x=>x.count).map(x=>`<li class="amt-line"><span>${x.name}</span><span>${x.count} 盞${x.amount!=null?`・$${x.amount.toLocaleString()}`:""}</span></li>`).join("")}</ul></div>`;
-    if(T2.all!=null) h+=`<div class="total"><span>合計</span><span class="amt">$${T2.all.toLocaleString()}</span></div>`;
+  const T=totals(); const st=steps(); const go=k=>editable?`<button class="linkbtn" type="button" data-goto="${st.findIndex(x=>x.k===k)}">${t("修改","Edit")}</button>`:"";
+  const usd = n => "$"+n.toLocaleString();
+  const birthLine = p => { const L=toLunar(p.birth); return EN()
+      ? `${p.birth.cal==="solar"?`Born ${solarText(p.birth)} · `:""}Lunar: ${lunarText(L)}`
+      : `農曆 ${lunarText(L)}${p.birth.cal==="solar"?`（${solarText(p.birth)}）`:""}`; };
+  const personLine = p => { const L=toLunar(p.birth); return EN()
+      ? `${esc(p.name)} (${genderText(p.gender)}) · ${L?zText(zodiacOf(L.y)):""} · age ${L?curLunarYear-L.y+1:""}`
+      : `${esc(p.name)}（${p.gender}）・生肖${L?zodiacOf(L.y):""}・${L?curLunarYear-L.y+1:""} 歲`; };
+  let h=`<div class="sum"><h3>${t("聯絡人","Contact")} ${go("contact")}</h3><ul><li>${esc(S.contact.name)}・${esc(S.contact.phone)}<span class="sub">${esc(S.contact.address)}</span></li></ul></div>`;
+  if(!isLampForm()){ const ev=curEvent(); h=`<div class="sum"><h3>${t("報名法會","Ceremony")}</h3><ul><li>${esc(eventName(ev))}${ev.date?`<span class="sub">${esc(ev.date)}</span>`:""}</li></ul></div>`+h; }
+  if(isLampForm()){
+    h+=`<div class="sum"><h3>${t(`點燈名單（${S.lamps.length} 位）`,`Lamps (${S.lamps.length} ${S.lamps.length>1?"people":"person"})`)}${go("lamp")}</h3><ul>${S.lamps.map(p=>
+      `<li>${personLine(p)}<span class="sub">${t("點：","Lamps: ")}${lampTypeNames(p).map(lampNameByZh).join(t("、",", "))}</span><span class="sub">${birthLine(p)}</span></li>`).join("")}</ul></div>`;
+    h+=`<div class="sum"><ul style="margin:8px 0">${CONFIG.lampForm.types.map(tp=>[tp,T.byType[tp.k]]).filter(([,x])=>x.count).map(([tp,x])=>`<li class="amt-line"><span>${lampName(tp)}</span><span>${t(`${x.count} 盞`,`× ${x.count}`)}${x.amount!=null?`・${usd(x.amount)}`:""}</span></li>`).join("")}</ul></div>`;
+    if(T.all!=null) h+=`<div class="total"><span>${t("合計","Total")}</span><span class="amt">${usd(T.all)}</span></div>`;
     return h; }
-  if(S.want.lamp) h+=`<div class="sum"><h3>點燈・蓮花福慧燈（${S.lamps.length} 位）${go("lamp")}</h3><ul>${S.lamps.map(p=>{const L=toLunar(p.birth);
-      return `<li>${esc(p.name)}（${p.gender}）・生肖${L?zodiacOf(L.y):""}・${L?curLunarYear-L.y+1:""} 歲<span class="sub">農曆 ${lunarText(L)}${p.birth.cal==="solar"?`（${solarText(p.birth)}）`:""}</span></li>`}).join("")}</ul></div>`;
-  if(S.want.chaodu) h+=`<div class="sum"><h3>超渡牌位（${S.souls.length} 個）${go("chaodu")}</h3><ul>${S.souls.map(p=>{
+  if(S.want.lamp) h+=`<div class="sum"><h3>${t(`點燈・蓮花福慧燈（${S.lamps.length} 位）`,`Lotus Blessing Lamp (${S.lamps.length})`)}${go("lamp")}</h3><ul>${S.lamps.map(p=>
+      `<li>${personLine(p)}<span class="sub">${birthLine(p)}</span></li>`).join("")}</ul></div>`;
+  if(S.want.chaodu) h+=`<div class="sum"><h3>${t(`超渡牌位（${S.souls.length} 個）`,`Memorial tablets (${S.souls.length})`)}${go("chaodu")}</h3><ul>${S.souls.map(p=>{
       const b=toLunar(p.birth), d=toLunar(p.death);
-      const nm = p.type==="往生者" ? `${esc(p.title)} ${esc(p.name)}` : (esc(p.name)||p.type);
-      const sub = p.type==="往生者" ? [b?"生 "+lunarText(b):"", d?"歿 "+lunarText(d):"", p.age?"享年 "+esc(p.age)+" 歲":""].filter(Boolean).join("・") : p.type;
-      return `<li>${nm}<span class="sub">${sub}${sub?"・":""}陽世報恩人：${esc(p.sponsor)}</span></li>`}).join("")}</ul></div>`;
-  if(S.want.meal) h+=`<div class="sum"><h3>供齋（${S.meals.length} 位）${go("meal")}</h3><ul>${S.meals.map(m=>`<li class="amt-line"><span>${esc(m.name)}</span><span>$${(+m.amount||0).toLocaleString()}</span></li>`).join("")}</ul></div>`;
+      const nm = p.type==="往生者" ? `${esc(p.title)} ${esc(p.name)}` : (esc(p.name)||soulText(p.type));
+      const sub = p.type==="往生者" ? [b?t("生 ","Born ")+lunarText(b):"", d?t("歿 ","Passed ")+lunarText(d):"", p.age?t(`享年 ${esc(p.age)} 歲`,`age ${esc(p.age)}`):""].filter(Boolean).join("・") : soulText(p.type);
+      return `<li>${nm}<span class="sub">${sub}${sub?"・":""}${t("陽世報恩人：","Registered by: ")}${esc(p.sponsor)}</span></li>`}).join("")}</ul></div>`;
+  if(S.want.meal) h+=`<div class="sum"><h3>${t(`供齋（${S.meals.length} 位）`,`Food offering (${S.meals.length})`)}${go("meal")}</h3><ul>${S.meals.map(m=>`<li class="amt-line"><span>${esc(m.name)}</span><span>${usd(+m.amount||0)}</span></li>`).join("")}</ul></div>`;
   h+=`<div class="sum"><ul style="margin:8px 0">
-      ${S.want.lamp?`<li class="amt-line"><span>點燈 ${S.lamps.length} 位 × $${CONFIG.prices.lamp}</span><span>$${T.lamp.toLocaleString()}</span></li>`:""}
-      ${S.want.chaodu?`<li class="amt-line"><span>超渡 ${S.souls.length} 牌位 × $${CONFIG.prices.chaodu}</span><span>$${T.chaodu.toLocaleString()}</span></li>`:""}
-      ${S.want.meal?`<li class="amt-line"><span>供齋功德金</span><span>$${T.meal.toLocaleString()}</span></li>`:""}
+      ${S.want.lamp?`<li class="amt-line"><span>${t(`點燈 ${S.lamps.length} 位`,`Lotus lamps: ${S.lamps.length}`)} × $${CONFIG.prices.lamp}</span><span>${usd(T.lamp)}</span></li>`:""}
+      ${S.want.chaodu?`<li class="amt-line"><span>${t(`超渡 ${S.souls.length} 牌位`,`Tablets: ${S.souls.length}`)} × $${CONFIG.prices.chaodu}</span><span>${usd(T.chaodu)}</span></li>`:""}
+      ${S.want.meal?`<li class="amt-line"><span>${t("供齋功德金","Food offering donation")}</span><span>${usd(T.meal)}</span></li>`:""}
     </ul></div>
-    <div class="total"><span>合計</span><span class="amt">$${T.all.toLocaleString()}</span></div>`;
+    <div class="total"><span>${t("合計","Total")}</span><span class="amt">${usd(T.all)}</span></div>`;
   return h;
 }
 
@@ -530,12 +575,14 @@ function find(coll,id){ return S[coll].find(x=>x.id===id); }
 function updDerived(kind,id){
   const el=$("dv-"+id); if(!el) return;
   if(kind==="lamp"){ const p=find("lamps",id); const L=toLunar(p.birth);
-    el.innerHTML = L ? `<span>生肖 <b>${zodiacOf(L.y)}</b></span><span><b>${curLunarYear-L.y+1}</b> 歲</span>${p.birth.cal==="solar"?`<span>農曆 ${lunarText(L)}</span>`:""}` : "";
+    el.innerHTML = L ? (EN()
+      ? `<span>Zodiac <b>${zText(zodiacOf(L.y))}</b></span><span>Age <b>${curLunarYear-L.y+1}</b></span>${p.birth.cal==="solar"?`<span>Lunar: ${lunarText(L)}</span>`:""}`
+      : `<span>生肖 <b>${zodiacOf(L.y)}</b></span><span><b>${curLunarYear-L.y+1}</b> 歲</span>${p.birth.cal==="solar"?`<span>農曆 ${lunarText(L)}</span>`:""}`) : "";
   } else { const p=find("souls",id); if(p.type!=="往生者"){el.innerHTML="";return}
     const b=toLunar(p.birth), d=toLunar(p.death);
     if(b&&d){ const a=d.y-b.y+1; const inp=document.querySelector(`[data-path="souls.${id}.age"]`);
       if(inp && (!p.age || p._autoAge)){ p.age=String(a); p._autoAge=true; inp.value=a; } }
-    el.innerHTML = b||d ? [b?`<span>生肖 <b>${zodiacOf(b.y)}</b></span>`:"", d&&p.death.cal==="solar"?`<span>往生農曆 ${lunarText(d)}</span>`:""].join("") : "";
+    el.innerHTML = b||d ? [b?`<span>${t("生肖","Zodiac")} <b>${zText(zodiacOf(b.y))}</b></span>`:"", d&&p.death.cal==="solar"?`<span>${t("往生農曆","Lunar date of passing:")} ${lunarText(d)}</span>`:""].join("") : "";
   }
 }
 
@@ -574,20 +621,20 @@ function validate(k){
   const errs=[]; const need=(path,msg,ok)=>{ if(!ok) errs.push([path,msg]); };
   const dateOK=(path,b,required)=>{
     const any=b.y||b.m||b.d; if(!required&&!any) return;
-    if(!(b.y&&b.m&&b.d)) return errs.push([path,"請選好年、月、日。"]);
-    if(b.cal==="solar"){ const dt=new Date(+b.y,+b.m-1,+b.d); if(dt.getMonth()!==+b.m-1) return errs.push([path,"這個日期不存在，請再檢查。"]); }
-    else if(!lunarValid(b)) errs.push([path, b.leap?"這一年沒有這個閏月，請再檢查。":"農曆這個月沒有這一天，請再檢查。"]);
+    if(!(b.y&&b.m&&b.d)) return errs.push([path,t("請選好年、月、日。","Please choose the year, month and day.")]);
+    if(b.cal==="solar"){ const dt=new Date(+b.y,+b.m-1,+b.d); if(dt.getMonth()!==+b.m-1) return errs.push([path,t("這個日期不存在，請再檢查。","This date does not exist. Please check.")]); }
+    else if(!lunarValid(b)) errs.push([path, b.leap?t("這一年沒有這個閏月，請再檢查。","That year has no such leap month. Please check."):t("農曆這個月沒有這一天，請再檢查。","That lunar month has no such day. Please check.")]);
   };
   if(k==="contact"){ const c=S.contact;
-    need("contact.name","請填聯絡人姓名。",c.name.trim());
-    need("contact.phone","請填聯絡電話。",c.phone.replace(/\D/g,"").length>=7);
-    need("contact.address","請填住址。",c.address.trim()); }
-  if(k==="pick") need("want","請至少勾選一個項目。",S.want.lamp||S.want.chaodu||S.want.meal);
-  if(k==="lamp") S.lamps.forEach(p=>{ need(`lamps.${p.id}.name`,"請填姓名。",p.name.trim()); need(`lamps.${p.id}.gender`,"請選性別。",p.gender); dateOK(`lamps.${p.id}.birth`,p.birth,true); if(isLampForm()) need(`lamps.${p.id}.types`,"請至少勾選一盞燈。",lampTypeNames(p).length); });
+    need("contact.name",t("請填聯絡人姓名。","Please enter your name."),c.name.trim());
+    need("contact.phone",t("請填聯絡電話。","Please enter a phone number."),c.phone.replace(/\D/g,"").length>=7);
+    need("contact.address",t("請填住址。","Please enter your address."),c.address.trim()); }
+  if(k==="pick") need("want",t("請至少勾選一個項目。","Please choose at least one item."),S.want.lamp||S.want.chaodu||S.want.meal);
+  if(k==="lamp") S.lamps.forEach(p=>{ need(`lamps.${p.id}.name`,t("請填姓名。","Please enter the name."),p.name.trim()); need(`lamps.${p.id}.gender`,t("請選性別。","Please choose a gender."),p.gender); dateOK(`lamps.${p.id}.birth`,p.birth,true); if(isLampForm()) need(`lamps.${p.id}.types`,t("請至少勾選一盞燈。","Please check at least one lamp."),lampTypeNames(p).length); });
   if(k==="chaodu") S.souls.forEach(p=>{
-    if(p.type==="往生者"){ need(`souls.${p.id}.name`,"請填往生者姓名。",p.name.trim()); dateOK(`souls.${p.id}.birth`,p.birth,false); dateOK(`souls.${p.id}.death`,p.death,false); }
-    need(`souls.${p.id}.sponsor`,"請填陽世報恩人。",p.sponsor.trim()); });
-  if(k==="meal") S.meals.forEach(m=>{ need(`meals.${m.id}.name`,"請填姓名。",m.name.trim()); need(`meals.${m.id}.amount`,"請填功德金金額。",+m.amount>0); });
+    if(p.type==="往生者"){ need(`souls.${p.id}.name`,t("請填往生者姓名。","Please enter the name of the deceased."),p.name.trim()); dateOK(`souls.${p.id}.birth`,p.birth,false); dateOK(`souls.${p.id}.death`,p.death,false); }
+    need(`souls.${p.id}.sponsor`,t("請填陽世報恩人。","Please enter who is registering this tablet."),p.sponsor.trim()); });
+  if(k==="meal") S.meals.forEach(m=>{ need(`meals.${m.id}.name`,t("請填姓名。","Please enter the name."),m.name.trim()); need(`meals.${m.id}.amount`,t("請填功德金金額。","Please enter the donation amount."),+m.amount>0); });
   return errs;
 }
 function showErrors(errs){
@@ -605,22 +652,25 @@ function refNo(){ const d=new Date(); const p=n=>String(n).padStart(2,"0"); cons
   return `${isLampForm()?"L":"F"}${String(d.getFullYear()).slice(2)}${p(d.getMonth()+1)}${p(d.getDate())}-${r}`; }
 function chargeLines(){
   const T=totals();
-  if(isLampForm()) return Object.values(T.byType).filter(x=>x.count).map(x=>[`${x.name} × ${x.count} 盞`, x.amount]);
+  // 繳費單要讓義工看得懂，英文介面也附上中文項目名稱
+  if(isLampForm()) return CONFIG.lampForm.types.map(tp=>[tp,T.byType[tp.k]]).filter(([,x])=>x.count).map(([tp,x])=>[t(`${x.name} × ${x.count} 盞`,`${lampName(tp)} × ${x.count}`), x.amount]);
   const a=[];
-  if(S.want.lamp) a.push([`蓮花福慧燈 × ${S.lamps.length} 位`, T.lamp]);
-  if(S.want.chaodu) a.push([`超渡 × ${S.souls.length} 牌位`, T.chaodu]);
-  if(S.want.meal) a.push([`供齋功德金`, T.meal]);
+  if(S.want.lamp) a.push([t(`蓮花福慧燈 × ${S.lamps.length} 位`,`Lotus Blessing Lamp（蓮花福慧燈）× ${S.lamps.length}`), T.lamp]);
+  if(S.want.chaodu) a.push([t(`超渡 × ${S.souls.length} 牌位`,`Memorial tablet（超渡牌位）× ${S.souls.length}`), T.chaodu]);
+  if(S.want.meal) a.push([t(`供齋功德金`,`Food offering（供齋）`), T.meal]);
   return a;
 }
-const money = n => n==null ? "請洽堂裡" : "$"+n.toLocaleString();
+const money = n => n==null ? t("請洽堂裡","Please ask the temple") : "$"+n.toLocaleString();
+let LAST_SLIP = null;
 function renderSlip(ref, dateISO){
+  LAST_SLIP = {ref, dateISO};
   $("refNo").textContent=ref;
-  $("slipTitle").textContent=formTitle();
-  $("slipDate").textContent=new Date(dateISO).toLocaleDateString("zh-TW",{year:"numeric",month:"long",day:"numeric"});
+  $("slipTitle").innerHTML = EN() ? `${esc(formTitle())}<br><span style="font-size:.9em">${esc(formTitleZh())}</span>` : esc(formTitle());
+  $("slipDate").textContent=new Date(dateISO).toLocaleDateString(t("zh-TW","en-US"),{year:"numeric",month:"long",day:"numeric"});
   $("slipLogo").src=document.querySelector(".logo img").src;
   $("slipTel").textContent=CONFIG.phone;
-  const names = isLampForm()||S.want.lamp ? S.lamps.map(p=>esc(p.name)).join("、") : "";
-  $("slipWho").innerHTML = `聯絡人：${esc(S.contact.name)}　${esc(S.contact.phone)}${names?`<br>點燈：${names}`:""}`;
+  const names = isLampForm()||S.want.lamp ? S.lamps.map(p=>esc(p.name)).join(t("、",", ")) : "";
+  $("slipWho").innerHTML = `${t("聯絡人：","Contact: ")}${esc(S.contact.name)}　<span style="white-space:nowrap">${esc(S.contact.phone)}</span>${names?`<br>${t("點燈：","Lamps for: ")}${names}`:""}`;
   $("slipItems").innerHTML = chargeLines().map(([t,v])=>`<li><span>${t}</span><span>${money(v)}</span></li>`).join("");
   $("slipTotal").textContent = money(totals().all);
   $("slipQR").innerHTML="";
@@ -633,13 +683,13 @@ function getSlips(){ try{return JSON.parse(localStorage.getItem(SLIPS)||"[]")}ca
 function keepSlip(ref, at){ try{ const a=getSlips().filter(x=>x.ref!==ref); a.unshift({ref, at, state:JSON.parse(JSON.stringify(S))}); localStorage.setItem(SLIPS, JSON.stringify(a.slice(0,10))); }catch(e){} }
 function renderMySlips(){
   const a=getSlips(); $("mySlips").hidden=!a.length; if(!a.length) return;
-  $("mySlips").innerHTML=`<h2>我的繳費單</h2>`+a.map(x=>{ const t=x.state.form==="lamp"?CONFIG.lampForm.title:(EVENTS().find(e=>e.id===x.state.eventId)||{name:"法會"}).name;
-    return `<div class="myslip"><div><b>${esc(x.ref)}</b><small>${esc(t)}・${new Date(x.at).toLocaleDateString("zh-TW")}</small></div><button class="btn ghost" type="button" data-slip="${esc(x.ref)}">打開</button></div>`}).join("");
+  $("mySlips").innerHTML=`<h2>${t("我的繳費單","My payment slips")}</h2>`+a.map(x=>{ const ti=x.state.form==="lamp"?t(CONFIG.lampForm.title,CONFIG.lampForm.titleEn):eventName(EVENTS().find(e=>e.id===x.state.eventId)||{name:t("法會","Ceremony")});
+    return `<div class="myslip"><div><b>${esc(x.ref)}</b><small>${esc(ti)}・${new Date(x.at).toLocaleDateString(t("zh-TW","en-US"))}</small></div><button class="btn ghost" type="button" data-slip="${esc(x.ref)}">${t("打開","Open")}</button></div>`}).join("");
 }
 function payload(ref){
   const dateOut=b=>{ const L=toLunar(b); return L?{lunar:{year:L.y,month:L.m,leap:L.leap,day:L.d,hour:L.h||""}, solar: b.cal==="solar"?{year:+b.y,month:+b.m,day:+b.d}:null, entered:b.cal}:null; };
   return {
-    ref, paid:false, form:S.form, eventId:S.eventId, formTitle:formTitle(), submittedAt:new Date().toISOString(),
+    ref, paid:false, form:S.form, eventId:S.eventId, formTitle:formTitleZh(), submittedAt:new Date().toISOString(), lang:LANG,
     contact:{...S.contact}, note:S.note,
     lamps: (isLampForm()||S.want.lamp) ? S.lamps.map(p=>{const L=toLunar(p.birth); return {name:p.name.trim(), gender:p.gender, birth:dateOut(p.birth), zodiac:L?zodiacOf(L.y):"", age_xu:L?curLunarYear-L.y+1:null, lampTypes: isLampForm()?lampTypeNames(p):["蓮花福慧燈"]};}) : [],
     chaodu: isLampForm() ? [] : S.want.chaodu ? S.souls.map(p=>({type:p.type, name:p.name.trim(), title:p.title.trim(), birth:dateOut(p.birth), death:dateOut(p.death), age:p.age?+p.age:null, sponsor:p.sponsor.trim()})) : [],
@@ -648,7 +698,7 @@ function payload(ref){
   };
 }
 async function submit(){
-  const btn=$("nextBtn"); btn.disabled=true; btn.textContent="送出中…";
+  const btn=$("nextBtn"); btn.disabled=true; btn.textContent=t("送出中…","Submitting…");
   const ref=refNo(); const data=payload(ref);
   try{
     if(CONFIG.submitUrl){
@@ -661,8 +711,8 @@ async function submit(){
     keepSlip(ref, data.submittedAt);
     clearSaved(draftKey(S)); show("done");
   }catch(e){
-    btn.disabled=false; btn.textContent="確認送出";
-    $("panel").insertAdjacentHTML("afterbegin",`<p class="errmsg" role="alert" style="font-size:1rem">網路連線有問題，資料還沒送出。請稍等一下再按一次「確認送出」，已填的資料不會不見。</p>`);
+    btn.disabled=false; btn.textContent=t("確認送出","Submit");
+    $("panel").insertAdjacentHTML("afterbegin",`<p class="errmsg" role="alert" style="font-size:1rem">${t("網路連線有問題，資料還沒送出。請稍等一下再按一次「確認送出」，已填的資料不會不見。","Connection problem — your form has not been sent yet. Please wait a moment and press \"Submit\" again. Nothing you entered will be lost.")}</p>`);
     window.scrollTo({top:0});
   }
 }
@@ -680,18 +730,18 @@ function renderEvents(){
   const shown=EVENTS().filter(e=>e.status!=="hidden");
   // 所有法會都設為「不顯示」時，整張法會卡片收起來，首頁只剩點燈
   $("fahuiCard").hidden = !shown.length;
-  $("heroTitle").textContent = shown.length ? "線上點燈和法會報名" : "線上點燈報名";
+  $("heroTitle").textContent = shown.length ? t("線上點燈和法會報名","Online Lamp & Ceremony Registration") : t("線上點燈報名","Online Lamp Lighting Registration");
   $("eventList").innerHTML = shown.length ? shown.map(e=>{ const open=e.status==="open"; return `<div class="event">
-      <b>${esc(e.name)}${open?"":'<span class="closedtag">未開放</span>'}</b>${e.date?`<div class="when">${esc(e.date)}</div>`:""}
-      ${open?`<button class="btn primary block" data-start="fahui-${esc(e.id)}" type="button">報名這場法會</button>`
-            :`<button class="btn block closed" type="button" disabled aria-disabled="true">目前未開放報名</button>`}
-      ${open?`<p class="note" data-resume="fahui-${esc(e.id)}" hidden>您上次填到一半的資料還在，按上面的按鈕會接著填。<button class="linkbtn" data-clear="fahui-${esc(e.id)}" type="button">清除重填</button></p>`:""}
-    </div>`}).join("") : `<p class="desc">目前沒有法會開放報名。請洽堂裡：<span>${CONFIG.phone}</span></p>`;
+      <b>${esc(eventName(e))}${open?"":`<span class="closedtag">${t("未開放","Closed")}</span>`}</b>${EN()&&eventName(e)!==e.name?`<span class="en-sub">${esc(e.name)}</span>`:""}${e.date?`<div class="when">${esc(e.date)}</div>`:""}
+      ${open?`<button class="btn primary block" data-start="fahui-${esc(e.id)}" type="button">${t("報名這場法會","Register for this ceremony")}</button>`
+            :`<button class="btn block closed" type="button" disabled aria-disabled="true">${t("目前未開放報名","Registration not open")}</button>`}
+      ${open?`<p class="note" data-resume="fahui-${esc(e.id)}" hidden>${t("您上次填到一半的資料還在，按上面的按鈕會接著填。","Your unfinished form has been saved. Press the button above to continue. ")}<button class="linkbtn" data-clear="fahui-${esc(e.id)}" type="button">${t("清除重填","Start over")}</button></p>`:""}
+    </div>`}).join("") : `<p class="desc">${t("目前沒有法會開放報名。請洽堂裡：","No ceremonies are open for registration. Please call the temple: ")}<span>${CONFIG.phone}</span></p>`;
 }
 function renderLampBtn(){
   const open=SETTINGS.lamp.status==="open", b=$("lampBtn");
   b.disabled=!open; b.classList.toggle("closed",!open); b.classList.toggle("primary",open);
-  b.setAttribute("aria-disabled", String(!open)); b.textContent = open ? "點燈報名" : "目前未開放報名";
+  b.setAttribute("aria-disabled", String(!open)); b.textContent = open ? t("點燈報名","Register for lamps") : t("目前未開放報名","Registration not open");
   if(!open) document.querySelector('[data-resume="lamp"]').hidden=true;
 }
 document.addEventListener("click", e=>{
@@ -702,7 +752,7 @@ document.addEventListener("click", e=>{
 $("homeLink").addEventListener("click", e=>{ e.preventDefault(); refreshResume(); renderMySlips(); show("home"); });
 $("printBtn").addEventListener("click", ()=>window.print());
 $("againBtn").addEventListener("click", ()=>{ S=freshState(S.form, S.eventId); show("form"); render(); });
-function setBig(on){ document.documentElement.classList.toggle("big",on); $("sizeBtn").setAttribute("aria-pressed",on); $("sizeBtn").textContent=on?"字縮小":"字放大"; try{localStorage.setItem("tsuhui-big",on?"1":"")}catch(e){} }
+function setBig(on){ document.documentElement.classList.toggle("big",on); $("sizeBtn").setAttribute("aria-pressed",on); $("sizeBtn").textContent=on?t("字縮小","Smaller text"):t("字放大","Larger text"); try{localStorage.setItem("tsuhui-big",on?"1":"")}catch(e){} }
 $("sizeBtn").addEventListener("click", ()=>setBig(!document.documentElement.classList.contains("big")));
 function refreshResume(){ document.querySelectorAll("[data-resume]").forEach(el=>{ const d=load(el.dataset.resume); el.hidden=!(isOpen(el.dataset.resume)&&d&&(d.contact.name||d.step>0)); }); }
 
@@ -712,15 +762,32 @@ loadSettings().then(()=>{ renderEvents(); renderLampBtn(); renderMySlips(); refr
   // 帶 #lamp 或 #fahui-場次 進來，項目有開放就直接開啟表單
   const h=location.hash.slice(1); if(h && isOpen(h) && $("home").hidden===false){ const [f,ev]=keyToForm(h); S=load(h)||freshState(f,ev); show("form"); render(); }
 });
-$("lampTitle").textContent=CONFIG.lampForm.title;
-{ const TT=CONFIG.lampForm.types, same=TT.every(t=>t.price&&t.price===TT[0].price);
-  $("lampPrice").textContent = same ? `每盞 $${TT[0].price}` : "";
-  $("lampChips").innerHTML=TT.map(t=>`<li>${t.short||t.name}${!same&&t.price?` $${t.price}`:""}</li>`).join(""); }
-$("pChaodu").textContent=`每牌位 $${CONFIG.prices.chaodu}`; $("pLotus").textContent=`每位 $${CONFIG.prices.lamp}`;
+function renderStatic(){
+  $("lampTitle").innerHTML = EN() ? `${esc(CONFIG.lampForm.titleEn)}<span class="en-sub">${esc(CONFIG.lampForm.title)}</span>` : esc(CONFIG.lampForm.title);
+  const TT=CONFIG.lampForm.types, same=TT.every(x=>x.price&&x.price===TT[0].price);
+  $("lampPrice").textContent = same ? t(`每盞 $${TT[0].price}`,`$${TT[0].price} per lamp`) : "";
+  $("lampChips").innerHTML=TT.map(x=>`<li>${EN()?esc(x.en):x.short||x.name}${!same&&x.price?` $${x.price}`:""}</li>`).join("");
+  $("lampChips").classList.toggle("row", !EN());   // 英文名稱較長，改成自動換行
+  $("pChaodu").textContent=t(`每牌位 $${CONFIG.prices.chaodu}`,`$${CONFIG.prices.chaodu} each`); $("pLotus").textContent=t(`每位 $${CONFIG.prices.lamp}`,`$${CONFIG.prices.lamp} per person`);
+}
+// 切換語言：靜態文字用 data-en，其餘重畫目前的畫面
+function applyLang(){
+  document.documentElement.lang = t("zh-Hant","en");
+  document.title = t("慈惠堂線上點燈和法會報名","Tsu Hui Temple – Online Registration");
+  document.querySelectorAll("[data-en]").forEach(el=>{ if(el.dataset.zh===undefined) el.dataset.zh=el.innerHTML; el.innerHTML = EN() ? el.dataset.en : el.dataset.zh; });
+  $("langBtn").textContent = t("English","中文"); $("langBtn").lang = t("en","zh-Hant");
+  $("langBtn").setAttribute("aria-label", t("Switch to English","切換成中文"));
+  $("homeLink").setAttribute("aria-label", t("回到報名首頁","Back to home"));
+  setBig(document.documentElement.classList.contains("big"));
+  renderStatic(); renderEvents(); renderLampBtn(); renderMySlips(); refreshResume();
+  if(!$("form").hidden) render();
+  if(!$("done").hidden && LAST_SLIP) renderSlip(LAST_SLIP.ref, LAST_SLIP.dateISO);
+}
+$("langBtn").addEventListener("click", ()=>{ LANG = EN() ? "zh" : "en"; try{ localStorage.setItem("tsuhui-lang", LANG); }catch(e){} applyLang(); });
 $("telNo").textContent=CONFIG.phone; $("faxNo").textContent=CONFIG.fax;
 
 try{ if(localStorage.getItem("tsuhui-big")) setBig(true); }catch(e){}
-refreshResume();
+applyLang();
 </script>
 </body>
 </html>

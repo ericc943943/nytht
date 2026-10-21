@@ -483,10 +483,12 @@ function match(r, q){
   if(r.ref.toLowerCase().replace(/-/g,"").includes(ql)) ok=true;
   if(qd.length>=3 && digits(r.contact.phone).includes(qd)) ok=true;
   const names=[r.contact.name, ...(r.lamps||[]).map(p=>p.name), ...(r.chaodu||[]).flatMap(c=>[c.name,c.sponsor]), ...(r.meals||[]).map(m=>m.name)];
-  names.forEach(n=>{ if(n && q.trim() && n.includes(q.trim())){ ok=true; hits.add(n); } });
+  const qn=q.trim().toLowerCase();
+  names.forEach(n=>{ if(n && qn && n.toLowerCase().includes(qn)){ ok=true; hits.add(n); } });
   return ok ? {hits} : null;
 }
-const hl = (text, q) => { const t=esc(text); const k=q.trim(); if(!k || /^[\d\s()+-]+$/.test(k)) return t; return t.split(esc(k)).join(`<mark>${esc(k)}</mark>`); };
+const hl = (text, q) => { const t=esc(text); const k=q.trim(); if(!k || /^[\d\s()+-]+$/.test(k)) return t;
+  const re=new RegExp(esc(k).replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"gi"); return t.replace(re, m=>`<mark>${m}</mark>`); };
 
 /* ================= 畫面 ================= */
 let SETTINGS = { lamp:{status:"open"}, events: CONFIG.events.map(e=>({...e})) };
@@ -522,7 +524,7 @@ function cardHTML(r, m){
                      : `<button class="btn okb" data-ask="${esc(r.ref)}" type="button">收款：標記已繳清</button>`;
   return `<article class="card ${paid?"paid":"unpaid"}">
     <div class="card-head">
-      <div><div class="ref">${hl(r.ref,q.replace(/-/g,""))}</div><div class="meta">${esc(formName(r))}・報名 ${fmtDate(r.submittedAt)}${r.sample?'<span class="tag">範例</span>':""}</div></div>
+      <div><div class="ref">${hl(r.ref,q.replace(/-/g,""))}</div><div class="meta">${esc(formName(r))}・報名 ${fmtDate(r.submittedAt)}${r.sample?'<span class="tag">範例</span>':""}${r.lang==="en"?'<span class="tag">英文報名</span>':""}</div></div>
       <span class="status ${paid?"paid":"unpaid"}">${paid?`已繳清 ${r.paidAt?fmtDate(r.paidAt):""}`:"待繳費"}</span>${paid&&r.paidBy?`<span class="paidby">經手：${esc(r.paidBy)}</span>`:""}
     </div>
     <div class="contact"><span>聯絡人 <b>${hl(r.contact.name,q)}</b></span><span class="phone">${esc(r.contact.phone)}</span></div>
