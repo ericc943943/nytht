@@ -68,7 +68,16 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .searchbox{position:relative}
 .searchbox input{font-size:1.15rem;min-height:3.4rem;padding-right:3rem;border-width:2px;border-color:var(--ink)}
 .searchbox .clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:var(--line);border-radius:50%;width:2rem;height:2rem;cursor:pointer;font-size:1rem;line-height:1}
-.filters{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.filters{display:grid;grid-template-columns:1fr;gap:10px}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}
+.tabs button{flex:none;border:none;border-bottom:3px solid transparent;background:none;padding:8px 12px;font-size:.95rem;cursor:pointer;color:var(--muted);white-space:nowrap}
+.tabs button[aria-selected="true"]{color:#356D82;border-bottom-color:#356D82;font-weight:700}
+.tabs .n{display:inline-block;min-width:1.4em;margin-left:4px;font-size:.75rem;background:var(--line);border-radius:999px;padding:0 6px;color:var(--ink)}
+.tabs .n.red{background:var(--red-soft);color:var(--red)}
+.subtabs{display:flex;flex-wrap:wrap;gap:8px}
+.subtabs button{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 14px;cursor:pointer;font-size:.9rem}
+.subtabs button[aria-pressed="true"]{background:#356D82;border-color:#356D82;color:#fff;font-weight:700}
+.dim{opacity:.38}
 .seg{display:flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
 .seg button{flex:1;border:none;background:none;padding:8px 4px;cursor:pointer;min-height:3rem;font-size:.92rem;white-space:nowrap}
 .seg button + button{border-left:1.5px solid var(--line)}
@@ -227,6 +236,7 @@ details.log li{margin:2px 0}
   <main id="mainView" hidden>
     <div class="demo" id="demoBar" hidden>示範版：目前顯示的是範例資料，加上這台電腦上用報名頁送出的測試報名。標記繳費只會存在這台電腦。</div>
     <div class="bar">
+      <div class="tabs" id="tabs" role="tablist" aria-label="報名表單與法會場次"></div>
       <div class="searchbox">
         <input type="search" id="q" placeholder="輸入電話、報名編號或姓名" aria-label="搜尋電話、報名編號或姓名" autocomplete="off" enterkeyhint="search">
         <button class="clear" id="clearQ" type="button" aria-label="清除搜尋" hidden>✕</button>
@@ -237,8 +247,8 @@ details.log li{margin:2px 0}
           <button type="button" data-paid="unpaid" aria-pressed="false">未繳費</button>
           <button type="button" data-paid="paid" aria-pressed="false">已繳清</button>
         </div>
-        <select id="formFilter" aria-label="表單或法會場次"></select>
       </div>
+      <div class="subtabs" id="subtabs" role="group" aria-label="項目篩選" hidden></div>
       <div class="count" id="count"></div>
     </div>
     <div class="list" id="list"></div>
@@ -356,7 +366,28 @@ API.userOp = async function(op, data){
 };
 
 /* ================= 狀態 ================= */
-let ROWS = [], F = {q:"", paid:"all", form:"all"}, confirming = null;
+let ROWS = [], F = {q:"", paid:"all", form:"all", item:"all"}, confirming = null;
+const LAMP_TYPES = ["個人光明燈","太歲燈","五路財神燈","文昌燈"];
+const FAHUI_ITEMS = ["超渡","蓮花福慧燈","供齋"];
+const inTab = (r,tab) => tab==="all" || (tab==="lamp" ? r.form==="lamp" : r.form!=="lamp" && r.eventId===tab);
+function hasItem(r,item){
+  if(item==="all") return true;
+  if(LAMP_TYPES.includes(item)) return (r.lamps||[]).some(p=>(p.lampTypes||[]).includes(item));
+  if(item==="超渡") return (r.chaodu||[]).length>0;
+  if(item==="蓮花福慧燈") return r.form!=="lamp" && (r.lamps||[]).length>0;
+  if(item==="供齋") return (r.meals||[]).length>0;
+  return true;
+}
+// 項目的數量：燈＝盞數、超渡＝牌位數、蓮花福慧燈＝人數、供齋＝人數
+function itemUnits(rows,item){
+  let n=0; rows.forEach(r=>{
+    if(LAMP_TYPES.includes(item)) n+=(r.lamps||[]).filter(p=>(p.lampTypes||[]).includes(item)).length;
+    else if(item==="超渡") n+=(r.chaodu||[]).length;
+    else if(item==="蓮花福慧燈") n+=r.form!=="lamp"?(r.lamps||[]).length:0;
+    else if(item==="供齋") n+=(r.meals||[]).length;
+  }); return n;
+}
+const UNIT = item => LAMP_TYPES.includes(item)?"盞":item==="超渡"?"個牌位":"位";
 
 /* ================= 搜尋 ================= */
 // 回傳 null（不符合）或 {hits:Set(人名)}：電話比數字、編號忽略大小寫與「-」、姓名比所有出現的名字
@@ -389,12 +420,13 @@ API.saveSettings = async function(st){
 function formName(r){ return r.form==="lamp" ? CONFIG.lampTitle : (SETTINGS.events.find(e=>e.id===r.eventId)||{name:r.formTitle||"法會"}).name; }
 function cardHTML(r, m){
   const q=F.q, paid=!!r.paid;
-  const lampSec = (r.lamps||[]).length ? `<div class="sec"><h3>${r.form==="lamp"?"點燈":"蓮花福慧燈"}</h3>${r.lamps.map(p=>`
-      <div class="person"><span class="nm">${hl(p.name,q)}</span><span class="info">${p.gender?esc(p.gender)+"・":""}${esc(p.zodiac)}・虛歲 ${p.age_xu??""}・${lunarText(p.birth)}</span>
+  const secDim = name => FAHUI_ITEMS.includes(F.item) && F.item!==name ? " dim" : "";
+  const lampSec = (r.lamps||[]).length ? `<div class="sec${r.form==="lamp"?"":secDim("蓮花福慧燈")}"><h3>${r.form==="lamp"?"點燈":"蓮花福慧燈"}</h3>${r.lamps.map(p=>`
+      <div class="person${LAMP_TYPES.includes(F.item)&&!(p.lampTypes||[]).includes(F.item)?" dim":""}"><span class="nm">${hl(p.name,q)}</span><span class="info">${p.gender?esc(p.gender)+"・":""}${esc(p.zodiac)}・虛歲 ${p.age_xu??""}・${lunarText(p.birth)}</span>
       ${r.form==="lamp"?`<div class="chips">${(p.lampTypes||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>`:""}</div>`).join("")}</div>` : "";
-  const soulSec = (r.chaodu||[]).length ? `<div class="sec"><h3>超渡</h3>${r.chaodu.map(c=>`
+  const soulSec = (r.chaodu||[]).length ? `<div class="sec${secDim("超渡")}"><h3>超渡</h3>${r.chaodu.map(c=>`
       <div class="person"><span class="nm">${c.type==="亡者"?`${esc(c.title)} ${hl(c.name,q)}`:hl(c.name||c.type,q)}</span><span class="info">陽世報恩人 ${hl(c.sponsor,q)}</span></div>`).join("")}</div>` : "";
-  const mealSec = (r.meals||[]).length ? `<div class="sec"><h3>供齋</h3>${r.meals.map(x=>`
+  const mealSec = (r.meals||[]).length ? `<div class="sec${secDim("供齋")}"><h3>供齋</h3>${r.meals.map(x=>`
       <div class="person"><span class="nm">${hl(x.name,q)}</span><span class="info">${money(x.amount)}</span></div>`).join("")}</div>` : "";
   const total = r.totals ? r.totals.all : null;
   let action;
@@ -417,16 +449,23 @@ function cardHTML(r, m){
 function render(){
   const res = ROWS.map(r=>[r,match(r,F.q)]).filter(([r,m])=>m
       && (F.paid==="all" || (F.paid==="paid")===!!r.paid)
-      && (F.form==="all" || (F.form==="lamp" ? r.form==="lamp" : r.eventId===F.form)))
+      && inTab(r,F.form) && hasItem(r,F.item))
     .sort((a,b)=>b[0].submittedAt.localeCompare(a[0].submittedAt));
   const unpaid = res.filter(([r])=>!r.paid);
-  $("count").innerHTML = `<span>共 <b>${res.length}</b> 筆</span><span>未繳費 <b>${unpaid.length}</b> 筆・<b>${money(unpaid.reduce((a,[r])=>a+(r.totals?.all||0),0))}</b></span>`;
+  $("count").innerHTML = `<span>共 <b>${res.length}</b> 筆</span>${F.item!=="all"?`<span>${esc(F.item)} <b>${itemUnits(res.map(x=>x[0]),F.item)}</b> ${UNIT(F.item)}</span>`:""}<span>未繳費 <b>${unpaid.length}</b> 筆・<b>${money(unpaid.reduce((a,[r])=>a+(r.totals?.all||0),0))}</b></span>`;
+  renderTabs();
   $("list").innerHTML = res.length ? res.map(([r,m])=>cardHTML(r,m)).join("")
     : `<div class="empty"><b>找不到符合的報名</b>${F.q?"請確認電話、編號或姓名是否輸入正確，或把上方篩選改成「全部」。":"目前還沒有報名資料。"}</div>`;
 }
-function buildFormFilter(){
-  $("formFilter").innerHTML = `<option value="all">全部表單與場次</option><option value="lamp">${esc(CONFIG.lampTitle)}</option>`
-    + SETTINGS.events.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join("");
+function buildFormFilter(){ renderTabs(); }
+function renderTabs(){
+  const evs=SETTINGS.events.filter(e=>e.status!=="hidden" || ROWS.some(r=>r.eventId===e.id));
+  const tabs=[["all","全部"],["lamp","點燈"],...evs.map(e=>[e.id,e.name])];
+  const cnt=t=>{ const rs=ROWS.filter(r=>inTab(r,t)); const u=rs.filter(r=>!r.paid).length; return `<span class="n">${rs.length}</span>${u?`<span class="n red" title="未繳費">${u}</span>`:""}`; };
+  $("tabs").innerHTML=tabs.map(([v,t])=>`<button type="button" role="tab" data-tab="${esc(v)}" aria-selected="${F.form===v}">${esc(t)}${cnt(v)}</button>`).join("");
+  const items = F.form==="all" ? [] : F.form==="lamp" ? LAMP_TYPES : FAHUI_ITEMS;
+  $("subtabs").hidden=!items.length;
+  $("subtabs").innerHTML = items.length ? [["all", F.form==="lamp"?"全部燈種":"全部項目"],...items.map(x=>[x,x])].map(([v,t])=>`<button type="button" data-item="${esc(v)}" aria-pressed="${F.item===v}">${esc(t)}</button>`).join("") : "";
 }
 
 /* ================= 事件 ================= */
@@ -434,7 +473,8 @@ $("q").addEventListener("input", e=>{ F.q=e.target.value; $("clearQ").hidden=!F.
 $("clearQ").addEventListener("click", ()=>{ $("q").value=""; F.q=""; $("clearQ").hidden=true; render(); $("q").focus(); });
 $("segPaid").addEventListener("click", e=>{ const b=e.target.closest("[data-paid]"); if(!b) return; F.paid=b.dataset.paid;
   $("segPaid").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x===b)); render(); });
-$("formFilter").addEventListener("change", e=>{ F.form=e.target.value; render(); });
+$("tabs").addEventListener("click", e=>{ const b=e.target.closest("[data-tab]"); if(!b) return; F.form=b.dataset.tab; F.item="all"; confirming=null; render(); });
+$("subtabs").addEventListener("click", e=>{ const b=e.target.closest("[data-item]"); if(!b) return; F.item=b.dataset.item; confirming=null; render(); });
 $("list").addEventListener("click", async e=>{
   const ask=e.target.closest("[data-ask]"); if(ask){ confirming=ask.dataset.ask; render(); return; }
   const d=e.target.closest("[data-do]"); if(!d) return;
