@@ -113,6 +113,28 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 2px}
 .pwcard label{font-weight:700;font-size:.92rem;margin-top:4px}
 .pwcard input{width:100%;min-height:3rem;padding:10px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface)}
 .pwmsg{font-weight:700;margin:0;min-height:1.4em}
+.evrows{display:grid;gap:12px}
+#forceStep,#pinStep{display:grid;gap:10px}
+#forceStep[hidden],#pinStep[hidden]{display:none}
+#forceStep p{margin:0 0 4px}
+.who{display:grid;grid-template-columns:repeat(auto-fill,minmax(8rem,1fr));gap:10px}
+.who button{min-height:3.2rem;border:2px solid var(--line);border-radius:12px;background:var(--surface);font-size:1.05rem;font-weight:700;cursor:pointer}
+.who button.adm{border-color:#356D82}
+.urow{border:1.5px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.urow b{font-size:1.05rem;margin-right:auto}
+.urow.off{opacity:.55}
+.rtag{font-size:.78rem;border-radius:999px;padding:2px 10px;background:var(--line)}
+.rtag.adm{background:#356D82;color:#fff}
+.urow .reset{display:flex;gap:6px;width:100%}
+.urow .reset input{flex:1;min-height:2.6rem;padding:6px 10px;border:1.5px solid var(--line);border-radius:8px}
+.paidby{font-size:.85rem;color:var(--muted)}
+details.log{font-size:.85rem;color:var(--muted)}
+details.log summary{cursor:pointer}
+details.log li{margin:2px 0}
+.evrow{border:1.5px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:8px}
+.evrow input{min-height:2.8rem}
+.evrow .seg button{font-size:.88rem}
+#lampSeg button[aria-pressed="true"],.evrow .seg button[aria-pressed="true"]{background:#356D82;color:#fff}
 .pwmsg.ok{color:var(--ok)} .pwmsg.bad{color:var(--red)}
 .empty{text-align:center;color:var(--muted);padding:40px 10px}
 .empty b{display:block;color:var(--ink);font-size:1.1rem;margin-bottom:6px}
@@ -124,7 +146,8 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 2px}
     <div class="brand"><span class="logo"><img alt="紐約花蓮慈惠堂" src="data:image/jpeg;base64,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"></span><h1>後台</h1></div>
     <div style="display:flex;gap:8px">
       <button class="pillbtn" id="sizeBtn" type="button">字放大</button>
-      <button class="pillbtn" id="settingsBtn" type="button" hidden>密碼設定</button>
+      <span class="paidby" id="whoAmI" style="align-self:center"></span>
+      <button class="pillbtn" id="settingsBtn" type="button" hidden>設定</button>
       <button class="pillbtn" id="logoutBtn" type="button" hidden>登出</button>
     </div>
   </header>
@@ -132,32 +155,68 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 2px}
   <!-- 登入 -->
   <section class="login" id="loginView">
     <h2>後台登入</h2>
-    <p>義工請輸入義工密碼；負責人或堂主請輸入管理密碼。</p>
-    <input type="password" id="pw" autocomplete="current-password" aria-label="後台密碼" placeholder="密碼">
-    <button class="btn primary" id="loginBtn" type="button">登入</button>
+    <div id="whoStep">
+      <p>請點選您的名字。</p>
+      <div class="who" id="whoList"></div>
+    </div>
+    <div id="pinStep" hidden>
+      <p>您好，<b id="whoName"></b>。請輸入您的 PIN 碼。</p>
+      <input type="password" id="pw" inputmode="numeric" autocomplete="current-password" aria-label="PIN 碼" placeholder="PIN 碼" maxlength="12">
+      <button class="btn primary" id="loginBtn" type="button">登入</button>
+      <button class="linkbtn" id="whoBack" type="button">不是我，重新選擇</button>
+    </div>
+    <div id="forceStep" hidden>
+      <p><b id="forceName"></b>，您的 PIN 碼是負責人設定的。為了安全，請改成只有您自己知道的 PIN 碼。</p>
+      <label for="fpNew"><b>新的 PIN 碼（4～8 位數字）</b></label>
+      <input type="password" id="fpNew" inputmode="numeric" autocomplete="new-password">
+      <label for="fpNew2"><b>再輸入一次</b></label>
+      <input type="password" id="fpNew2" inputmode="numeric" autocomplete="new-password">
+      <button class="btn primary" id="fpSave" type="button">更改 PIN 碼並進入</button>
+    </div>
     <div class="err" id="loginErr" role="alert"></div>
-    <p id="demoLoginNote" hidden>示範版：義工密碼 1234，管理密碼 8888。</p>
+    <p id="demoLoginNote" hidden>示範版：管理員 PIN 8888；王師姐 PIN 1234；李師兄 PIN 5678。</p>
   </section>
 
   <!-- 密碼設定（只有負責人／堂主看得到） -->
   <section id="settingsView" hidden>
-    <div class="settings">
-      <h2>密碼設定</h2>
-      <p class="hint">義工共用一組「義工密碼」，只能查詢和收款。負責人和堂主用「管理密碼」登入，可以在這裡修改密碼。</p>
+    <div class="settings" id="adminOnly">
+      <h2>報名項目設定</h2>
+      <p class="hint">決定報名頁上哪些項目可以報名。「暫停」會在報名頁顯示，但按鈕是灰色的、不能點；「不顯示」則完全不出現在報名頁。</p>
       <div class="pwcard">
-        <h3>義工密碼</h3>
-        <p class="hint" id="volChanged"></p>
-        <label for="volNew">新的義工密碼</label><input type="password" id="volNew" autocomplete="new-password">
-        <label for="volNew2">再輸入一次</label><input type="password" id="volNew2" autocomplete="new-password">
-        <button class="btn primary" id="volSave" type="button">更新義工密碼</button>
-        <p class="hint">更新後，請告訴義工新密碼。已經登入的義工，下次登入就要用新密碼。</p>
+        <h3>點燈報名</h3>
+        <p class="hint" id="lampName"></p>
+        <div class="seg" id="lampSeg" role="group" aria-label="點燈報名狀態">
+          <button type="button" data-ls="open">開放報名</button><button type="button" data-ls="paused">暫停</button>
+        </div>
       </div>
       <div class="pwcard">
-        <h3>管理密碼</h3>
-        <label for="admCur">目前的管理密碼</label><input type="password" id="admCur" autocomplete="current-password">
-        <label for="admNew">新的管理密碼</label><input type="password" id="admNew" autocomplete="new-password">
-        <label for="admNew2">再輸入一次</label><input type="password" id="admNew2" autocomplete="new-password">
-        <button class="btn primary" id="admSave" type="button">更新管理密碼</button>
+        <h3>法會場次</h3>
+        <div id="evRows" class="evrows"></div>
+        <button class="btn ghost" id="evAdd" type="button">＋ 新增法會場次</button>
+      </div>
+      <button class="btn primary" id="itemsSave" type="button">儲存報名項目</button>
+      <p class="pwmsg" id="itemsMsg" role="status"></p>
+      <hr style="border:none;border-top:1px solid var(--line);width:100%;margin:8px 0">
+      <h2>義工帳號</h2>
+      <p class="hint">每位義工有自己的名字和 PIN 碼，收款紀錄會記下是誰經手。不再幫忙的義工請按「停用」，過去的紀錄會保留。</p>
+      <div id="userRows" class="evrows"></div>
+      <div class="pwcard">
+        <h3>新增義工</h3>
+        <label for="nuName">姓名（例：王師姐）</label><input id="nuName" autocomplete="off">
+        <label>身分</label>
+        <div class="seg" id="nuRole" role="group" aria-label="身分"><button type="button" data-role="volunteer" aria-pressed="true">義工</button><button type="button" data-role="admin" aria-pressed="false">負責人／堂主</button></div>
+        <label for="nuPin">PIN 碼（4～8 位數字）</label><input id="nuPin" type="password" inputmode="numeric" autocomplete="new-password">
+        <button class="btn primary" id="nuAdd" type="button">新增</button>
+      </div>
+      <p class="pwmsg" id="usersMsg" role="status"></p>
+    </div>
+    <div class="settings" style="margin-top:0">
+      <h2>我的 PIN 碼</h2>
+      <div class="pwcard">
+        <label for="myCur">目前的 PIN 碼</label><input type="password" id="myCur" inputmode="numeric" autocomplete="current-password">
+        <label for="myNew">新的 PIN 碼（4～8 位數字）</label><input type="password" id="myNew" inputmode="numeric" autocomplete="new-password">
+        <label for="myNew2">再輸入一次</label><input type="password" id="myNew2" inputmode="numeric" autocomplete="new-password">
+        <button class="btn primary" id="mySave" type="button">更新我的 PIN 碼</button>
       </div>
       <p class="pwmsg" id="pwMsg" role="status"></p>
       <button class="btn ghost" id="backBtn" type="button">回到報名名單</button>
@@ -191,10 +250,10 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 2px}
 const CONFIG = {
   apiUrl: "",   // Google Apps Script 網址；留空 = 示範模式
   lampTitle: "啟點光明燈暨安奉太歲",
-  events: [     // 與報名頁的場次設定相同
-    {id:"2027-zhongyuan", name:"瑤池金母聖誕祈福消災超渡暨普渡大法會"},
-    {id:"2027-spring-lidou", name:"春季祈安禮斗法會"},
-    {id:"2027-autumn-lidou", name:"秋季祈安禮斗法會"},
+  events: [     // 預設值；之後由「報名項目設定」管理
+    {id:"2027-zhongyuan", name:"瑤池金母聖誕祈福消災超渡暨普渡大法會", date:"", status:"open"},
+    {id:"2027-spring-lidou", name:"春季祈安禮斗法會", date:"", status:"open"},
+    {id:"2027-autumn-lidou", name:"秋季祈安禮斗法會", date:"", status:"hidden"},
   ],
 };
 const DEMO = !CONFIG.apiUrl;
@@ -243,42 +302,58 @@ const LS = { get(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse
              set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} } };
 const API = {
   async list(){
-    if(!DEMO){ const r=await fetch(`${CONFIG.apiUrl}?action=list&key=${encodeURIComponent(session())}`); if(!r.ok) throw new Error(r.status); return (await r.json()).rows; }
+    if(!DEMO){ const r=await fetch(`${CONFIG.apiUrl}?action=list&${authQS()}`); if(!r.ok) throw new Error(r.status); return (await r.json()).rows; }
     const paidMap = LS.get("tsuhui-demo-paid",{});
     return [...sampleData(), ...LS.get("tsuhui-demo-db",[])].map(r=> paidMap[r.ref] ? {...r, ...paidMap[r.ref]} : r);
   },
-  async setPaid(ref, paid){
-    const rec = {paid, paidAt: paid ? new Date().toISOString() : null};
-    if(!DEMO){ const r=await fetch(CONFIG.apiUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"setPaid",key:session(),ref,paid})}); if(!r.ok) throw new Error(r.status); return rec; }
+  // 收款：記錄經手人與時間，並留下每一次的修改紀錄
+  async setPaid(ref, paid, amount, prevLog){
+    const me=sess(), at=new Date().toISOString();
+    const entry={action: paid?"paid":"unpaid", by: me.name, byId: me.uid, at, amount};
+    const rec = {paid, paidAt: paid?at:null, paidBy: paid?me.name:null, paidById: paid?me.uid:null, payLog:[...(prevLog||[]), entry]};
+    if(!DEMO){ const r=await fetch(CONFIG.apiUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"setPaid",...auth(),ref,paid})}); const j=await r.json(); if(!j.ok) throw new Error("fail"); return j.record||rec; }
     const m=LS.get("tsuhui-demo-paid",{}); m[ref]=rec; LS.set("tsuhui-demo-paid",m); return rec;
   },
 };
-// 登入狀態：{key:密碼, role:"admin"|"volunteer"}
+// 登入狀態：{uid, pin, role:"admin"|"volunteer", name}
 function sess(){ try{ return JSON.parse(sessionStorage.getItem("tsuhui-admin")||"null"); }catch(e){ return window._sess||null; } }
 function setSess(v){ try{ v?sessionStorage.setItem("tsuhui-admin",JSON.stringify(v)):sessionStorage.removeItem("tsuhui-admin"); }catch(e){ window._sess=v; } }
-function session(){ return sess()?.key||""; }
+const auth = () => { const s=sess()||{}; return {uid:s.uid, pin:s.pin}; };
+const authQS = () => { const a=auth(); return `uid=${encodeURIComponent(a.uid||"")}&pin=${encodeURIComponent(a.pin||"")}`; };
 async function hashPw(pw){
   try{ const b=await crypto.subtle.digest("SHA-256", new TextEncoder().encode("tsuhui:"+pw)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
   catch(e){ let h=0; for(const c of "tsuhui:"+pw) h=(h*31+c.charCodeAt(0))|0; return "x"+h; }
 }
-async function demoPw(){
-  let p=LS.get("tsuhui-demo-pw",null);
-  if(!p){ p={vol:await hashPw("1234"), admin:await hashPw("8888"), volChangedAt:null}; LS.set("tsuhui-demo-pw",p); }
-  return p;
+// 示範模式的帳號存在本機；正式版存在堂裡的試算表（PIN 只存加密後的值）
+async function demoUsers(){
+  let u=LS.get("tsuhui-demo-users",null);
+  if(!u){ u=[{id:"u-admin",name:"管理員",role:"admin",pin:await hashPw("8888"),active:true},
+             {id:"u-wang",name:"王師姐",role:"volunteer",pin:await hashPw("1234"),active:true},
+             {id:"u-li",name:"李師兄",role:"volunteer",pin:await hashPw("5678"),active:true}]; LS.set("tsuhui-demo-users",u); }
+  return u;
 }
-API.login = async function(pw){
-  if(!DEMO){ const r=await fetch(`${CONFIG.apiUrl}?action=login&key=${encodeURIComponent(pw)}`); const j=await r.json(); return j.ok?j.role:null; }
-  const p=await demoPw(), h=await hashPw(pw);
-  return h===p.admin ? "admin" : h===p.vol ? "volunteer" : null;
+const pub = u => ({id:u.id, name:u.name, role:u.role, active:u.active, mustChange:!!u.mustChange});
+API.users = async function(){ // 登入名單：只有名字，不含 PIN
+  if(!DEMO){ const r=await fetch(`${CONFIG.apiUrl}?action=users`); return (await r.json()).users; }
+  return (await demoUsers()).map(pub);
 };
-API.changePw = async function(kind, newPw, adminPw){
-  if(!DEMO){ const r=await fetch(CONFIG.apiUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"changePassword",key:adminPw,kind,newPw})}); const j=await r.json(); if(!j.ok) throw new Error(j.error||"fail"); return; }
-  const p=await demoPw();
-  if(await hashPw(adminPw)!==p.admin) throw new Error("admin");
-  if(kind==="vol"){ p.vol=await hashPw(newPw); p.volChangedAt=new Date().toISOString(); } else { p.admin=await hashPw(newPw); }
-  LS.set("tsuhui-demo-pw",p);
+API.login = async function(uid, pin){
+  if(!DEMO){ const r=await fetch(`${CONFIG.apiUrl}?action=login&uid=${encodeURIComponent(uid)}&pin=${encodeURIComponent(pin)}`); const j=await r.json(); return j.ok?j.user:null; }
+  const u=(await demoUsers()).find(x=>x.id===uid&&x.active); return u && u.pin===await hashPw(pin) ? pub(u) : null;
 };
-API.pwInfo = async function(){ if(!DEMO){ try{ const r=await fetch(`${CONFIG.apiUrl}?action=pwInfo&key=${encodeURIComponent(session())}`); return await r.json(); }catch(e){ return {}; } } return await demoPw(); };
+// 帳號管理（負責人／堂主）：add / resetPin / setActive；個人：changeMyPin
+API.userOp = async function(op, data){
+  if(!DEMO){ const r=await fetch(CONFIG.apiUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"userOp",op,...auth(),...data})}); const j=await r.json(); if(!j.ok) throw new Error(j.error||"fail"); return; }
+  const list=await demoUsers(), me=sess(), meU=list.find(x=>x.id===me.uid);
+  if(!meU || meU.pin!==await hashPw(me.pin)) throw new Error("auth");
+  if(op==="changeMyPin"){ if(meU.pin!==await hashPw(data.cur)) throw new Error("cur"); if(await hashPw(data.pin)===meU.pin) throw new Error("same"); meU.pin=await hashPw(data.pin); meU.mustChange=false; }
+  else { if(meU.role!=="admin") throw new Error("auth");
+    if(op==="add"){ if(list.some(x=>x.name===data.name)) throw new Error("dup"); list.push({id:"u-"+Date.now().toString(36), name:data.name, role:data.role, pin:await hashPw(data.pin), active:true, mustChange:true}); }
+    if(op==="resetPin"){ const u=list.find(x=>x.id===data.id); u.pin=await hashPw(data.pin); u.mustChange=true; }
+    if(op==="setActive"){ const u=list.find(x=>x.id===data.id); if(u.id===me.uid) throw new Error("self"); u.active=data.active; }
+  }
+  LS.set("tsuhui-demo-users", list);
+};
 
 /* ================= 狀態 ================= */
 let ROWS = [], F = {q:"", paid:"all", form:"all"}, confirming = null;
@@ -298,7 +373,20 @@ function match(r, q){
 const hl = (text, q) => { const t=esc(text); const k=q.trim(); if(!k || /^[\d\s()+-]+$/.test(k)) return t; return t.split(esc(k)).join(`<mark>${esc(k)}</mark>`); };
 
 /* ================= 畫面 ================= */
-function formName(r){ return r.form==="lamp" ? CONFIG.lampTitle : (CONFIG.events.find(e=>e.id===r.eventId)||{name:r.formTitle||"法會"}).name; }
+let SETTINGS = { lamp:{status:"open"}, events: CONFIG.events.map(e=>({...e})) };
+API.getSettings = async function(){
+  try{
+    if(!DEMO){ const r=await fetch(`${CONFIG.apiUrl}?action=settings`); if(r.ok){ const j=await r.json(); if(j.events) SETTINGS=j; } return SETTINGS; }
+    const st=LS.get("tsuhui-settings",null); if(st&&st.events) SETTINGS=st;
+  }catch(e){} return SETTINGS;
+};
+API.saveSettings = async function(st){
+  st.updatedAt=new Date().toISOString();
+  if(!DEMO){ const r=await fetch(CONFIG.apiUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"saveSettings",...auth(),settings:st})}); const j=await r.json(); if(!j.ok) throw new Error("fail"); }
+  else LS.set("tsuhui-settings", st);
+  SETTINGS=st;
+};
+function formName(r){ return r.form==="lamp" ? CONFIG.lampTitle : (SETTINGS.events.find(e=>e.id===r.eventId)||{name:r.formTitle||"法會"}).name; }
 function cardHTML(r, m){
   const q=F.q, paid=!!r.paid;
   const lampSec = (r.lamps||[]).length ? `<div class="sec"><h3>${r.form==="lamp"?"點燈":"蓮花福慧燈"}</h3>${r.lamps.map(p=>`
@@ -310,7 +398,7 @@ function cardHTML(r, m){
       <div class="person"><span class="nm">${hl(x.name,q)}</span><span class="info">${money(x.amount)}</span></div>`).join("")}</div>` : "";
   const total = r.totals ? r.totals.all : null;
   let action;
-  if(confirming===r.ref) action = `<div class="confirm"><span>${paid?`確定要把 ${esc(r.ref)} 改回「未繳費」？`:`確定已收到現金 ${money(total)}？`}</span>
+  if(confirming===r.ref) action = `<div class="confirm"><span>${paid?`確定要把 ${esc(r.ref)} 改回「未繳費」？`:`確定已收到現金 ${money(total)}？會記錄為「${esc(sess()?.name||"")}」經手。`}</span>
       <button class="btn ${paid?"primary":"okb"} small" data-do="${paid?"unpay":"pay"}" data-ref="${esc(r.ref)}" type="button">確定</button>
       <button class="btn ghost small" data-do="cancel" type="button">取消</button></div>`;
   else action = paid ? `<button class="linkbtn" data-ask="${esc(r.ref)}" type="button">改回未繳費</button>`
@@ -318,11 +406,12 @@ function cardHTML(r, m){
   return `<article class="card ${paid?"paid":"unpaid"}">
     <div class="card-head">
       <div><div class="ref">${hl(r.ref,q.replace(/-/g,""))}</div><div class="meta">${esc(formName(r))}・報名 ${fmtDate(r.submittedAt)}${r.sample?'<span class="tag">範例</span>':""}</div></div>
-      <span class="status ${paid?"paid":"unpaid"}">${paid?`已繳清 ${r.paidAt?fmtDate(r.paidAt):""}`:"待繳費"}</span>
+      <span class="status ${paid?"paid":"unpaid"}">${paid?`已繳清 ${r.paidAt?fmtDate(r.paidAt):""}`:"待繳費"}</span>${paid&&r.paidBy?`<span class="paidby">經手：${esc(r.paidBy)}</span>`:""}
     </div>
     <div class="contact"><span>聯絡人 <b>${hl(r.contact.name,q)}</b></span><span class="phone">${esc(r.contact.phone)}</span></div>
     ${lampSec}${soulSec}${mealSec}
     <div class="foot"><span class="amt"><small>應繳</small>${money(total)}</span>${action}</div>
+    ${(r.payLog||[]).length?`<details class="log"><summary>收款紀錄（${r.payLog.length}）</summary><ul>${r.payLog.map(l=>`<li>${fmtDate(l.at)}　${esc(l.by)}　${l.action==="paid"?`標記已繳清（${money(l.amount)}）`:"改回未繳費"}</li>`).join("")}</ul></details>`:""}
   </article>`;
 }
 function render(){
@@ -337,7 +426,7 @@ function render(){
 }
 function buildFormFilter(){
   $("formFilter").innerHTML = `<option value="all">全部表單與場次</option><option value="lamp">${esc(CONFIG.lampTitle)}</option>`
-    + CONFIG.events.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join("");
+    + SETTINGS.events.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join("");
 }
 
 /* ================= 事件 ================= */
@@ -351,56 +440,115 @@ $("list").addEventListener("click", async e=>{
   const d=e.target.closest("[data-do]"); if(!d) return;
   if(d.dataset.do==="cancel"){ confirming=null; render(); return; }
   d.disabled=true; d.textContent="處理中…";
-  try{ const rec=await API.setPaid(d.dataset.ref, d.dataset.do==="pay"); const r=ROWS.find(x=>x.ref===d.dataset.ref); Object.assign(r,rec); confirming=null; render(); }
+  try{ const r=ROWS.find(x=>x.ref===d.dataset.ref); const rec=await API.setPaid(d.dataset.ref, d.dataset.do==="pay", r.totals?.all??null, r.payLog); Object.assign(r,rec); confirming=null; render(); }
   catch(err){ d.disabled=false; d.textContent="確定"; d.closest(".confirm").querySelector("span").textContent="網路有問題，還沒存好。請再按一次「確定」。"; }
 });
 
 async function enter(){
   $("loginView").hidden=true; $("settingsView").hidden=true; $("mainView").hidden=false; $("logoutBtn").hidden=false; $("demoBar").hidden=!DEMO;
-  $("settingsBtn").hidden = sess()?.role!=="admin";
-  buildFormFilter();
+  $("settingsBtn").hidden = false; $("whoAmI").textContent = sess()?.name||"";
+  await API.getSettings(); buildFormFilter();
   $("list").innerHTML=`<div class="empty">載入中…</div>`;
   try{ ROWS = await API.list(); render(); }
   catch(e){ $("list").innerHTML=`<div class="empty"><b>讀不到資料</b>請確認網路，或重新登入。</div>`; }
   $("q").focus();
 }
+let PICK=null;
+async function showLogin(){
+  $("loginErr").textContent=""; $("whoStep").hidden=false; $("pinStep").hidden=true;
+  let users=[]; try{ users=(await API.users()).filter(u=>u.active); }catch(e){ $("loginErr").textContent="讀不到義工名單，請確認網路。"; }
+  $("whoList").innerHTML = users.map(u=>`<button type="button" data-uid="${esc(u.id)}" class="${u.role==="admin"?"adm":""}">${esc(u.name)}</button>`).join("");
+}
+$("whoList").addEventListener("click", e=>{ const b=e.target.closest("[data-uid]"); if(!b) return; PICK={uid:b.dataset.uid, name:b.textContent};
+  $("whoName").textContent=PICK.name; $("whoStep").hidden=true; $("pinStep").hidden=false; $("pw").value=""; $("loginErr").textContent=""; $("pw").focus(); });
+$("whoBack").addEventListener("click", showLogin);
 $("loginBtn").addEventListener("click", async ()=>{
-  const pw=$("pw").value.trim(); if(!pw){ $("loginErr").textContent="請輸入密碼。"; return; }
-  let role=null; try{ role=await API.login(pw); }catch(e){ $("loginErr").textContent="網路有問題，請稍後再試。"; return; }
-  if(!role){ $("loginErr").textContent="密碼不正確，請再試一次。"; return; }
-  setSess({key:pw, role}); enter();
+  const pin=$("pw").value.trim(); if(!pin){ $("loginErr").textContent="請輸入 PIN 碼。"; return; }
+  let u=null; try{ u=await API.login(PICK.uid, pin); }catch(e){ $("loginErr").textContent="網路有問題，請稍後再試。"; return; }
+  if(!u){ $("loginErr").textContent="PIN 碼不正確，請再試一次。"; $("pw").value=""; return; }
+  setSess({uid:u.id, pin, role:u.role, name:u.name});
+  if(u.mustChange){ $("pinStep").hidden=true; $("forceStep").hidden=false; $("forceName").textContent=u.name; $("loginErr").textContent=""; $("fpNew").focus(); return; }
+  enter();
+});
+$("fpSave").addEventListener("click", async ()=>{
+  const a=$("fpNew").value.trim(), b=$("fpNew2").value.trim();
+  if(!/^\d{4,8}$/.test(a)){ $("loginErr").textContent="PIN 碼要 4～8 位數字。"; return; }
+  if(a!==b){ $("loginErr").textContent="兩次輸入的 PIN 碼不一樣，請再輸入一次。"; return; }
+  try{ await API.userOp("changeMyPin",{cur:sess().pin, pin:a}); setSess({...sess(), pin:a}); $("forceStep").hidden=true; enter(); }
+  catch(err){ $("loginErr").textContent = err.message==="same" ? "請換一組和負責人設定的不一樣的 PIN 碼。" : "更改失敗，請稍後再試。"; }
 });
 $("pw").addEventListener("keydown", e=>{ if(e.key==="Enter") $("loginBtn").click(); });
 $("logoutBtn").addEventListener("click", ()=>{ setSess(null); location.reload(); });
 const pwMsg=(t,ok)=>{ $("pwMsg").textContent=t; $("pwMsg").className="pwmsg "+(ok?"ok":"bad"); };
+let DRAFT=null;
+const ST_LABEL=[["open","開放報名"],["paused","暫停"],["hidden","不顯示"]];
+function renderItems(){
+  $("lampName").textContent=CONFIG.lampTitle;
+  $("lampSeg").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.ls===DRAFT.lamp.status));
+  $("evRows").innerHTML = DRAFT.events.map((e,i)=>`<div class="evrow">
+      <label for="evn${i}"><b>法會名稱</b></label><input id="evn${i}" data-ev="${i}" data-f="name" value="${esc(e.name)}">
+      <label for="evd${i}"><b>日期</b> <span class="hint">（顯示在報名頁，可留空）</span></label><input id="evd${i}" data-ev="${i}" data-f="date" value="${esc(e.date||"")}" placeholder="例：2027/3/8～3/10">
+      <div class="seg" role="group" aria-label="報名狀態">${ST_LABEL.map(([v,t])=>`<button type="button" data-ev="${i}" data-st="${v}" aria-pressed="${e.status===v}">${t}</button>`).join("")}</div>
+    </div>`).join("");
+}
+$("lampSeg").addEventListener("click", e=>{ const b=e.target.closest("[data-ls]"); if(!b) return; DRAFT.lamp.status=b.dataset.ls; renderItems(); });
+$("evRows").addEventListener("click", e=>{ const b=e.target.closest("[data-st]"); if(!b) return; DRAFT.events[+b.dataset.ev].status=b.dataset.st; renderItems(); });
+$("evRows").addEventListener("input", e=>{ const t=e.target; if(t.dataset.ev==null) return; DRAFT.events[+t.dataset.ev][t.dataset.f]=t.value; });
+$("evAdd").addEventListener("click", ()=>{ DRAFT.events.push({id:"ev-"+Date.now().toString(36), name:"", date:"", status:"paused"}); renderItems(); document.getElementById("evn"+(DRAFT.events.length-1)).focus(); });
+$("itemsSave").addEventListener("click", async ()=>{
+  const m=$("itemsMsg");
+  if(DRAFT.events.some(e=>!e.name.trim())){ m.textContent="每一場法會都要填名稱。"; m.className="pwmsg bad"; return; }
+  DRAFT.events.forEach(e=>{ e.name=e.name.trim(); e.date=(e.date||"").trim(); });
+  try{ await API.saveSettings(JSON.parse(JSON.stringify(DRAFT))); m.textContent="已儲存。報名頁重新整理後就會套用。"; m.className="pwmsg ok"; buildFormFilter(); }
+  catch(err){ m.textContent="儲存失敗，請重新登入後再試。"; m.className="pwmsg bad"; }
+});
 async function openSettings(){
-  $("mainView").hidden=true; $("settingsView").hidden=false; pwMsg("",true);
-  ["volNew","volNew2","admCur","admNew","admNew2"].forEach(id=>$(id).value="");
-  const info=await API.pwInfo();
-  $("volChanged").textContent = info.volChangedAt ? `上次更新：${new Date(info.volChangedAt).toLocaleDateString("zh-TW")}` : "尚未更新過";
+  const admin=sess()?.role==="admin";
+  $("adminOnly").hidden=!admin;
+  if(admin){ await API.getSettings(); DRAFT=JSON.parse(JSON.stringify(SETTINGS)); renderItems(); $("itemsMsg").textContent=""; await renderUsers(); }
+  $("mainView").hidden=true; $("settingsView").hidden=false; pwMsg("",true); $("usersMsg").textContent="";
+  ["myCur","myNew","myNew2","nuName","nuPin"].forEach(id=>$(id).value="");
 }
 $("settingsBtn").addEventListener("click", openSettings);
 $("backBtn").addEventListener("click", ()=>{ $("settingsView").hidden=true; $("mainView").hidden=false; });
-function checkNew(a,b){ if(a.length<4) return "新密碼至少要 4 個字元。"; if(a!==b) return "兩次輸入的新密碼不一樣，請再輸入一次。"; return ""; }
-$("volSave").addEventListener("click", async ()=>{
-  const a=$("volNew").value.trim(), b=$("volNew2").value.trim(); const err=checkNew(a,b); if(err) return pwMsg(err,false);
-  if(a===session()) return pwMsg("義工密碼不能和管理密碼一樣。",false);
-  try{ await API.changePw("vol", a, session()); pwMsg("義工密碼已更新。請把新密碼告訴義工。",true); $("volNew").value=$("volNew2").value=""; openSettingsInfo(); }
-  catch(e){ pwMsg("更新失敗，請重新登入後再試。",false); }
+const pinOK = p => /^\d{4,8}$/.test(p);
+const uMsg=(t,ok)=>{ $("usersMsg").textContent=t; $("usersMsg").className="pwmsg "+(ok?"ok":"bad"); };
+async function renderUsers(){
+  const list=await API.users(), me=sess();
+  $("userRows").innerHTML=list.map(u=>`<div class="urow ${u.active?"":"off"}">
+      <b>${esc(u.name)}</b><span class="rtag ${u.role==="admin"?"adm":""}">${u.role==="admin"?"負責人／堂主":"義工"}</span>${u.active?"":'<span class="rtag">已停用</span>'}${u.active&&u.mustChange?'<span class="rtag">待本人改 PIN</span>':""}
+      ${u.id===me.uid?'<span class="hint">（您自己）</span>':`<button class="linkbtn" data-act="${u.active?"off":"on"}" data-id="${esc(u.id)}" type="button">${u.active?"停用":"重新啟用"}</button>`}
+      <div class="reset"><input type="password" inputmode="numeric" placeholder="新的 PIN 碼" aria-label="${esc(u.name)} 的新 PIN 碼" data-pin="${esc(u.id)}"><button class="btn ghost small" data-act="reset" data-id="${esc(u.id)}" type="button">重設 PIN</button></div>
+    </div>`).join("");
+}
+$("userRows").addEventListener("click", async e=>{
+  const b=e.target.closest("[data-act]"); if(!b) return; const id=b.dataset.id;
+  try{
+    if(b.dataset.act==="reset"){ const v=document.querySelector(`[data-pin="${id}"]`).value.trim(); if(!pinOK(v)) return uMsg("PIN 碼要 4～8 位數字。",false);
+      await API.userOp("resetPin",{id,pin:v}); uMsg("已重設 PIN 碼，請告訴這位義工。他下次登入時會被要求改成自己的 PIN 碼。",true); }
+    else { await API.userOp("setActive",{id,active:b.dataset.act==="on"}); uMsg(b.dataset.act==="on"?"已重新啟用。":"已停用，這位義工無法再登入。",true); }
+    renderUsers();
+  }catch(err){ uMsg(err.message==="self"?"不能停用自己。":"操作失敗，請重新登入後再試。",false); }
 });
-async function openSettingsInfo(){ const info=await API.pwInfo(); $("volChanged").textContent = info.volChangedAt ? `上次更新：${new Date(info.volChangedAt).toLocaleDateString("zh-TW")}` : "尚未更新過"; }
-$("admSave").addEventListener("click", async ()=>{
-  const cur=$("admCur").value.trim(), a=$("admNew").value.trim(), b=$("admNew2").value.trim();
-  if(!cur) return pwMsg("請輸入目前的管理密碼。",false);
-  const err=checkNew(a,b); if(err) return pwMsg(err,false);
-  try{ await API.changePw("admin", a, cur); setSess({key:a, role:"admin"}); pwMsg("管理密碼已更新。下次請用新密碼登入。",true); ["admCur","admNew","admNew2"].forEach(id=>$(id).value=""); }
-  catch(e){ pwMsg(e.message==="admin"?"目前的管理密碼不正確。":"更新失敗，請稍後再試。",false); }
+let NU_ROLE="volunteer";
+$("nuRole").addEventListener("click", e=>{ const b=e.target.closest("[data-role]"); if(!b) return; NU_ROLE=b.dataset.role; $("nuRole").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
+$("nuAdd").addEventListener("click", async ()=>{
+  const name=$("nuName").value.trim(), pin=$("nuPin").value.trim();
+  if(!name) return uMsg("請填姓名。",false); if(!pinOK(pin)) return uMsg("PIN 碼要 4～8 位數字。",false);
+  try{ await API.userOp("add",{name,role:NU_ROLE,pin}); uMsg(`已新增「${name}」。請把 PIN 碼告訴對方，第一次登入時會被要求改成自己的 PIN 碼。`,true); $("nuName").value=$("nuPin").value=""; renderUsers(); }
+  catch(err){ uMsg(err.message==="dup"?"已經有同名的帳號，請在名字後面加註區別。":"新增失敗，請重新登入後再試。",false); }
+});
+$("mySave").addEventListener("click", async ()=>{
+  const cur=$("myCur").value.trim(), a=$("myNew").value.trim(), b2=$("myNew2").value.trim();
+  if(!cur) return pwMsg("請輸入目前的 PIN 碼。",false); if(!pinOK(a)) return pwMsg("新的 PIN 碼要 4～8 位數字。",false); if(a!==b2) return pwMsg("兩次輸入的新 PIN 碼不一樣。",false);
+  try{ await API.userOp("changeMyPin",{cur,pin:a}); const s0=sess(); setSess({...s0,pin:a}); pwMsg("PIN 碼已更新，下次請用新的 PIN 碼登入。",true); ["myCur","myNew","myNew2"].forEach(id=>$(id).value=""); }
+  catch(err){ pwMsg(err.message==="cur"?"目前的 PIN 碼不正確。":err.message==="same"?"新的 PIN 碼不能和目前的一樣。":"更新失敗，請稍後再試。",false); }
 });
 function setBig(on){ document.documentElement.classList.toggle("big",on); $("sizeBtn").textContent=on?"字縮小":"字放大"; try{localStorage.setItem("tsuhui-big",on?"1":"")}catch(e){} }
 $("sizeBtn").addEventListener("click", ()=>setBig(!document.documentElement.classList.contains("big")));
 try{ if(localStorage.getItem("tsuhui-big")) setBig(true); }catch(e){}
 $("demoLoginNote").hidden=!DEMO;
-if(sess()) enter();
+if(sess()) enter(); else showLogin();
 </script>
 </body>
 </html>

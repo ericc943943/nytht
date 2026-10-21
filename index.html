@@ -84,6 +84,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 .btn.block{width:100%}
 .btn.add{width:100%;border:2px dashed var(--gold);background:transparent;color:var(--gold)}
 .btn:disabled{opacity:.55;cursor:wait}
+.btn.closed,.btn.closed:disabled{background:var(--line);color:var(--muted);border-color:transparent;cursor:not-allowed;opacity:1}
+.closedtag{display:inline-block;font-size:.8rem;font-weight:700;color:var(--muted);background:var(--line);border-radius:999px;padding:2px 10px;margin-left:6px;vertical-align:2px}
 
 /* 步驟 */
 .steps{display:flex;gap:6px;margin:22px 0 6px}
@@ -212,7 +214,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
         <h2 id="lampTitle"></h2>
         <ul class="chips" id="lampChips"></ul>
         <p class="desc">為家人點燈祈福、安奉太歲。每一位可以點一盞或多盞燈。請準備每位的生日，農曆或國曆都可以。</p>
-        <button class="btn primary block" data-start="lamp" type="button">點燈報名</button>
+        <button class="btn primary block" data-start="lamp" id="lampBtn" type="button">點燈報名</button>
         <p class="note" data-resume="lamp" hidden>您上次填到一半的資料還在，按上面的按鈕會接著填。<button class="linkbtn" data-clear="lamp" type="button">清除重填</button></p>
       </article>
 
@@ -225,7 +227,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
           <li><span>祈福消災點燈・蓮花福慧燈</span><span id="pLotus"></span></li>
           <li><span>供齋（供養十方孤魂）</span><span>功德金隨喜</span></li>
         </ul>
-        <div class="legend" style="margin-top:6px">目前開放報名的法會</div>
+        <div class="legend" style="margin-top:6px">法會場次</div>
         <div class="events" id="eventList"></div>
       </article>
     </section>
@@ -292,8 +294,7 @@ const CONFIG = {
       {k:"wenchang",  name:"文昌燈",     price:120},
     ],
   },
-  // 法會場次：open:true 才會出現在首頁。date 留空就不顯示。
-  // id 請用英文或數字，不要重複（資料會依 id 分場次）。
+  // 法會場次的預設值。正式使用時，開放哪些項目由後台「報名項目設定」決定，會蓋過這裡的設定。
   events: [
     {id:"2027-zhongyuan", name:"瑤池金母聖誕祈福消災超渡暨普渡大法會", date:"", open:true},
     {id:"2027-spring-lidou", name:"春季祈安禮斗法會", date:"", open:true},
@@ -327,7 +328,19 @@ let S = freshState("lamp");
 const draftKey = st => st.form==="lamp" ? "lamp" : "fahui-"+st.eventId;
 const KEY = k => "tsuhui-draft-"+k;
 const keyToForm = k => k==="lamp" ? ["lamp",null] : ["fahui", k.slice(6)];
-const curEvent = () => CONFIG.events.find(e=>e.id===S.eventId) || {name:"法會", date:""};
+// 報名項目狀態：open 開放報名／paused 顯示但不能報名／hidden 不顯示（法會場次）
+let SETTINGS = { lamp:{status:"open"}, events: CONFIG.events.map(e=>({id:e.id, name:e.name, date:e.date||"", status:e.open?"open":"hidden"})) };
+const EVENTS = () => SETTINGS.events;
+async function loadSettings(){
+  try{
+    let st=null;
+    if(CONFIG.submitUrl){ const r=await fetch(CONFIG.submitUrl+"?action=settings"); if(r.ok) st=await r.json(); }
+    else { const v=localStorage.getItem("tsuhui-settings"); if(v) st=JSON.parse(v); }
+    if(st && st.events) SETTINGS=st;
+  }catch(e){}
+}
+const isOpen = key => key==="lamp" ? SETTINGS.lamp.status==="open" : (EVENTS().find(e=>"fahui-"+e.id===key)||{}).status==="open";
+const curEvent = () => EVENTS().find(e=>e.id===S.eventId) || {name:"法會", date:""};
 const isLampForm = () => S.form==="lamp";
 const formTitle = () => isLampForm() ? CONFIG.lampForm.title : curEvent().name;
 function save(){ try{localStorage.setItem(KEY(draftKey(S)), JSON.stringify(S))}catch(e){} }
@@ -611,7 +624,7 @@ function getSlips(){ try{return JSON.parse(localStorage.getItem(SLIPS)||"[]")}ca
 function keepSlip(ref, at){ try{ const a=getSlips().filter(x=>x.ref!==ref); a.unshift({ref, at, state:JSON.parse(JSON.stringify(S))}); localStorage.setItem(SLIPS, JSON.stringify(a.slice(0,10))); }catch(e){} }
 function renderMySlips(){
   const a=getSlips(); $("mySlips").hidden=!a.length; if(!a.length) return;
-  $("mySlips").innerHTML=`<h2>我的繳費單</h2>`+a.map(x=>{ const t=x.state.form==="lamp"?CONFIG.lampForm.title:(CONFIG.events.find(e=>e.id===x.state.eventId)||{name:"法會"}).name;
+  $("mySlips").innerHTML=`<h2>我的繳費單</h2>`+a.map(x=>{ const t=x.state.form==="lamp"?CONFIG.lampForm.title:(EVENTS().find(e=>e.id===x.state.eventId)||{name:"法會"}).name;
     return `<div class="myslip"><div><b>${esc(x.ref)}</b><small>${esc(t)}・${new Date(x.at).toLocaleDateString("zh-TW")}</small></div><button class="btn ghost" type="button" data-slip="${esc(x.ref)}">打開</button></div>`}).join("");
 }
 function payload(ref){
@@ -655,15 +668,22 @@ $("nextBtn").addEventListener("click", ()=>{
 });
 $("prevBtn").addEventListener("click", ()=>{ if(S.step===0){ refreshResume(); show("home"); return; } S.step--; save(); render(); window.scrollTo({top:0}); });
 function renderEvents(){
-  const open=CONFIG.events.filter(e=>e.open);
-  $("eventList").innerHTML = open.length ? open.map(e=>`<div class="event">
-      <b>${esc(e.name)}</b>${e.date?`<div class="when">${esc(e.date)}</div>`:""}
-      <button class="btn primary block" data-start="fahui-${esc(e.id)}" type="button">報名這場法會</button>
-      <p class="note" data-resume="fahui-${esc(e.id)}" hidden>您上次填到一半的資料還在，按上面的按鈕會接著填。<button class="linkbtn" data-clear="fahui-${esc(e.id)}" type="button">清除重填</button></p>
-    </div>`).join("") : `<p class="desc">目前沒有開放報名的法會。請洽堂裡：<span>${CONFIG.phone}</span></p>`;
+  const shown=EVENTS().filter(e=>e.status!=="hidden");
+  $("eventList").innerHTML = shown.length ? shown.map(e=>{ const open=e.status==="open"; return `<div class="event">
+      <b>${esc(e.name)}${open?"":'<span class="closedtag">未開放</span>'}</b>${e.date?`<div class="when">${esc(e.date)}</div>`:""}
+      ${open?`<button class="btn primary block" data-start="fahui-${esc(e.id)}" type="button">報名這場法會</button>`
+            :`<button class="btn block closed" type="button" disabled aria-disabled="true">目前未開放報名</button>`}
+      ${open?`<p class="note" data-resume="fahui-${esc(e.id)}" hidden>您上次填到一半的資料還在，按上面的按鈕會接著填。<button class="linkbtn" data-clear="fahui-${esc(e.id)}" type="button">清除重填</button></p>`:""}
+    </div>`}).join("") : `<p class="desc">目前沒有法會開放報名。請洽堂裡：<span>${CONFIG.phone}</span></p>`;
+}
+function renderLampBtn(){
+  const open=SETTINGS.lamp.status==="open", b=$("lampBtn");
+  b.disabled=!open; b.classList.toggle("closed",!open); b.classList.toggle("primary",open);
+  b.setAttribute("aria-disabled", String(!open)); b.textContent = open ? "點燈報名" : "目前未開放報名";
+  if(!open) document.querySelector('[data-resume="lamp"]').hidden=true;
 }
 document.addEventListener("click", e=>{
-  const st=e.target.closest("[data-start]"); if(st){ const k=st.dataset.start; const [f,ev]=keyToForm(k); S=load(k)||freshState(f,ev); show("form"); render(); return; }
+  const st=e.target.closest("[data-start]"); if(st){ const k=st.dataset.start; if(!isOpen(k)){ renderEvents(); renderLampBtn(); return; } const [f,ev]=keyToForm(k); S=load(k)||freshState(f,ev); show("form"); render(); return; }
   const cl=e.target.closest("[data-clear]"); if(cl){ clearSaved(cl.dataset.clear); refreshResume(); }
   const sl=e.target.closest("[data-slip]"); if(sl){ const x=getSlips().find(y=>y.ref===sl.dataset.slip); if(x){ S=Object.assign(freshState(x.state.form,x.state.eventId),x.state); renderSlip(x.ref,x.at); $("doneMsg").hidden=true; show("done"); } }
 });
@@ -672,14 +692,14 @@ $("printBtn").addEventListener("click", ()=>window.print());
 $("againBtn").addEventListener("click", ()=>{ S=freshState(S.form, S.eventId); show("form"); render(); });
 function setBig(on){ document.documentElement.classList.toggle("big",on); $("sizeBtn").setAttribute("aria-pressed",on); $("sizeBtn").textContent=on?"字縮小":"字放大"; try{localStorage.setItem("tsuhui-big",on?"1":"")}catch(e){} }
 $("sizeBtn").addEventListener("click", ()=>setBig(!document.documentElement.classList.contains("big")));
-function refreshResume(){ document.querySelectorAll("[data-resume]").forEach(el=>{ const d=load(el.dataset.resume); el.hidden=!(d&&(d.contact.name||d.step>0)); }); }
+function refreshResume(){ document.querySelectorAll("[data-resume]").forEach(el=>{ const d=load(el.dataset.resume); el.hidden=!(isOpen(el.dataset.resume)&&d&&(d.contact.name||d.step>0)); }); }
 
 /* ---------- 啟動 ---------- */
-renderEvents(); renderMySlips();
-// 從網站其他頁面帶 #lamp 或 #fahui-場次 進來，直接開啟該表單
-(function(){ const h=location.hash.slice(1); if(!h) return;
-  const ok = h==="lamp" || (h.startsWith("fahui-") && CONFIG.events.some(e=>e.open && "fahui-"+e.id===h));
-  if(ok){ const [f,ev]=keyToForm(h); S=load(h)||freshState(f,ev); show("form"); render(); } })();
+renderEvents(); renderLampBtn(); renderMySlips();
+loadSettings().then(()=>{ renderEvents(); renderLampBtn(); renderMySlips(); refreshResume();
+  // 帶 #lamp 或 #fahui-場次 進來，項目有開放就直接開啟表單
+  const h=location.hash.slice(1); if(h && isOpen(h) && $("home").hidden===false){ const [f,ev]=keyToForm(h); S=load(h)||freshState(f,ev); show("form"); render(); }
+});
 $("lampTitle").textContent=CONFIG.lampForm.title;
 $("lampChips").innerHTML=CONFIG.lampForm.types.map(t=>`<li>${t.name}${t.price?` $${t.price}`:""}</li>`).join("");
 $("pChaodu").textContent=`每牌位 $${CONFIG.prices.chaodu}`; $("pLotus").textContent=`每位 $${CONFIG.prices.lamp}`;
