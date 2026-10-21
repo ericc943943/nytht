@@ -205,7 +205,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
   <main id="home">
     <section class="hero">
       <div class="eyebrow">紐約花蓮慈惠堂</div>
-      <h1>線上點燈和法會報名</h1>
+      <h1 id="heroTitle">線上點燈和法會報名</h1>
       <p>請選擇要報名的表單。一張報名表限同一住址的家人使用。</p>
     </section>
 
@@ -222,7 +222,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
         <p class="note" data-resume="lamp" hidden>您上次填到一半的資料還在，按上面的按鈕會接著填。<button class="linkbtn" data-clear="lamp" type="button">清除重填</button></p>
       </article>
 
-      <article class="formcard">
+      <article class="formcard" id="fahuiCard">
         <div class="eyebrow">法會</div>
         <h2>法會報名</h2>
         <p class="desc">各場法會都用同一張報名表，可報名以下項目：</p>
@@ -300,8 +300,8 @@ const CONFIG = {
   },
   // 法會場次的預設值。正式使用時，開放哪些項目由後台「報名項目設定」決定，會蓋過這裡的設定。
   events: [
-    {id:"2027-zhongyuan", name:"瑤池金母聖誕祈福消災超渡暨普渡大法會", date:"", open:true},
-    {id:"2027-spring-lidou", name:"春季祈安禮斗法會", date:"", open:true},
+    {id:"2027-zhongyuan", name:"瑤池金母聖誕祈福消災超渡暨普渡大法會", date:"", open:false},
+    {id:"2027-spring-lidou", name:"春季祈安禮斗法會", date:"", open:false},
     {id:"2027-autumn-lidou", name:"秋季祈安禮斗法會", date:"", open:false},
   ],
   prices: { chaodu: 160, lamp: 60 },
@@ -678,6 +678,9 @@ $("nextBtn").addEventListener("click", ()=>{
 $("prevBtn").addEventListener("click", ()=>{ if(S.step===0){ refreshResume(); show("home"); return; } S.step--; save(); render(); window.scrollTo({top:0}); });
 function renderEvents(){
   const shown=EVENTS().filter(e=>e.status!=="hidden");
+  // 所有法會都設為「不顯示」時，整張法會卡片收起來，首頁只剩點燈
+  $("fahuiCard").hidden = !shown.length;
+  $("heroTitle").textContent = shown.length ? "線上點燈和法會報名" : "線上點燈報名";
   $("eventList").innerHTML = shown.length ? shown.map(e=>{ const open=e.status==="open"; return `<div class="event">
       <b>${esc(e.name)}${open?"":'<span class="closedtag">未開放</span>'}</b>${e.date?`<div class="when">${esc(e.date)}</div>`:""}
       ${open?`<button class="btn primary block" data-start="fahui-${esc(e.id)}" type="button">報名這場法會</button>`

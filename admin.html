@@ -183,6 +183,9 @@ details.log li{margin:2px 0}
 .rt td.mono{font-family:var(--mono);font-size:.85rem;white-space:nowrap}
 .rt td.nw{white-space:nowrap}
 .rt td.none{text-align:center;color:var(--muted)}
+.compact .rt{font-size:.88rem}
+.compact .rt th,.compact .rt td{padding:5px 5px}
+.compact .rt td.nm{font-size:.98rem}
 .rt tr.grp td{background:var(--paper);font-weight:700}
 .rt tfoot td{font-weight:700;border-top:2px solid var(--ink)}
 .unp{color:var(--red);font-weight:700}
@@ -302,6 +305,8 @@ details.log li{margin:2px 0}
       <div class="rkinds" id="rKinds" role="group" aria-label="報表種類"></div>
       <div id="rScopeWrap"><div class="rlabel">哪一場？</div><div class="subtabs" id="rScope" role="group" aria-label="場次"></div></div>
       <div id="rTypeWrap"><div class="rlabel">燈種</div><div class="subtabs" id="rType" role="group" aria-label="燈種"></div></div>
+      <div id="rSortWrap"><div class="rlabel">排列順序</div>
+        <div class="seg" id="rSort" role="group" aria-label="排列順序"><button type="button" data-rsort="ref">依報名先後（一家人排一起）</button><button type="button" data-rsort="zodiac">依生肖</button></div></div>
       <div id="rPaidWrap"><div class="rlabel">要列出哪些人？</div>
         <div class="seg" id="rPaid" role="group" aria-label="繳費狀態"><button type="button" data-rp="all">全部（含未繳費）</button><button type="button" data-rp="paid">只列已繳清</button></div></div>
       <div id="rDateWrap"><div class="rlabel">只看某一天收的款？<span class="hint">（不選就是全部）</span></div>
@@ -340,8 +345,8 @@ const CONFIG = {
   apiUrl: "",   // Google Apps Script 網址；留空 = 示範模式
   lampTitle: "啟點光明燈暨安奉太歲",
   events: [     // 預設值；之後由「報名項目設定」管理
-    {id:"2027-zhongyuan", name:"瑤池金母聖誕祈福消災超渡暨普渡大法會", date:"", status:"open"},
-    {id:"2027-spring-lidou", name:"春季祈安禮斗法會", date:"", status:"open"},
+    {id:"2027-zhongyuan", name:"瑤池金母聖誕祈福消災超渡暨普渡大法會", date:"", status:"hidden"},
+    {id:"2027-spring-lidou", name:"春季祈安禮斗法會", date:"", status:"hidden"},
     {id:"2027-autumn-lidou", name:"秋季祈安禮斗法會", date:"", status:"hidden"},
   ],
 };
@@ -393,7 +398,8 @@ const API = {
   async list(){
     if(!DEMO){ const r=await fetch(`${CONFIG.apiUrl}?action=list&${authQS()}`); if(!r.ok) throw new Error(r.status); return (await r.json()).rows; }
     const paidMap = LS.get("tsuhui-demo-paid",{});
-    return [...sampleData(), ...LS.get("tsuhui-demo-db",[])].map(r=> paidMap[r.ref] ? {...r, ...paidMap[r.ref]} : r);
+    const shownEv = id => (SETTINGS.events.find(e=>e.id===id)||{}).status!=="hidden";
+    return [...sampleData().filter(r=>r.form==="lamp"||shownEv(r.eventId)), ...LS.get("tsuhui-demo-db",[])].map(r=> paidMap[r.ref] ? {...r, ...paidMap[r.ref]} : r);
   },
   // 收款：記錄經手人與時間，並留下每一次的修改紀錄
   async setPaid(ref, paid, amount, prevLog){
@@ -674,7 +680,10 @@ const RKINDS = [
   ["meal","供齋名單","供齋的人和功德金"],
   ["money","收款總表","應收、已收、誰經手"],
 ];
-const R = {kind:"lamp", scope:"", type:"all", paidOnly:false, date:""};
+const R = {kind:"lamp", scope:"", type:"all", paidOnly:false, date:"", sort:"ref"};
+// 有法會開放／暫停中，或已經有法會報名資料時，才顯示法會的三種報表
+const hasFahui = () => evList().length>0;
+const kindsShown = () => RKINDS.filter(([k])=>!["lotus","chaodu","meal"].includes(k) || hasFahui());
 const gText = g => g==="男"?"信士":g==="女"?"信女":"";
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 const mdText = s => { const [y,m,d]=s.split("-"); return `${+m}/${+d}`; };
@@ -683,7 +692,7 @@ const scopeName = s => s==="all" ? "全部報名" : s==="lamp" ? CONFIG.lampTitl
 function rScopes(){
   if(R.kind==="lamp") return [];
   const evs = evList().map(e=>[e.id,e.name]);
-  return R.kind==="money" ? [["all","全部"],["lamp","點燈"],...evs] : evs;
+  return R.kind==="money" ? (evs.length ? [["all","全部"],["lamp","點燈"],...evs] : []) : evs;
 }
 const paidCell = r => r.paid ? ["已繳","c"] : [`<span class="unp">未繳</span>`,"c"];
 // 表格：每格可以是字串，或 [內容, class]
@@ -694,17 +703,41 @@ function table(head, rows, foot){
                 : `<tr><td colspan="${head.length}" class="none">目前沒有</td></tr>`}</tbody>${foot||""}</table></div>`;
 }
 function rRows(){
-  let rs = ROWS.filter(r=>inTab(r, R.kind==="lamp"?"lamp":R.scope));
+  let rs = ROWS.filter(r=>inTab(r, R.kind==="lamp" ? "lamp" : R.scope || "lamp"));
   if(R.paidOnly && R.kind!=="money") rs = rs.filter(r=>r.paid);
   return rs.slice().sort((a,b)=>a.submittedAt.localeCompare(b.submittedAt));
 }
 // 點燈名冊、蓮花福慧燈名冊共用：一人一列
+const ZODIAC = "鼠牛虎兔龍蛇馬羊猴雞狗豬";
+// 依生肖排序時：鼠→豬，同生肖年紀大的在前；其餘維持報名先後
+function sortPeople(list){
+  if(R.kind!=="lamp" || R.sort!=="zodiac") return list;
+  return list.map((x,i)=>[x,i]).sort((a,b)=>{ const za=ZODIAC.indexOf(a[0].p.zodiac), zb=ZODIAC.indexOf(b[0].p.zodiac);
+    return (za<0?99:za)-(zb<0?99:zb) || (b[0].p.age_xu||0)-(a[0].p.age_xu||0) || a[1]-b[1]; }).map(x=>x[0]);
+}
 function personTable(list){
-  const head=["",["姓名",""],"信士／信女","生肖",["歲數","num"],"農曆生日",["報名編號",""]];
+  list = sortPeople(list);
+  const head=["",["姓名",""],"信士／信女","生肖",["歲數","num"],"農曆生日","聯絡電話",["報名編號",""]];
   if(!R.paidOnly) head.push("繳費");
-  return table(head, list.map(({p,r},i)=>{ const c=[[i+1,"num"],[esc(p.name),"nm"],[gText(p.gender),"c"],[esc(p.zodiac),"c"],[p.age_xu!=null?p.age_xu+" 歲":"","num"],[esc(lunarText(p.birth)),"nw"],[esc(r.ref),"mono"]]; if(!R.paidOnly) c.push(paidCell(r)); return c; }));
+  return table(head, list.map(({p,r},i)=>{ const c=[[i+1,"num"],[esc(p.name),"nm"],[gText(p.gender),"c"],[esc(p.zodiac),"c"],[p.age_xu!=null?p.age_xu+" 歲":"","num"],[esc(lunarText(p.birth)),"nw"],[esc(r.contact.phone),"nw"],[esc(r.ref),"mono"]]; if(!R.paidOnly) c.push(paidCell(r)); return c; }));
+}
+// 總表：一人一列，每種燈一欄打勾
+function lampSummaryTable(rs){
+  const list = sortPeople(rs.flatMap(r=>(r.lamps||[]).filter(p=>(p.lampTypes||[]).length).map(p=>({p,r}))));
+  const short = t => t.replace("個人","").replace("五路","");
+  const head=["",["姓名",""],"信士／信女","生肖",["歲數","num"],"農曆生日",...LAMP_TYPES.map(t=>[short(t),"c"]),["盞數","num"],["報名編號",""]];
+  if(!R.paidOnly) head.push("繳費");
+  const rows = list.map(({p,r},i)=>{ const c=[[i+1,"num"],[esc(p.name),"nm"],[gText(p.gender),"c"],[esc(p.zodiac),"c"],[p.age_xu!=null?p.age_xu+" 歲":"","num"],esc(lunarText(p.birth)),
+    ...LAMP_TYPES.map(t=>[(p.lampTypes||[]).includes(t)?"✓":"","c"]),[(p.lampTypes||[]).length,"num"],[esc(r.ref),"mono"]]; if(!R.paidOnly) c.push(paidCell(r)); return c; });
+  const n = list.reduce((a,x)=>a+(x.p.lampTypes||[]).length,0);
+  const foot = list.length ? `<tfoot><tr><td></td><td colspan="5">合計 ${list.length} 位</td>${LAMP_TYPES.map(t=>`<td class="c">${itemUnits(rs,t)}</td>`).join("")}<td class="num">${n}</td><td colspan="${R.paidOnly?1:2}"></td></tr></tfoot>` : "";
+  return table(head, rows, foot);
 }
 function sheetLamp(rs){
+  if(R.type==="sum"){
+    const people = rs.reduce((a,r)=>a+(r.lamps||[]).length,0);
+    return {title:"點燈總表", sum:`<span>共 <b>${people}</b> 位</span>`+LAMP_TYPES.map(t=>`<span>${t} <b>${itemUnits(rs,t)}</b> 盞</span>`).join(""), body:`<div class="rsec compact">${lampSummaryTable(rs)}</div>`};
+  }
   const types = R.type==="all" ? LAMP_TYPES : [R.type];
   const sum = LAMP_TYPES.map(t=>`<span>${t} <b>${itemUnits(rs,t)}</b> 盞</span>`).join("");
   const secs = types.map((t,i)=>{
@@ -783,13 +816,17 @@ function sheetMoney(rs){
 }
 function renderReport(){
   // 控制項
-  $("rKinds").innerHTML = RKINDS.map(([k,t,d])=>`<button type="button" data-rk="${k}" aria-pressed="${R.kind===k}"><b>${t}</b><small>${d}</small></button>`).join("");
+  if(!kindsShown().some(([k])=>k===R.kind)) R.kind="lamp";
+  $("rKinds").innerHTML = kindsShown().map(([k,t,d])=>`<button type="button" data-rk="${k}" aria-pressed="${R.kind===k}"><b>${t}</b><small>${d}</small></button>`).join("");
   const scopes = rScopes();
   if(scopes.length && !scopes.some(s=>s[0]===R.scope)) R.scope = scopes[0][0];
+  if(!scopes.length && R.kind==="money") R.scope = "lamp";
   $("rScopeWrap").hidden = !scopes.length;
   $("rScope").innerHTML = scopes.map(([v,t])=>`<button type="button" data-rs="${esc(v)}" aria-pressed="${R.scope===v}">${esc(t)}</button>`).join("");
   $("rTypeWrap").hidden = R.kind!=="lamp";
-  $("rType").innerHTML = [["all","全部燈種"],...LAMP_TYPES.map(x=>[x,x])].map(([v,t])=>`<button type="button" data-rt="${esc(v)}" aria-pressed="${R.type===v}">${esc(t)}</button>`).join("");
+  $("rSortWrap").hidden = R.kind!=="lamp";
+  $("rSort").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.rsort===R.sort));
+  $("rType").innerHTML = [["all","依燈種分開"],["sum","總表（一人一列）"],...LAMP_TYPES.map(x=>[x,x])].map(([v,t])=>`<button type="button" data-rt="${esc(v)}" aria-pressed="${R.type===v}">${esc(t)}</button>`).join("");
   $("rPaidWrap").hidden = R.kind==="money";
   $("rPaid").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", (b.dataset.rp==="paid")===R.paidOnly));
   $("rDateWrap").hidden = R.kind!=="money"; $("rDate").value = R.date;
@@ -814,6 +851,7 @@ $("rPrint").addEventListener("click", ()=>window.print());
 $("rKinds").addEventListener("click", e=>{ const b=e.target.closest("[data-rk]"); if(!b) return; R.kind=b.dataset.rk; if(R.kind==="money") R.scope="all"; renderReport(); });
 $("rScope").addEventListener("click", e=>{ const b=e.target.closest("[data-rs]"); if(!b) return; R.scope=b.dataset.rs; renderReport(); });
 $("rType").addEventListener("click", e=>{ const b=e.target.closest("[data-rt]"); if(!b) return; R.type=b.dataset.rt; renderReport(); });
+$("rSort").addEventListener("click", e=>{ const b=e.target.closest("[data-rsort]"); if(!b) return; R.sort=b.dataset.rsort; renderReport(); });
 $("rPaid").addEventListener("click", e=>{ const b=e.target.closest("[data-rp]"); if(!b) return; R.paidOnly=b.dataset.rp==="paid"; renderReport(); });
 $("rDate").addEventListener("change", e=>{ R.date=e.target.value; renderReport(); });
 $("rToday").addEventListener("click", ()=>{ R.date=ymd(new Date()); renderReport(); });
