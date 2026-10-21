@@ -775,7 +775,7 @@ function applyLang(){
   document.documentElement.lang = t("zh-Hant","en");
   document.title = t("慈惠堂線上點燈和法會報名","Tsu Hui Temple – Online Registration");
   document.querySelectorAll("[data-en]").forEach(el=>{ if(el.dataset.zh===undefined) el.dataset.zh=el.innerHTML; el.innerHTML = EN() ? el.dataset.en : el.dataset.zh; });
-  $("langBtn").textContent = t("English","中文"); $("langBtn").lang = t("en","zh-Hant");
+  $("langBtn").textContent = t("EN","中文"); $("langBtn").lang = t("en","zh-Hant");
   $("langBtn").setAttribute("aria-label", t("Switch to English","切換成中文"));
   $("homeLink").setAttribute("aria-label", t("回到報名首頁","Back to home"));
   setBig(document.documentElement.classList.contains("big"));
