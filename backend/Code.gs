@@ -6,9 +6,12 @@
  * 詳細步驟見 backend/設定說明.txt。
  *
  * 試算表分頁（setup 會自動建立）：
- *   報名  一筆報名一列；最後一欄「完整資料」是 JSON，後台靠它顯示，請勿手動修改
+ *   報名  一筆報名一列；「完整資料」欄是 JSON，後台靠它顯示，請勿手動修改
  *   帳號  義工帳號；PIN 只存加密後的值
  *   設定  報名項目開關（A1 的 JSON），由後台「設定」修改
+ *
+ * 示範模式：網站根目錄的 demo-backend.js 是用這份檔案產生的（在瀏覽器裡跑同一套規則），
+ * 改了這份之後請重新產生（見 backend/build-demo.py）。
  */
 
 /* ================= 設定 ================= */
@@ -16,6 +19,13 @@ const PRICES = {
   lamp: { "個人光明燈": 120, "太歲燈": 120, "五路財神燈": 120, "文昌燈": 120 },  // 點燈：每盞
   lotus: 60,     // 法會：蓮花福慧燈，每位
   chaodu: 160,   // 法會：超渡牌位，每牌位
+};
+// 燈位：每種燈牆上的排列。燈號 = 代碼-排排個個，例：A01-0512 ＝ 光明燈第 5 排第 12 個
+const SEATS = {
+  "個人光明燈": { code: "A01", perRow: 30, rows: 20 },
+  "文昌燈":     { code: "A02", perRow: 20, rows: 20 },
+  "太歲燈":     { code: "A03", perRow: 30, rows: 19 },
+  "五路財神燈": { code: "A05", perRow: 30, rows: 23 },
 };
 const DEFAULT_SETTINGS = {
   lamp: { status: "open" },
@@ -26,11 +36,12 @@ const DEFAULT_SETTINGS = {
   ],
 };
 const FIRST_ADMIN = { name: "管理員", pin: "8888" };   // 第一次登入會被要求改 PIN
-const MAX_FAILS = 8;          // PIN 連續打錯幾次就暫時鎖住
+const MAX_FAILS = 8;          // PIN 或查詢連續打錯幾次就暫時鎖住
 const LOCK_MINUTES = 15;
 
 const SHEET = { reg: "報名", users: "帳號", settings: "設定" };
-const REG_HEAD = ["報名編號", "報名時間", "表單", "場次", "聯絡人", "電話", "住址", "應繳", "已繳清", "收款時間", "經手人", "語言", "備註", "收款紀錄", "送出代碼", "完整資料"];
+const REG_HEAD = ["報名編號", "報名時間", "表單", "場次", "聯絡人", "電話", "住址", "應繳", "已繳清", "收款時間", "經手人", "語言", "備註", "收款紀錄", "送出代碼", "完整資料", "已取消", "燈位"];
+const C = { ref: 1, time: 2, form: 3, event: 4, name: 5, phone: 6, address: 7, total: 8, paid: 9, paidAt: 10, paidBy: 11, lang: 12, note: 13, log: 14, cid: 15, json: 16, cancelled: 17, seats: 18 };
 const USER_HEAD = ["id", "姓名", "身分", "PIN（加密）", "啟用", "待改PIN"];
 
 /* ================= 第一次使用：建立分頁與管理員帳號 ================= */
@@ -39,7 +50,10 @@ function setup() {
   const make = (name, head) => {
     let sh = ss.getSheetByName(name);
     if (!sh) sh = ss.insertSheet(name);
-    if (head && sh.getLastRow() === 0) { sh.appendRow(head); sh.setFrozenRows(1); sh.getRange(1, 1, 1, head.length).setFontWeight("bold"); }
+    if (head) {   // 標題列：新建或欄位有增加時都重寫
+      sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight("bold");
+      sh.setFrozenRows(1);
+    }
     return sh;
   };
   const reg = make(SHEET.reg, REG_HEAD);
@@ -59,7 +73,7 @@ function doGet(e) {
   const p = e.parameter || {};
   try {
     switch (p.action) {
-      case "settings": return out_(getSettings_());
+      case "settings": { const s = getSettings_(); s.seatsLeft = seatsLeft_(); return out_(s); }
       case "users":    return out_({ users: readUsers_().map(pub_) });
       case "login": {
         if (isLocked_(p.uid)) return out_({ ok: false, error: "locked" });
@@ -70,6 +84,7 @@ function doGet(e) {
         if (!checkLogin_(p.uid, p.pin)) return out_({ ok: false, error: "auth" });
         return out_({ ok: true, rows: listRows_() });
       }
+      case "lookup": return out_(lookup_(p.ref, p.phone));    // 信眾用編號＋電話查自己的報名
       default: return out_({ ok: true, service: "tsuhui-signup" });
     }
   } catch (err) { return out_({ ok: false, error: String(err && err.message || err) }); }
@@ -81,11 +96,14 @@ function doPost(e) {
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(20000);
-    if (!body.action) return out_(submit_(body));          // 報名頁送出
+    if (!body.action) return out_(submit_(body));           // 報名頁送出
+    if (body.action === "update") return out_(update_(body)); // 信眾修改自己的報名
     const me = checkLogin_(body.uid, body.pin);
     if (!me) return out_({ ok: false, error: "auth" });
     switch (body.action) {
       case "setPaid":      return out_(setPaid_(me, body.ref, !!body.paid));
+      case "setCancelled": return out_(setCancelled_(me, body.ref, !!body.cancelled));
+      case "assignSeats":  return out_(assignWaitlist_(me, body.ref));
       case "saveSettings": if (me.role !== "admin") return out_({ ok: false, error: "auth" });
                            return out_(saveSettings_(body.settings));
       case "userOp":       return out_(userOp_(me, body));
@@ -105,28 +123,36 @@ function submit_(d) {
 
   const sh = sheet_(SHEET.reg);
   const last = sh.getLastRow();
-  // 同一份報名重送（網路斷掉後再按一次）：回傳原本的編號，不重複建立
+  // 同一份報名重送（網路斷掉後再按一次）：回傳原本的報名，不重複建立
   if (d.clientId && last > 1) {
-    const ids = sh.getRange(2, 15, last - 1, 1).getValues();
+    const ids = sh.getRange(2, C.cid, last - 1, 1).getValues();
     for (let i = 0; i < ids.length; i++) if (ids[i][0] === d.clientId) {
-      return { ok: true, ref: String(sh.getRange(i + 2, 1).getValue()), duplicate: true };
+      const rec = readRecord_(sh.getRange(i + 2, 1, 1, REG_HEAD.length).getValues()[0]);
+      return { ok: true, ref: rec.ref, record: publicRecord_(rec), duplicate: true };
     }
   }
-  // 報名編號由這裡決定，確保不重複（格式同報名頁：L/F + yymmdd + - + 4 碼）
+  // 報名編號由這裡決定，確保不重複（格式：L/F + yymmdd + - + 4 碼）
   const existing = new Set(last > 1 ? sh.getRange(2, 1, last - 1, 1).getValues().map(r => String(r[0])) : []);
   const tz = Session.getScriptTimeZone() || "America/New_York";
   const prefix = (d.form === "lamp" ? "L" : "F") + Utilities.formatDate(new Date(), tz, "yyMMdd") + "-";
-  let ref = d.ref && String(d.ref).indexOf(prefix) === 0 && !existing.has(d.ref) ? String(d.ref) : "";
+  let ref = "";
   for (let i = 0; !ref && i < 200; i++) { const c = prefix + ("000" + Math.floor(Math.random() * 10000)).slice(-4); if (!existing.has(c)) ref = c; }
   if (!ref) return { ok: false, error: "ref" };
 
-  // 金額一律在這裡重新計算，不採用網頁送來的數字
-  d.totals = calcTotals_(d);
-  d.ref = ref; d.paid = false; d.submittedAt = new Date().toISOString();
+  cleanData_(d);
+  d.totals = calcTotals_(d);                     // 金額一律在這裡重新計算
+  if (d.form === "lamp") assignSeats_(d, usedSeats_(""), null);
+  d.ref = ref; d.paid = false; d.cancelled = false; d.submittedAt = new Date().toISOString();
   const evName = d.form === "lamp" ? "點燈" : ((st.events.find(x => x.id === d.eventId) || {}).name || d.formTitle || "法會");
   sh.appendRow([ref, new Date(), d.form === "lamp" ? "點燈" : "法會", evName, d.contact.name || "", d.contact.phone || "", d.contact.address || "",
-                d.totals.all, false, "", "", d.lang === "en" ? "英文" : "中文", d.note || "", "[]", d.clientId || "", JSON.stringify(d)]);
-  return { ok: true, ref: ref, totals: d.totals };
+                d.totals.all, false, "", "", d.lang === "en" ? "英文" : "中文", d.note || "", "[]", d.clientId || "", JSON.stringify(d), false, seatText_(d)]);
+  return { ok: true, ref: ref, record: publicRecord_(d) };
+}
+
+// 只留下報名需要的欄位（金額、燈位、繳費狀態一律由後端決定）
+function cleanData_(d) {
+  delete d.totals; delete d.paid; delete d.paidAt; delete d.paidBy; delete d.payLog; delete d.cancelled; delete d.sample;
+  (d.lamps || []).forEach(p => { delete p.seats; if (!p.pid) p.pid = Utilities.getUuid().slice(0, 8); });
 }
 
 function calcTotals_(d) {
@@ -145,44 +171,191 @@ function calcTotals_(d) {
   return { lamp: lamp, chaodu: chaodu, meal: meal, all: lamp + chaodu + meal };
 }
 
+/* ================= 燈位 ================= */
+const seatId_ = (cfg, r, c) => cfg.code + "-" + ("0" + r).slice(-2) + ("0" + c).slice(-2);
+
+// 目前被佔用的燈位（已取消的不算；exceptRef 是正在修改的那一筆）
+function usedSeats_(exceptRef) {
+  const used = new Set(), sh = sheet_(SHEET.reg), n = sh.getLastRow() - 1;
+  if (n < 1) return used;
+  sh.getRange(2, 1, n, REG_HEAD.length).getValues().forEach(r => {
+    if (r[C.cancelled - 1] === true || String(r[0]) === String(exceptRef)) return;
+    let d = {}; try { d = JSON.parse(r[C.json - 1]); } catch (e) { return; }
+    (d.lamps || []).forEach(p => Object.keys(p.seats || {}).forEach(t => { if (p.seats[t]) used.add(p.seats[t]); }));
+  });
+  return used;
+}
+function nextFreeSeat_(type, used) {
+  const cfg = SEATS[type]; if (!cfg) return null;
+  for (let r = 1; r <= cfg.rows; r++) for (let c = 1; c <= cfg.perRow; c++) {
+    const id = seatId_(cfg, r, c); if (!used.has(id)) return id;
+  }
+  return null;   // 額滿：候補
+}
+// 分配燈位。prev 是修改前的資料：同一個人（pid）同一種燈原本有燈位、且沒被別人佔走，就保留原位
+function assignSeats_(d, used, prev) {
+  const old = {};
+  ((prev && prev.lamps) || []).forEach(p => { if (p.pid) old[p.pid] = p.seats || {}; });
+  (d.lamps || []).forEach(p => {
+    const keep = old[p.pid] || {}, seats = {};
+    (p.lampTypes || []).forEach(t => {
+      if (!SEATS[t]) return;
+      if (keep[t] && !used.has(keep[t])) seats[t] = keep[t];
+      else seats[t] = nextFreeSeat_(t, used);
+      if (seats[t]) used.add(seats[t]);
+    });
+    p.seats = seats;
+  });
+}
+function seatsLeft_() {
+  const used = usedSeats_(""), left = {};
+  Object.keys(SEATS).forEach(t => {
+    const cfg = SEATS[t], prefix = cfg.code + "-";
+    let n = 0; used.forEach(id => { if (id.indexOf(prefix) === 0) n++; });
+    left[t] = cfg.rows * cfg.perRow - n;
+  });
+  return left;
+}
+const SHORT_ = { "個人光明燈": "光明燈", "五路財神燈": "財神燈" };
+function seatText_(d) {
+  return (d.lamps || []).filter(p => p.seats && Object.keys(p.seats).length)
+    .map(p => p.name + "：" + Object.keys(p.seats).map(t => (SHORT_[t] || t) + " " + (p.seats[t] || "候補")).join("、")).join("\n");
+}
+
+/* ================= 讀寫一筆報名 ================= */
+function readRecord_(r) {
+  let d = {}; try { d = JSON.parse(r[C.json - 1]); } catch (e) {}
+  let log = []; try { log = JSON.parse(r[C.log - 1] || "[]"); } catch (e) {}
+  d.ref = String(r[C.ref - 1]);
+  d.paid = r[C.paid - 1] === true;
+  d.paidAt = r[C.paidAt - 1] ? new Date(r[C.paidAt - 1]).toISOString() : null;
+  d.paidBy = r[C.paidBy - 1] || null;
+  d.cancelled = r[C.cancelled - 1] === true;
+  d.payLog = log;
+  return d;
+}
+function findRow_(ref) {
+  const sh = sheet_(SHEET.reg), n = sh.getLastRow() - 1;
+  if (n < 1 || !ref) return null;
+  const refs = sh.getRange(2, 1, n, 1).getValues();
+  for (let i = 0; i < n; i++) if (String(refs[i][0]) === String(ref).trim().toUpperCase()) {
+    const row = i + 2;
+    return { sh: sh, row: row, rec: readRecord_(sh.getRange(row, 1, 1, REG_HEAD.length).getValues()[0]) };
+  }
+  return null;
+}
+// 把修改後的報名內容寫回（繳費、取消、收款紀錄另外處理）
+function writeData_(f, d) {
+  const keep = {}; ["paid", "paidAt", "paidBy", "payLog", "cancelled"].forEach(k => { keep[k] = d[k]; delete d[k]; });
+  f.sh.getRange(f.row, C.name, 1, 4).setValues([[d.contact.name || "", d.contact.phone || "", d.contact.address || "", d.totals.all]]);
+  f.sh.getRange(f.row, C.note).setValue(d.note || "");
+  f.sh.getRange(f.row, C.json).setValue(JSON.stringify(d));
+  f.sh.getRange(f.row, C.seats).setValue(seatText_(d));
+  Object.assign(d, keep);
+}
+function addLog_(f, entry) {
+  const log = f.rec.payLog || [];
+  log.push(entry);
+  f.sh.getRange(f.row, C.log).setValue(JSON.stringify(log));
+  f.rec.payLog = log;
+}
+// 給信眾看的資料：不含收款紀錄和內部欄位
+function publicRecord_(d) {
+  const o = JSON.parse(JSON.stringify(d));
+  delete o.payLog; delete o.clientId; delete o.paidBy;
+  return o;
+}
+
 function listRows_() {
   const sh = sheet_(SHEET.reg), n = sh.getLastRow() - 1;
   if (n < 1) return [];
-  return sh.getRange(2, 1, n, REG_HEAD.length).getValues().map(r => {
-    let d = {}; try { d = JSON.parse(r[15]); } catch (e) {}
-    let log = []; try { log = JSON.parse(r[13] || "[]"); } catch (e) {}
-    d.ref = String(r[0]);
-    d.paid = r[8] === true;
-    d.paidAt = r[9] ? new Date(r[9]).toISOString() : null;
-    d.paidBy = r[10] || null;
-    d.payLog = log;
-    return d;
-  });
+  return sh.getRange(2, 1, n, REG_HEAD.length).getValues().map(readRecord_);
 }
 
-function setPaid_(me, ref, paid) {
-  const sh = sheet_(SHEET.reg), n = sh.getLastRow() - 1;
-  if (n < 1) return { ok: false, error: "not-found" };
-  const refs = sh.getRange(2, 1, n, 1).getValues();
-  for (let i = 0; i < n; i++) if (String(refs[i][0]) === String(ref)) {
-    const row = i + 2, now = new Date();
-    let log = []; try { log = JSON.parse(sh.getRange(row, 14).getValue() || "[]"); } catch (e) {}
-    const amount = sh.getRange(row, 8).getValue();
-    log.push({ action: paid ? "paid" : "unpaid", by: me.name, byId: me.id, at: now.toISOString(), amount: amount });
-    sh.getRange(row, 9, 1, 3).setValues([[paid, paid ? now : "", paid ? me.name : ""]]);
-    sh.getRange(row, 14).setValue(JSON.stringify(log));
-    return { ok: true, record: { paid: paid, paidAt: paid ? now.toISOString() : null, paidBy: paid ? me.name : null, paidById: paid ? me.id : null, payLog: log } };
+/* ================= 信眾查詢、修改 ================= */
+const digits_ = s => String(s || "").replace(/\D/g, "");
+function phoneMatch_(stored, given) {
+  const a = digits_(stored), b = digits_(given);
+  return b.length >= 7 && (a === b || a.slice(-10) === b.slice(-10));
+}
+// 用報名編號＋電話找自己的報名；同一個編號連續打錯會暫時鎖住
+function lookup_(ref, phone) {
+  const cache = CacheService.getScriptCache(), key = "lk-" + String(ref || "").toUpperCase();
+  const fails = Number(cache.get(key) || 0);
+  if (fails >= MAX_FAILS) return { ok: false, error: "locked" };
+  const f = findRow_(ref);
+  if (!f || !phoneMatch_(f.rec.contact && f.rec.contact.phone, phone)) {
+    cache.put(key, String(fails + 1), LOCK_MINUTES * 60);
+    return { ok: false, error: "not-found" };
   }
-  return { ok: false, error: "not-found" };
+  if (fails) cache.remove(key);
+  return { ok: true, record: publicRecord_(f.rec) };
+}
+// 繳費前可以修改；修改後重新計算金額，原本的燈位盡量保留
+function update_(b) {
+  const look = lookup_(b.ref, b.phone);
+  if (!look.ok) return look;
+  const f = findRow_(b.ref), old = f.rec;
+  if (old.cancelled) return { ok: false, error: "cancelled" };
+  if (old.paid) return { ok: false, error: "paid" };
+  const d = b.data || {};
+  if (!d.contact) return { ok: false, error: "bad-data" };
+  cleanData_(d);
+  // 不能改的欄位沿用原本的
+  ["ref", "form", "eventId", "formTitle", "submittedAt", "clientId", "lang"].forEach(k => { d[k] = old[k]; });
+  if (b.data.lang) d.lang = b.data.lang;
+  d.updatedAt = new Date().toISOString();
+  d.totals = calcTotals_(d);
+  if (d.form === "lamp") assignSeats_(d, usedSeats_(old.ref), old);
+  Object.assign(d, { paid: old.paid, paidAt: old.paidAt, paidBy: old.paidBy, payLog: old.payLog, cancelled: old.cancelled });
+  writeData_(f, d);
+  addLog_(f, { action: "edit", by: "信眾", at: d.updatedAt, amount: d.totals.all });
+  d.payLog = f.rec.payLog;
+  return { ok: true, record: publicRecord_(d) };
+}
+
+/* ================= 後台：收款、取消、分配燈位 ================= */
+function setPaid_(me, ref, paid) {
+  const f = findRow_(ref);
+  if (!f) return { ok: false, error: "not-found" };
+  if (paid && f.rec.cancelled) return { ok: false, error: "cancelled" };
+  const now = new Date(), amount = f.rec.totals ? f.rec.totals.all : f.sh.getRange(f.row, C.total).getValue();
+  f.sh.getRange(f.row, C.paid, 1, 3).setValues([[paid, paid ? now : "", paid ? me.name : ""]]);
+  addLog_(f, { action: paid ? "paid" : "unpaid", by: me.name, byId: me.id, at: now.toISOString(), amount: amount });
+  return { ok: true, record: { paid: paid, paidAt: paid ? now.toISOString() : null, paidBy: paid ? me.name : null, paidById: paid ? me.id : null, payLog: f.rec.payLog } };
+}
+// 取消報名會把燈位放出來；恢復時重新分配（原位還空著就用原位）
+function setCancelled_(me, ref, cancelled) {
+  const f = findRow_(ref);
+  if (!f) return { ok: false, error: "not-found" };
+  if (cancelled && f.rec.paid) return { ok: false, error: "paid" };
+  const d = f.rec;
+  if (!cancelled && d.form === "lamp") { assignSeats_(d, usedSeats_(d.ref), d); writeData_(f, d); }
+  f.sh.getRange(f.row, C.cancelled).setValue(cancelled);
+  d.cancelled = cancelled;
+  addLog_(f, { action: cancelled ? "cancel" : "restore", by: me.name, byId: me.id, at: new Date().toISOString() });
+  return { ok: true, record: d };
+}
+// 候補的燈：有空位時補上燈位（已經有燈位的不變）
+function assignWaitlist_(me, ref) {
+  const f = findRow_(ref);
+  if (!f) return { ok: false, error: "not-found" };
+  const d = f.rec;
+  if (d.cancelled) return { ok: false, error: "cancelled" };
+  assignSeats_(d, usedSeats_(d.ref), d);
+  writeData_(f, d);
+  addLog_(f, { action: "seat", by: me.name, byId: me.id, at: new Date().toISOString() });
+  return { ok: true, record: d };
 }
 
 /* ================= 設定 ================= */
 function getSettings_() {
   try { const v = sheet_(SHEET.settings).getRange("A1").getValue(); if (v) { const s = JSON.parse(v); if (s && s.events) return s; } } catch (e) {}
-  return DEFAULT_SETTINGS;
+  return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
 }
 function saveSettings_(s) {
   if (!s || !s.lamp || !Array.isArray(s.events)) return { ok: false, error: "bad-data" };
+  delete s.seatsLeft;
   s.updatedAt = new Date().toISOString();
   sheet_(SHEET.settings).getRange("A1").setValue(JSON.stringify(s));
   return { ok: true };

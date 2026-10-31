@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.7.7/lunar.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="demo-backend.js"></script>
 <style>
 /* 版面：單欄、大字、大按鈕；入口頁 → 分步驟報名 → 確認 → 完成 */
 :root{
@@ -160,43 +161,79 @@ textarea{min-height:5rem;resize:vertical}
 .note{font-size:.88rem;color:var(--muted);margin-top:12px}
 .testbar{background:var(--gold-soft);border:1px dashed var(--gold);color:var(--ink);border-radius:10px;padding:10px 14px;font-size:.85rem;margin-top:14px}
 
-/* 完成頁 */
-.done{text-align:center;padding:36px 0 10px}
-.done .seal{width:84px;height:84px;margin:0 auto 14px;border-radius:50%;border:3px solid var(--red);color:var(--red);display:grid;place-items:center;font-family:var(--serif);font-size:1.6rem;transform:rotate(-8deg)}
-.refno{display:inline-block;font-family:ui-monospace,Menlo,monospace;font-size:1.5rem;letter-spacing:.08em;background:var(--surface);border:2px solid var(--line);border-radius:10px;padding:8px 18px;margin:10px 0}
-/* 繳費單 */
+/* 完成頁：報名表（上半）＋收執聯（下半），用 Letter 紙列印 */
 .donemsg{background:var(--gold-soft);border-radius:12px;padding:14px 18px;margin:22px 0 16px;font-weight:500}
-.slip{background:#fff;color:#23201C;border:2px solid #23201C;border-radius:6px;padding:20px 20px 16px;display:flex;flex-direction:column;gap:14px}
-.slip-head{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:2px solid #23201C;padding-bottom:12px}
-.slip-head img{height:38px;width:auto}
-.slip-head .doc{font-family:var(--serif);font-size:1.25rem;font-weight:700;letter-spacing:.15em;white-space:nowrap}
-.slip-title{font-family:var(--serif);font-weight:700;font-size:1.05rem;line-height:1.45}
-.slip-main{display:flex;justify-content:space-between;align-items:center;gap:14px}
-.slip .lbl{display:block;font-size:.8rem;color:#6B645A;letter-spacing:.1em}
-.slip .refno{font-size:clamp(1.05rem,5.2vw,1.55rem);white-space:nowrap;letter-spacing:.04em;margin:2px 0 8px;padding:4px 10px;background:#fff;color:#23201C;border:2px solid #23201C}
-.slip .qr{width:96px;flex:none}
-.slip-main > div:first-child{min-width:0}
-.slip .qr svg{width:100%;height:auto;display:block}
-.slip-who{font-size:.95rem;border-top:1px dashed #BDB5A8;padding-top:10px}
-.slip-items{list-style:none;margin:0;padding:0;font-variant-numeric:tabular-nums}
-.slip-items li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px dashed #BDB5A8;font-size:.95rem}
-.slip-total{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid #23201C;padding-top:10px;font-weight:700;font-variant-numeric:tabular-nums}
-.slip-total span:last-child{font-size:1.7rem;color:#356D82}
-.slip-status{display:flex;align-items:center;gap:14px}
-.stamp{flex:none;border:3px solid #9B2226;color:#9B2226;font-family:var(--serif);font-weight:700;padding:6px 12px;border-radius:6px;transform:rotate(-6deg);letter-spacing:.15em}
-.paid-box{flex:1;font-size:.82rem;color:#6B645A;line-height:2}
-.slip-note{margin:0;font-size:.85rem;color:#4A443C}
-details.full{margin-top:16px}
-details.full summary{cursor:pointer;padding:12px 0;font-weight:700;color:var(--muted)}
+.donemsg.warn{background:var(--red-soft)}
+.paper{background:#fff;color:#23201C;border:1.5px solid #23201C;border-radius:4px;padding:18px 18px 14px;font-size:.92rem;line-height:1.5}
+.f-head{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:2px solid #23201C;padding-bottom:10px}
+.f-head img{height:36px;width:auto}
+.f-head .doc{font-family:var(--serif);font-size:1.2rem;font-weight:700;letter-spacing:.12em;white-space:nowrap;text-align:right;line-height:1.25}
+.f-head .doc small{display:block;font-size:.6em;letter-spacing:.04em;font-weight:500}
+.f-title{font-family:var(--serif);font-weight:700;font-size:1.02rem;margin:10px 0 4px;line-height:1.4}
+.f-meta{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.f-meta > div:first-child{min-width:0}
+.lbl{display:block;font-size:.75rem;color:#6B645A;letter-spacing:.06em}
+.f-ref{font-family:ui-monospace,Menlo,monospace;font-weight:700;font-size:clamp(1.05rem,5vw,1.4rem);border:2px solid #23201C;border-radius:6px;padding:2px 10px;display:inline-block;margin:2px 0 6px;white-space:nowrap;letter-spacing:.04em}
+.f-qr{width:84px;flex:none}
+.f-qr svg{width:100%;height:auto;display:block}
+.f-sec{border-top:1px dashed #BDB5A8;margin-top:8px;padding-top:6px}
+.f-sec h4{margin:0 0 2px;font-size:.78rem;color:#6B645A;letter-spacing:.08em;font-weight:700}
+.f-person{padding:6px 0;border-top:1px dotted #D5CFC5}
+.f-person:first-of-type{border-top:none}
+.f-pn b{font-size:1.02rem}
+.f-sub{color:#4A443C;font-size:.85rem}
+.f-pl{display:flex;flex-wrap:wrap;gap:2px 16px;margin-top:2px}
+.seat{font-family:ui-monospace,Menlo,monospace;font-weight:700;white-space:nowrap}
+.wait{color:#9B2226;font-weight:700;white-space:nowrap}
+.f-items{list-style:none;margin:6px 0 0;padding:0;font-variant-numeric:tabular-nums}
+.f-items li{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-top:1px dashed #BDB5A8}
+.f-total{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid #23201C;margin-top:6px;padding-top:6px;font-weight:700;font-variant-numeric:tabular-nums}
+.f-total span:last-child{font-size:1.45rem;color:#356D82}
+.f-temple{display:flex;align-items:center;gap:14px;margin-top:10px}
+.stamp{flex:none;border:3px solid #9B2226;color:#9B2226;font-family:var(--serif);font-weight:700;padding:5px 10px;border-radius:6px;transform:rotate(-6deg);letter-spacing:.12em;text-align:center;line-height:1.2}
+.stamp small{display:block;font-size:.65em;letter-spacing:0;font-family:var(--sans)}
+.stamp.ok{border-color:#2E6B3A;color:#2E6B3A}
+.stamp.void{border-color:#6B645A;color:#6B645A}
+.sign{flex:1;font-size:.82rem;color:#4A443C;line-height:2.1}
+.f-note{margin:8px 0 0;font-size:.8rem;color:#4A443C}
+.cut{display:flex;align-items:center;gap:8px;color:#6B645A;font-size:.78rem;margin:16px 0;white-space:nowrap}
+.cut::before,.cut::after{content:"";flex:1;border-top:2px dashed #9E978C}
+.stub .f-head .doc{font-size:1.05rem}
+html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1.02rem}
+.stub-list{list-style:none;margin:4px 0 0;padding:0;font-size:.88rem}
+.stub-list li{padding:2px 0}
+.lookupcard .desc{margin:0}
 .myslips{display:grid;gap:10px;margin-top:24px}
 .myslips h2{font-size:1.05rem}
 .myslip{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
 .myslip small{display:block;color:var(--muted);font-size:.85rem}
 .myslip .btn{min-height:2.6rem;padding:0 16px;font-size:.95rem}
+.left{font-weight:700;color:var(--err)}
+.lkerr{color:var(--err);font-weight:500;margin:0;min-height:1.4em}
 @media print{
-  .top,footer,.nav,.donemsg,details.full{display:none!important}
-  body{background:#fff;padding:0}
-  .slip{border-width:1.5px;break-inside:avoid}
+  @page{size:letter;margin:10mm 12mm}
+  html,:root.big{font-size:11pt}
+  body{background:#fff!important;padding:0!important}
+  .wrap{max-width:none}
+  .top,footer,.nav,.donemsg,#home,#form,#lookup{display:none!important}
+  .paper{border:none;padding:0;font-size:10pt;line-height:1.4}
+  /* 上半部固定高度，收執聯就會落在同一頁的下方，方便撕下；人多的時候自動延伸 */
+  .regform{min-height:5.6in}
+  .f-qr{width:62px}
+  .f-head{padding-bottom:6px}
+  .f-head img{height:28px}
+  .f-title{margin:6px 0 2px}
+  .f-ref{font-size:14pt;margin:0 0 3px}
+  .lbl{font-size:7.5pt}
+  .f-sec{margin-top:5px;padding-top:4px}
+  .f-person{padding:2px 0}
+  .f-items{margin-top:4px}
+  .f-items li{padding:1px 0}
+  .f-temple{margin-top:6px}
+  .sign{line-height:1.9}
+  .cut{margin:8px 0}
+  .stub .f-head img{height:24px}
+  .f-person,.stub{break-inside:avoid}
 }
 footer span{white-space:nowrap}
 footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem;text-align:center}
@@ -246,13 +283,19 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
       </article>
     </section>
 
+    <section class="formcard lookupcard" style="margin-bottom:24px">
+      <h2 data-en="Already registered?">已經報名過了？</h2>
+      <p class="desc" data-en="Use your registration number and phone number to print your form again or check your lamp numbers. You can also make changes before you pay.">用報名編號和電話，可以再列印報名表、查詢燈位；繳費前也可以修改資料。</p>
+      <button class="btn ghost block" id="lookupBtn" type="button" data-en="Look up / change my registration">查詢／修改報名</button>
+    </section>
+
     <section class="howto">
       <h2 data-en="How it works">報名步驟</h2>
       <ol>
         <li data-en="Enter the contact person's name, phone number and address.">填寫聯絡人的姓名、電話、住址。</li>
         <li data-en="Fill in the details for each person.">依序填寫每一位的資料。</li>
-        <li data-en="Review and submit. A payment slip will appear on the screen.">核對無誤後送出，畫面會出現一張繳費單。</li>
-        <li data-en="Bring the payment slip to the temple and pay in cash.">帶著繳費單到慈惠堂繳交現金。</li>
+        <li data-en="Review and submit. Your registration form, with lamp numbers, will appear — print it or take a screenshot.">核對無誤後送出，畫面會出現報名表和燈號，可以列印或截圖。</li>
+        <li data-en="Pay in cash at the temple. A volunteer will sign the receipt at the bottom of the form and give it to you.">到慈惠堂繳交現金，義工簽名後，撕下報名表下半部的收執聯給您。</li>
       </ol>
     </section>
   </main>
@@ -268,25 +311,32 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
     </div>
   </main>
 
-  <!-- ===== 完成 ===== -->
-  <main id="done" hidden>
-    <p class="donemsg" id="doneMsg" data-en="Your registration has been submitted. Please bring this payment slip to the temple and pay in cash. You can take a screenshot, or press &quot;Print payment slip&quot; below.">報名已送出。請帶這張繳費單到慈惠堂繳交現金。可以截圖存在手機，或按下方「列印繳費單」。</p>
-    <article class="slip" id="slip">
-      <div class="slip-head"><img id="slipLogo" alt="紐約花蓮慈惠堂"><span class="doc" data-en="Payment Slip">繳費單</span></div>
-      <div class="slip-title" id="slipTitle"></div>
-      <div class="slip-main">
-        <div><span class="lbl" data-en="Registration No.">報名編號</span><div class="refno" id="refNo"></div><span class="lbl" data-en="Date">報名日期</span><div id="slipDate"></div></div>
-        <div class="qr" id="slipQR" aria-hidden="true"></div>
-      </div>
-      <div class="slip-who" id="slipWho"></div>
-      <ul class="slip-items" id="slipItems"></ul>
-      <div class="slip-total"><span data-en="Amount due (cash)">應繳金額（現金）</span><span id="slipTotal"></span></div>
-      <div class="slip-status"><span class="stamp" data-en="UNPAID">待繳費</span><div class="paid-box">堂裡收款：□ 已繳清<span data-en="（For temple use）"></span><br>經手人＿＿＿＿　日期＿＿＿＿</div></div>
-      <p class="slip-note"><span data-en="Bring this slip (on your phone or printed) to the temple and pay in cash — just give your registration number. Questions: ">請攜帶此單（手機畫面或紙本）至慈惠堂繳交現金，告知報名編號即可。洽詢電話 </span><span id="slipTel"></span></p>
-    </article>
-    <details class="full"><summary data-en="View full registration details">查看完整報名資料</summary><div id="doneSummary"></div></details>
+  <!-- ===== 查詢／修改 ===== -->
+  <main id="lookup" hidden>
+    <section class="panel" style="margin-top:22px">
+      <h2 data-en="Look up my registration">查詢報名</h2>
+      <p class="lead" data-en="Enter the registration number on your form and the phone number you registered with.">請輸入報名表上的報名編號，和報名時填的電話。</p>
+      <div class="field"><label for="lkRef" data-en="Registration No.">報名編號</label>
+        <input id="lkRef" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="L261031-1234"></div>
+      <div class="field"><label for="lkPhone" data-en="Phone number">電話</label>
+        <input id="lkPhone" type="tel" inputmode="tel" autocomplete="tel"></div>
+      <p class="lkerr" id="lkErr" role="alert"></p>
+    </section>
     <div class="nav">
-      <button class="btn primary" id="printBtn" type="button" data-en="Print payment slip">列印繳費單</button>
+      <button class="btn ghost" id="lkBack" type="button" data-en="Home">回首頁</button>
+      <button class="btn primary" id="lkGo" type="button" data-en="Look up">查詢</button>
+    </div>
+  </main>
+
+  <!-- ===== 完成：報名表＋收執聯 ===== -->
+  <main id="done" hidden>
+    <p class="donemsg" id="doneMsg"></p>
+    <div id="slip"></div>
+    <div class="nav">
+      <button class="btn primary" id="printBtn" type="button" data-en="Print form">列印報名表</button>
+      <button class="btn ghost" id="editBtn" type="button" data-en="Make changes" hidden>修改報名</button>
+    </div>
+    <div class="nav" style="margin-top:12px">
       <button class="btn ghost" id="againBtn" type="button" data-en="Fill in another form">再填一份</button>
     </div>
   </main>
@@ -322,7 +372,7 @@ const CONFIG = {
     "2027-autumn-lidou": "Autumn Blessing Ceremony (Li Dou)",
   },
   prices: { chaodu: 160, lamp: 60 },
-  submitUrl: "",            // Google Apps Script 網址；留空 = 測試模式，不會真的送出
+  submitUrl: "",            // Google Apps Script 網址；留空 = 示範模式（資料只存在這台電腦，見 demo-backend.js）
 };
 
 /* ================= 常用資料 ================= */
@@ -369,20 +419,26 @@ const keyToForm = k => k==="lamp" ? ["lamp",null] : ["fahui", k.slice(6)];
 // 報名項目狀態：open 開放報名／paused 顯示但不能報名／hidden 不顯示（法會場次）
 let SETTINGS = { lamp:{status:"open"}, events: CONFIG.events.map(e=>({id:e.id, name:e.name, date:e.date||"", status:e.open?"open":"hidden"})) };
 const EVENTS = () => SETTINGS.events;
+/* ---------- 跟後端溝通（沒填 submitUrl 時用示範後端，規則完全一樣） ---------- */
+async function apiGet(q){
+  if(!CONFIG.submitUrl) return window.DemoBackend.get(q);
+  const r=await fetch(CONFIG.submitUrl+"?"+new URLSearchParams(q)); if(!r.ok) throw new Error(r.status); return r.json();
+}
+async function apiPost(b){
+  if(!CONFIG.submitUrl) return window.DemoBackend.post(b);
+  const r=await fetch(CONFIG.submitUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(b)});
+  if(!r.ok) throw new Error(r.status); return r.json();
+}
+let SEATS_LEFT = {};   // 每種燈還剩幾個燈位
 async function loadSettings(){
-  try{
-    let st=null;
-    if(CONFIG.submitUrl){ const r=await fetch(CONFIG.submitUrl+"?action=settings"); if(r.ok) st=await r.json(); }
-    else { const v=localStorage.getItem("tsuhui-settings"); if(v) st=JSON.parse(v); }
-    if(st && st.events) SETTINGS=st;
-  }catch(e){}
+  try{ const st=await apiGet({action:"settings"}); if(st && st.events){ SETTINGS=st; SEATS_LEFT=st.seatsLeft||{}; } }catch(e){}
 }
 const isOpen = key => key==="lamp" ? SETTINGS.lamp.status==="open" : (EVENTS().find(e=>"fahui-"+e.id===key)||{}).status==="open";
 const curEvent = () => EVENTS().find(e=>e.id===S.eventId) || {name:"法會", date:""};
 const isLampForm = () => S.form==="lamp";
 const formTitleZh = () => isLampForm() ? CONFIG.lampForm.title : curEvent().name;   // 存檔用，一律中文
 const formTitle = () => isLampForm() ? t(CONFIG.lampForm.title, CONFIG.lampForm.titleEn) : eventName(curEvent());
-function save(){ try{localStorage.setItem(KEY(draftKey(S)), JSON.stringify(S))}catch(e){} }
+function save(){ if(S.editRef) return; try{localStorage.setItem(KEY(draftKey(S)), JSON.stringify(S))}catch(e){} }   // 修改舊報名時不存草稿
 function load(k){ const [f,ev]=keyToForm(k); try{const v=localStorage.getItem(KEY(k)); const d=v?JSON.parse(v):null; return d&&d.contact?Object.assign(freshState(f,ev),d,{form:f,eventId:ev}):null}catch(e){return null} }
 function clearSaved(k){ try{localStorage.removeItem(KEY(k))}catch(e){} }
 const lampTypeNames = p => CONFIG.lampForm.types.filter(t=>p.types&&p.types[t.k]).map(t=>t.name);
@@ -417,15 +473,16 @@ function steps(){
 }
 
 const $ = id => document.getElementById(id);
-function show(view){ ["home","form","done"].forEach(v=>$(v).hidden = v!==view); window.scrollTo({top:0}); }
+function show(view){ ["home","form","done","lookup"].forEach(v=>$(v).hidden = v!==view); window.scrollTo({top:0}); }
 
 function render(){
   const st=steps(); if(S.step>=st.length) S.step=st.length-1;
   const cur=st[S.step];
   $("stepBar").innerHTML = st.map((x,i)=>`<span class="${i<=S.step?"on":""}"></span>`).join("");
-  $("stepInfo").textContent = t(`${formTitle()}｜第 ${S.step+1} 步，共 ${st.length} 步・${cur.t}`, `${formTitle()} | Step ${S.step+1} of ${st.length} · ${cur.t}`);
+  $("stepInfo").textContent = (S.editRef ? t(`修改報名 ${S.editRef}｜`,`Editing ${S.editRef} | `) : "") + t(`${formTitle()}｜第 ${S.step+1} 步，共 ${st.length} 步・${cur.t}`, `${formTitle()} | Step ${S.step+1} of ${st.length} · ${cur.t}`);
   $("prevBtn").textContent = S.step===0 ? t("回首頁","Home") : t("上一步","Back");
-  $("nextBtn").textContent = cur.k==="review" ? t("確認送出","Submit") : t("下一步","Next");
+  $("nextBtn").disabled = false;
+  $("nextBtn").textContent = cur.k==="review" ? (S.editRef ? t("儲存修改","Save changes") : t("確認送出","Submit")) : t("下一步","Next");
   $("panel").innerHTML = `<section class="panel">${VIEWS[cur.k]()}</section>`;
   if(cur.k==="lamp") S.lamps.forEach(p=>updDerived("lamp",p.id));
   if(cur.k==="chaodu") S.souls.forEach(p=>updDerived("soul",p.id));
@@ -494,7 +551,7 @@ const VIEWS = {
       ${dateBlock(`lamps.${p.id}.birth`, p.birth, t("出生日期","Date of birth"))}
       <div class="derived" id="dv-${p.id}"></div>
       ${LF?`<div class="field" data-err="lamps.${p.id}.types" style="margin:18px 0 0"><span class="legend">${t("要點的燈（可複選）","Lamps (check one or more)")}</span>
-        <div class="lamppick">${CONFIG.lampForm.types.map(tp=>`<label class="pickcard"><input type="checkbox" data-path="lamps.${p.id}.types.${tp.k}"${p.types&&p.types[tp.k]?" checked":""}><span><b>${EN()?esc(tp.en):tp.name}</b>${EN()?`<small>${tp.short||tp.name}・${esc(tp.enDesc||"")}</small>`:""}${tp.price?`<small>$${tp.price}</small>`:""}</span></label>`).join("")}</div></div>`:""}
+        <div class="lamppick">${CONFIG.lampForm.types.map(tp=>`<label class="pickcard"><input type="checkbox" data-path="lamps.${p.id}.types.${tp.k}"${p.types&&p.types[tp.k]?" checked":""}><span><b>${EN()?esc(tp.en):tp.name}</b>${EN()?`<small>${tp.short||tp.name}・${esc(tp.enDesc||"")}</small>`:""}${tp.price?`<small>$${tp.price}</small>`:""}${SEATS_LEFT[tp.name]===0?`<small class="left">${t("已額滿，可登記候補，由堂裡另外安排","Full — you can join the waiting list; the temple will arrange a spot")}</small>`:""}</span></label>`).join("")}</div></div>`:""}
     </div>`).join("")}
     <button class="btn add" data-add="lamps" type="button">${t("＋ 再加一位","＋ Add another person")}</button>`; },
 
@@ -528,7 +585,7 @@ const VIEWS = {
     <div class="field" style="margin-top:18px"><label for="f-note">${t("備註","Notes")}<span class="hint">${t("（選填）"," (optional)")}</span></label>
       <textarea id="f-note" data-path="note">${esc(S.note)}</textarea></div>
     <p class="note">${t("繳款方式請依堂裡通知辦理。","Please pay as instructed by the temple.")}</p>
-    ${CONFIG.submitUrl?"":`<div class="testbar">${t("測試版：目前尚未連接資料庫，按「確認送出」只會顯示結果，不會真的送出。","Test version: nothing is actually sent yet.")}</div>`}`; },
+    ${CONFIG.submitUrl?"":`<div class="testbar">${t("示範版：資料只存在這台電腦，堂裡收不到。","Demo version: your form is only saved on this device; the temple will not receive it.")}</div>`}`; },
 };
 
 function totals(){
@@ -651,82 +708,164 @@ function showErrors(errs){
 }
 
 /* ---------- 送出 ---------- */
-// 報名編號：L＝點燈、F＝法會，加上年月日與 4 位數字，例：L261020-3847
-function refNo(){ const d=new Date(); const p=n=>String(n).padStart(2,"0"); const r=String(Math.floor(Math.random()*10000)).padStart(4,"0");
-  return `${isLampForm()?"L":"F"}${String(d.getFullYear()).slice(2)}${p(d.getMonth()+1)}${p(d.getDate())}-${r}`; }
-function chargeLines(){
-  const T=totals();
-  // 繳費單要讓義工看得懂，英文介面也附上中文項目名稱
-  if(isLampForm()) return CONFIG.lampForm.types.map(tp=>[tp,T.byType[tp.k]]).filter(([,x])=>x.count).map(([tp,x])=>[t(`${x.name} × ${x.count} 盞`,`${lampName(tp)} × ${x.count}`), x.amount]);
-  const a=[];
-  if(S.want.lamp) a.push([t(`蓮花福慧燈 × ${S.lamps.length} 位`,`Lotus Blessing Lamp（蓮花福慧燈）× ${S.lamps.length}`), T.lamp]);
-  if(S.want.chaodu) a.push([t(`超渡 × ${S.souls.length} 牌位`,`Memorial tablet（超渡牌位）× ${S.souls.length}`), T.chaodu]);
-  if(S.want.meal) a.push([t(`供齋功德金`,`Food offering（供齋）`), T.meal]);
-  return a;
-}
-const money = n => n==null ? t("請洽堂裡","Please ask the temple") : "$"+n.toLocaleString();
-let LAST_SLIP = null;
-function renderSlip(ref, dateISO){
-  LAST_SLIP = {ref, dateISO};
-  $("refNo").textContent=ref;
-  $("slipTitle").innerHTML = EN() ? `${esc(formTitle())}<br><span style="font-size:.9em">${esc(formTitleZh())}</span>` : esc(formTitle());
-  $("slipDate").textContent=new Date(dateISO).toLocaleDateString(t("zh-TW","en-US"),{year:"numeric",month:"long",day:"numeric"});
-  $("slipLogo").src=document.querySelector(".logo img").src;
-  $("slipTel").textContent=CONFIG.phone;
-  const names = isLampForm()||S.want.lamp ? S.lamps.map(p=>esc(p.name)).join(t("、",", ")) : "";
-  $("slipWho").innerHTML = `${t("聯絡人：","Contact: ")}${esc(S.contact.name)}　<span style="white-space:nowrap">${esc(S.contact.phone)}</span>${names?`<br>${t("點燈：","Lamps for: ")}${names}`:""}`;
-  $("slipItems").innerHTML = chargeLines().map(([t,v])=>`<li><span>${t}</span><span>${money(v)}</span></li>`).join("");
-  $("slipTotal").textContent = money(totals().all);
-  $("slipQR").innerHTML="";
-  try{ if(typeof qrcode==="function"){ const q=qrcode(0,"M"); q.addData(ref); q.make(); $("slipQR").innerHTML=q.createSvgTag({cellSize:4,margin:2,scalable:true}); } }catch(e){}
-  $("doneSummary").innerHTML=summaryHTML(false);
-}
-// 送出後把繳費單留在這台手機／電腦上，方便之後再打開
-const SLIPS="tsuhui-slips";
-function getSlips(){ try{return JSON.parse(localStorage.getItem(SLIPS)||"[]")}catch(e){return []} }
-function keepSlip(ref, at){ try{ const a=getSlips().filter(x=>x.ref!==ref); a.unshift({ref, at, state:JSON.parse(JSON.stringify(S))}); localStorage.setItem(SLIPS, JSON.stringify(a.slice(0,10))); }catch(e){} }
-function renderMySlips(){
-  const a=getSlips(); $("mySlips").hidden=!a.length; if(!a.length) return;
-  $("mySlips").innerHTML=`<h2>${t("我的繳費單","My payment slips")}</h2>`+a.map(x=>{ const ti=x.state.form==="lamp"?t(CONFIG.lampForm.title,CONFIG.lampForm.titleEn):eventName(EVENTS().find(e=>e.id===x.state.eventId)||{name:t("法會","Ceremony")});
-    return `<div class="myslip"><div><b>${esc(x.ref)}</b><small>${esc(ti)}・${new Date(x.at).toLocaleDateString(t("zh-TW","en-US"))}</small></div><button class="btn ghost" type="button" data-slip="${esc(x.ref)}">${t("打開","Open")}</button></div>`}).join("");
-}
-function payload(ref){
+// 報名編號、金額、燈號都由後端決定
+function payload(){
   const dateOut=b=>{ const L=toLunar(b); return L?{lunar:{year:L.y,month:L.m,leap:L.leap,day:L.d,hour:L.h||""}, solar: b.cal==="solar"?{year:+b.y,month:+b.m,day:+b.d}:null, entered:b.cal}:null; };
   return {
-    ref, paid:false, form:S.form, eventId:S.eventId, formTitle:formTitleZh(), submittedAt:new Date().toISOString(), lang:LANG,
-    contact:{...S.contact}, note:S.note,
-    lamps: (isLampForm()||S.want.lamp) ? S.lamps.map(p=>{const L=toLunar(p.birth); return {name:p.name.trim(), gender:p.gender, birth:dateOut(p.birth), zodiac:L?zodiacOf(L.y):"", age_xu:L?curLunarYear-L.y+1:null, lampTypes: isLampForm()?lampTypeNames(p):["蓮花福慧燈"]};}) : [],
+    form:S.form, eventId:S.eventId, formTitle:formTitleZh(), lang:LANG,
+    contact:{name:S.contact.name.trim(), phone:S.contact.phone.trim(), address:S.contact.address.trim()}, note:S.note,
+    // pid：每個人固定的代號，修改時靠它保留原本的燈位
+    lamps: (isLampForm()||S.want.lamp) ? S.lamps.map(p=>{const L=toLunar(p.birth); return {pid:p.id, name:p.name.trim(), gender:p.gender, birth:dateOut(p.birth), zodiac:L?zodiacOf(L.y):"", age_xu:L?curLunarYear-L.y+1:null, lampTypes: isLampForm()?lampTypeNames(p):["蓮花福慧燈"]};}) : [],
     chaodu: isLampForm() ? [] : S.want.chaodu ? S.souls.map(p=>({type:p.type, name:p.name.trim(), title:p.title.trim(), birth:dateOut(p.birth), death:dateOut(p.death), age:p.age?+p.age:null, sponsor:p.sponsor.trim()})) : [],
     meals: !isLampForm() && S.want.meal ? S.meals.map(m=>({name:m.name.trim(), amount:+m.amount})) : [],
-    totals: totals(),
   };
 }
+const ERR_MSG = code => ({
+  closed:   t(`這個項目目前暫停報名，資料沒有送出。請洽堂裡：${CONFIG.phone}`,`Registration for this is currently closed, so your form was not sent. Please call the temple: ${CONFIG.phone}`),
+  paid:     t(`這筆報名已經繳費，不能在網路上修改。需要修改請洽堂裡：${CONFIG.phone}`,`This registration has been paid and can no longer be changed online. Please call the temple: ${CONFIG.phone}`),
+  cancelled:t(`這筆報名已經取消。有問題請洽堂裡：${CONFIG.phone}`,`This registration has been cancelled. Please call the temple: ${CONFIG.phone}`),
+  "not-found": t("找不到這筆報名，請確認報名編號和電話是否正確。","We couldn't find this registration. Please check the registration number and phone number."),
+  locked:   t(`嘗試太多次了，請 15 分鐘後再試，或打電話到堂裡：${CONFIG.phone}`,`Too many tries. Please wait 15 minutes, or call the temple: ${CONFIG.phone}`),
+}[code] || t("網路連線有問題，資料還沒送出。請稍等一下再按一次，已填的資料不會不見。","Connection problem — nothing has been sent yet. Please wait a moment and try again. Nothing you entered will be lost."));
 async function submit(){
   const btn=$("nextBtn"); btn.disabled=true; btn.textContent=t("送出中…","Submitting…");
   // clientId：同一份報名重按「送出」時不變，後端靠它避免重複建立
   if(!S.clientId){ S.clientId=uid()+uid(); save(); }
-  let ref=refNo(); const data=payload(ref); data.clientId=S.clientId;
+  const data=payload(); data.clientId=S.clientId;
+  const editing=!!S.editRef;
   try{
-    if(CONFIG.submitUrl){
-      const r=await fetch(CONFIG.submitUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(data)});
-      if(!r.ok) throw new Error(r.status);
-      const j=await r.json();
-      if(!j.ok){ const er=new Error(j.error||"fail"); er.code=j.error; throw er; }
-      ref=j.ref; data.ref=ref;   // 報名編號以後端為準
-    } else { // 測試模式：存在這台電腦上，後台（admin.html）在同一台電腦打開就看得到
-      try{ const db=JSON.parse(localStorage.getItem("tsuhui-demo-db")||"[]"); db.push(data); localStorage.setItem("tsuhui-demo-db", JSON.stringify(db)); }catch(e){}
-      console.log("[測試模式] 報名資料", data); }
-    renderSlip(ref, data.submittedAt); $("doneMsg").hidden=false;
-    keepSlip(ref, data.submittedAt);
-    clearSaved(draftKey(S)); show("done");
+    const j = editing ? await apiPost({action:"update", ref:S.editRef, phone:S.editPhone, data}) : await apiPost(data);
+    if(!j.ok){ const er=new Error(j.error||"fail"); er.code=j.error; throw er; }
+    if(!editing) clearSaved(draftKey(S));
+    LOOKUP_PHONE = j.record.contact.phone;
+    keepSlip(j.record);
+    showRecord(j.record, editing?"edited":"new");
   }catch(e){
-    btn.disabled=false; btn.textContent=t("確認送出","Submit");
-    const msg = e.code==="closed"
-      ? t(`這個項目目前暫停報名，資料沒有送出。請洽堂裡：${CONFIG.phone}`,`Registration for this is currently closed, so your form was not sent. Please call the temple: ${CONFIG.phone}`)
-      : t("網路連線有問題，資料還沒送出。請稍等一下再按一次「確認送出」，已填的資料不會不見。","Connection problem — your form has not been sent yet. Please wait a moment and press \"Submit\" again. Nothing you entered will be lost.");
-    $("panel").insertAdjacentHTML("afterbegin",`<p class="errmsg" role="alert" style="font-size:1rem">${msg}</p>`);
+    btn.disabled=false; btn.textContent=editing?t("儲存修改","Save changes"):t("確認送出","Submit");
+    $("panel").insertAdjacentHTML("afterbegin",`<p class="errmsg" role="alert" style="font-size:1rem">${ERR_MSG(e.code)}</p>`);
     window.scrollTo({top:0});
   }
+}
+
+/* ---------- 報名表（上半）＋收執聯（下半） ---------- */
+const money = n => n==null ? t("請洽堂裡","Please ask the temple") : "$"+Number(n).toLocaleString();
+const LAMP_BY_NAME = Object.fromEntries(CONFIG.lampForm.types.map(x=>[x.name,x]));
+const lampShort = n => { const x=LAMP_BY_NAME[n]; return x ? (EN()?`${x.en}（${x.short}）`:x.short) : n; };
+const seatHTML = s => s ? `<span class="seat">${esc(s)}</span>` : `<span class="wait">${t("候補","Waitlist")}</span>`;
+const recLunar = b => b&&b.lunar ? {y:b.lunar.year, m:b.lunar.month, leap:!!b.lunar.leap, d:b.lunar.day, h:b.lunar.hour||""} : null;
+const recBirth = b => { const L=recLunar(b); if(!L) return ""; const sol=b.entered==="solar"&&b.solar?solarText({y:b.solar.year,m:b.solar.month,d:b.solar.day}):"";
+  return EN() ? `${sol?`Born ${sol} · `:""}Lunar: ${lunarText(L)}` : `農曆 ${lunarText(L)}${sol?`（${sol}）`:""}`; };
+const recTitle = r => r.form==="lamp" ? t(CONFIG.lampForm.title, CONFIG.lampForm.titleEn) : eventName(EVENTS().find(e=>e.id===r.eventId)||{id:r.eventId, name:r.formTitle||"法會"});
+const recTitleZh = r => r.form==="lamp" ? CONFIG.lampForm.title : (EVENTS().find(e=>e.id===r.eventId)||{name:r.formTitle||"法會"}).name;
+const gText = g => EN() ? genderText(g) : (g==="男"?"信士":g==="女"?"信女":"");
+const dateText = iso => iso ? new Date(iso).toLocaleDateString(t("zh-TW","en-US"),{year:"numeric",month:"long",day:"numeric"}) : "";
+function chargeLinesOf(r){
+  const T=r.totals||{};
+  if(r.form==="lamp") return CONFIG.lampForm.types.map(tp=>{ const n=(r.lamps||[]).filter(p=>(p.lampTypes||[]).includes(tp.name)).length;
+      return n ? [t(`${tp.name} × ${n} 盞`,`${lampName(tp)} × ${n}`), n*(tp.price||0)] : null; }).filter(Boolean);
+  const a=[];
+  if((r.lamps||[]).length) a.push([t(`蓮花福慧燈 × ${r.lamps.length} 位`,`Lotus Blessing Lamp（蓮花福慧燈）× ${r.lamps.length}`), T.lamp]);
+  if((r.chaodu||[]).length) a.push([t(`超渡 × ${r.chaodu.length} 牌位`,`Memorial tablet（超渡牌位）× ${r.chaodu.length}`), T.chaodu]);
+  if((r.meals||[]).length) a.push([t("供齋功德金","Food offering（供齋）"), T.meal]);
+  return a;
+}
+function stampHTML(r){
+  if(r.cancelled) return `<span class="stamp void">${t("已取消","CANCELLED")}</span>`;
+  if(r.paid) return `<span class="stamp ok">${t("已繳清","PAID")}${r.paidAt?`<small>${new Date(r.paidAt).toLocaleDateString(t("zh-TW","en-US"))}</small>`:""}</span>`;
+  return `<span class="stamp">${t("待繳費","UNPAID")}</span>`;
+}
+function formHTML(r){
+  const logo=document.querySelector(".logo img").src;
+  const head = (doc,sub) => `<div class="f-head"><img src="${logo}" alt="紐約花蓮慈惠堂"><span class="doc">${doc}${sub?`<small>${sub}</small>`:""}</span></div>`;
+  const isLamp = r.form==="lamp";
+  const persons = (r.lamps||[]).map(p=>`<div class="f-person">
+      <div class="f-pn"><b>${esc(p.name)}</b>　<span class="f-sub">${[gText(p.gender), zText(p.zodiac), p.age_xu!=null?t(`${p.age_xu} 歲`,`age ${p.age_xu}`):""].filter(Boolean).join("・")}</span></div>
+      <div class="f-sub">${esc(recBirth(p.birth))}</div>
+      ${isLamp?`<div class="f-pl">${(p.lampTypes||[]).map(tn=>`<span>${esc(lampShort(tn))} ${seatHTML(p.seats&&p.seats[tn])}</span>`).join("")}</div>`:""}
+    </div>`).join("");
+  const souls = (r.chaodu||[]).map(c=>`<div class="f-person"><div class="f-pn"><b>${c.type==="往生者"?`${esc(c.title)} ${esc(c.name)}`:esc(c.name||soulText(c.type))}</b>　<span class="f-sub">${esc(soulText(c.type))}</span></div>
+      <div class="f-sub">${[c.birth?t("生 ","Born ")+lunarText(recLunar(c.birth)):"", c.death?t("歿 ","Passed ")+lunarText(recLunar(c.death)):"", c.age!=null?t(`享年 ${c.age} 歲`,`age ${c.age}`):""].filter(Boolean).join("・")}${c.sponsor?`${t("　陽世報恩人：","　Registered by: ")}${esc(c.sponsor)}`:""}</div></div>`).join("");
+  const meals = (r.meals||[]).map(m=>`<div class="f-person" style="display:flex;justify-content:space-between"><b>${esc(m.name)}</b><span>${money(m.amount)}</span></div>`).join("");
+  const sec = (title, body) => body ? `<div class="f-sec"><h4>${title}</h4>${body}</div>` : "";
+  const top = `<section class="regform">
+    ${head(t(isLamp?"點燈報名表":"法會報名表", isLamp?"Lamp Registration":"Ceremony Registration"), t("Registration Form","報名表"))}
+    <div class="f-title">${esc(recTitle(r))}${EN()?`<br><span style="font-size:.9em">${esc(recTitleZh(r))}</span>`:""}</div>
+    <div class="f-meta">
+      <div><span class="lbl">${t("報名編號","Registration No.")}</span><div class="f-ref">${esc(r.ref)}</div>
+        <span class="lbl">${t("報名日期","Date")}</span><div>${dateText(r.submittedAt)}${r.updatedAt?`<span class="f-sub">　${t("最後修改","Last changed")} ${dateText(r.updatedAt)}</span>`:""}</div></div>
+      <div class="f-qr" aria-hidden="true">${qrSVG(r.ref)}</div>
+    </div>
+    ${sec(t("聯絡人","Contact"), `<div><b>${esc(r.contact.name)}</b>　<span style="white-space:nowrap">${esc(r.contact.phone)}</span></div><div class="f-sub">${esc(r.contact.address)}</div>`)}
+    ${sec(isLamp?t("點燈名單與燈號","Lamps and lamp numbers"):t("蓮花福慧燈","Lotus Blessing Lamp"), persons)}
+    ${sec(t("超渡牌位","Memorial tablets"), souls)}
+    ${sec(t("供齋","Food offering"), meals)}
+    ${r.note?sec(t("備註","Notes"), `<div class="f-sub">${esc(r.note)}</div>`):""}
+    <ul class="f-items">${chargeLinesOf(r).map(([a,b])=>`<li><span>${a}</span><span>${money(b)}</span></li>`).join("")}</ul>
+    <div class="f-total"><span>${t("應繳金額（現金）","Amount due (cash)")}</span><span>${money(r.totals&&r.totals.all)}</span></div>
+    <div class="f-temple">${stampHTML(r)}<div class="sign">堂裡收款${t("","（For temple use）")}：□ 已收現金 $＿＿＿＿<br>經手人簽名＿＿＿＿＿＿　日期＿＿＿＿＿</div></div>
+  </section>`;
+  // 收執聯：繳費後義工簽名、撕下給信眾
+  const stubList = isLamp
+    ? (r.lamps||[]).map(p=>`<li><b>${esc(p.name)}</b>　${(p.lampTypes||[]).map(tn=>`${esc(lampShort(tn))} ${seatHTML(p.seats&&p.seats[tn])}`).join("　")}</li>`).join("")
+    : chargeLinesOf(r).map(([a,b])=>`<li>${a}　${money(b)}</li>`).join("");
+  const stub = `<div class="cut">✂ ${t("沿虛線剪下，下半部為收執聯","Cut here — the bottom part is your receipt")}</div>
+  <section class="stub">
+    ${head(t("收執聯","Receipt"), t("Receipt","收執聯"))}
+    <div class="f-meta" style="margin-top:8px"><div><span class="lbl">${t("報名編號","Registration No.")}</span><div class="f-ref">${esc(r.ref)}</div></div>
+      <div style="text-align:right"><span class="lbl">${t("聯絡人","Contact")}</span><b>${esc(r.contact.name)}</b></div></div>
+    <div class="f-sec"><h4>${esc(recTitle(r))}</h4><ul class="stub-list">${stubList}</ul></div>
+    <div class="f-total"><span>${t("應繳金額","Amount due")}</span><span>${money(r.totals&&r.totals.all)}</span></div>
+    <div class="f-temple"><div class="sign">實收現金 $＿＿＿＿＿　經手人簽名＿＿＿＿＿＿　日期＿＿＿＿＿</div></div>
+    <p class="f-note">${t("請妥善保存本聯，憑報名編號可查詢燈位與報名資料。","Please keep this receipt. Use your registration number to look up your lamp numbers.")} ${t("紐約花蓮慈惠堂","New York Hua Lian Tsu Hui Temple")}　${CONFIG.phone}</p>
+  </section>`;
+  return `<article class="paper">${top}${stub}</article>`;
+}
+function qrSVG(text){ try{ if(typeof qrcode==="function"){ const q=qrcode(0,"M"); q.addData(text); q.make(); return q.createSvgTag({cellSize:4,margin:2,scalable:true}); } }catch(e){} return ""; }
+
+let CUR=null, CUR_MODE="new", LOOKUP_PHONE="";
+function showRecord(r, mode){
+  CUR=r; CUR_MODE=mode||CUR_MODE;
+  $("slip").innerHTML = formHTML(r);
+  const msg = $("doneMsg");
+  const wl = (r.lamps||[]).some(p=>Object.values(p.seats||{}).some(v=>!v));
+  let m = r.cancelled ? t("這筆報名已經取消。","This registration has been cancelled.")
+    : r.paid ? t("這筆報名已經繳費，謝謝您。燈號請看下方報名表。","This registration has been paid — thank you. Your lamp numbers are on the form below.")
+    : CUR_MODE==="edited" ? t("已經儲存修改。請帶這張報名表到慈惠堂繳交現金。","Your changes have been saved. Please bring this form to the temple and pay in cash.")
+    : CUR_MODE==="new" ? t("報名已送出。請把這張報名表印出來或截圖，帶到慈惠堂繳交現金。","Your registration has been submitted. Please print this form or take a screenshot, and bring it to the temple to pay in cash.")
+    : t("這是您的報名表。繳費前如果有資料要改，可以按下方「修改報名」。","Here is your registration form. If anything needs to change before you pay, press \"Make changes\" below.");
+  if(wl && !r.cancelled) m += t("　標示「候補」的燈目前已額滿，堂裡會另外安排，再與您聯絡。"," Lamps marked \"Waitlist\" are currently full; the temple will arrange a spot and contact you.");
+  msg.textContent = m; msg.classList.toggle("warn", !!r.cancelled);
+  $("editBtn").hidden = !!(r.paid || r.cancelled);
+  $("printBtn").textContent = t("列印報名表","Print form");
+  show("done");
+}
+function recordToState(r){
+  const st=freshState(r.form==="lamp"?"lamp":"fahui", r.eventId);
+  st.contact={name:r.contact.name||"", phone:r.contact.phone||"", address:r.contact.address||""}; st.note=r.note||"";
+  const dIn = b => { if(!b||!b.lunar) return blankDate();
+    if(b.entered==="solar"&&b.solar) return {cal:"solar", y:String(b.solar.year), m:String(b.solar.month), leap:false, d:String(b.solar.day), h:b.lunar.hour||""};
+    return {cal:"lunar", y:String(b.lunar.year), m:String(b.lunar.month), leap:!!b.lunar.leap, d:String(b.lunar.day), h:b.lunar.hour||""}; };
+  if((r.lamps||[]).length){ st.lamps=r.lamps.map(p=>({id:p.pid||uid(), name:p.name||"", gender:p.gender||"", birth:dIn(p.birth),
+      types:Object.fromEntries(CONFIG.lampForm.types.filter(x=>(p.lampTypes||[]).includes(x.name)).map(x=>[x.k,true]))})); st.want.lamp=true; }
+  if((r.chaodu||[]).length){ st.souls=r.chaodu.map(c=>({id:uid(), type:c.type, name:c.name||"", title:c.title||"", birth:dIn(c.birth), death:dIn(c.death), age:c.age!=null?String(c.age):"", sponsor:c.sponsor||""})); st.want.chaodu=true; }
+  if((r.meals||[]).length){ st.meals=r.meals.map(m=>({id:uid(), name:m.name||"", amount:String(m.amount)})); st.want.meal=true; }
+  return st;
+}
+
+// 送出或查到的報名表留在這台手機／電腦上，方便之後再打開
+const SLIPS="tsuhui-slips2";
+function getSlips(){ try{ return JSON.parse(localStorage.getItem(SLIPS)||"[]").filter(x=>x&&x.rec) }catch(e){ return [] } }
+function keepSlip(rec){ try{ const a=getSlips().filter(x=>x.ref!==rec.ref); a.unshift({ref:rec.ref, at:rec.submittedAt, phone:rec.contact.phone, rec}); localStorage.setItem(SLIPS, JSON.stringify(a.slice(0,10))); }catch(e){} }
+function renderMySlips(){
+  const a=getSlips(); $("mySlips").hidden=!a.length; if(!a.length) return;
+  $("mySlips").innerHTML=`<h2>${t("我的報名表","My registration forms")}</h2>`+a.map(x=>
+    `<div class="myslip"><div><b>${esc(x.ref)}</b><small>${esc(recTitle(x.rec))}・${new Date(x.at).toLocaleDateString(t("zh-TW","en-US"))}</small></div><button class="btn ghost" type="button" data-slip="${esc(x.ref)}">${t("打開","Open")}</button></div>`).join("");
+}
+// 打開報名表時順便向後端拿最新狀態（是否已繳費、燈號）
+async function openRecord(ref, phone, mode, fallback){
+  if(fallback) showRecord(fallback, mode);
+  try{ const j=await apiGet({action:"lookup", ref, phone}); if(j.ok){ LOOKUP_PHONE=phone; keepSlip(j.record); showRecord(j.record, mode); return j; } return j; }
+  catch(e){ return {ok:false, error:"network"}; }
 }
 
 /* ---------- 導覽 ---------- */
@@ -737,7 +876,7 @@ $("nextBtn").addEventListener("click", ()=>{
   if(cur.k==="review") return submit();
   S.step++; save(); render(); window.scrollTo({top:0});
 });
-$("prevBtn").addEventListener("click", ()=>{ if(S.step===0){ refreshResume(); show("home"); return; } S.step--; save(); render(); window.scrollTo({top:0}); });
+$("prevBtn").addEventListener("click", ()=>{ if(S.step===0){ if(S.editRef&&CUR){ showRecord(CUR); return; } refreshResume(); show("home"); return; } S.step--; save(); render(); window.scrollTo({top:0}); });
 function renderEvents(){
   const shown=EVENTS().filter(e=>e.status!=="hidden");
   // 所有法會都設為「不顯示」時，整張法會卡片收起來，首頁只剩點燈
@@ -759,18 +898,37 @@ function renderLampBtn(){
 document.addEventListener("click", e=>{
   const st=e.target.closest("[data-start]"); if(st){ const k=st.dataset.start; if(!isOpen(k)){ renderEvents(); renderLampBtn(); return; } const [f,ev]=keyToForm(k); S=load(k)||freshState(f,ev); show("form"); render(); return; }
   const cl=e.target.closest("[data-clear]"); if(cl){ clearSaved(cl.dataset.clear); refreshResume(); }
-  const sl=e.target.closest("[data-slip]"); if(sl){ const x=getSlips().find(y=>y.ref===sl.dataset.slip); if(x){ S=Object.assign(freshState(x.state.form,x.state.eventId),x.state); renderSlip(x.ref,x.at); $("doneMsg").hidden=true; show("done"); } }
+  const sl=e.target.closest("[data-slip]"); if(sl){ const x=getSlips().find(y=>y.ref===sl.dataset.slip); if(x) openRecord(x.ref, x.phone, "view", x.rec); }
 });
 $("homeLink").addEventListener("click", e=>{ e.preventDefault(); refreshResume(); renderMySlips(); show("home"); });
 $("printBtn").addEventListener("click", ()=>window.print());
-$("againBtn").addEventListener("click", ()=>{ S=freshState(S.form, S.eventId); show("form"); render(); });
+$("againBtn").addEventListener("click", ()=>{ const f=CUR?CUR.form:"lamp", ev=CUR?CUR.eventId:null; const k=f==="lamp"?"lamp":"fahui-"+ev;
+  if(!isOpen(k)){ refreshResume(); renderMySlips(); show("home"); return; } S=load(k)||freshState(f==="lamp"?"lamp":"fahui",ev); show("form"); render(); });
+$("editBtn").addEventListener("click", ()=>{ if(!CUR) return; S=recordToState(CUR); S.editRef=CUR.ref; S.editPhone=LOOKUP_PHONE||CUR.contact.phone; S.step=0; show("form"); render(); });
+$("lookupBtn").addEventListener("click", ()=>{ $("lkErr").textContent=""; show("lookup"); $("lkRef").focus(); });
+$("lkBack").addEventListener("click", ()=>{ refreshResume(); renderMySlips(); show("home"); });
+$("lkGo").addEventListener("click", async ()=>{
+  const ref=$("lkRef").value.trim().toUpperCase(), phone=$("lkPhone").value.trim();
+  if(!ref || phone.replace(/\D/g,"").length<7){ $("lkErr").textContent=t("請輸入報名編號和電話。","Please enter the registration number and phone number."); return; }
+  const b=$("lkGo"); b.disabled=true; $("lkErr").textContent="";
+  const j=await openRecord(ref, phone, "view");
+  b.disabled=false;
+  if(!j.ok) $("lkErr").textContent=ERR_MSG(j.error);
+});
+["lkRef","lkPhone"].forEach(id=>$(id).addEventListener("keydown", e=>{ if(e.key==="Enter") $("lkGo").click(); }));
 function setBig(on){ document.documentElement.classList.toggle("big",on); $("sizeBtn").setAttribute("aria-pressed",on); $("sizeBtn").textContent=on?t("字縮小","Smaller"):t("字放大","Larger"); $("sizeBtn").setAttribute("aria-label", on?t("字縮小","Smaller text"):t("字放大","Larger text")); try{localStorage.setItem("tsuhui-big",on?"1":"")}catch(e){} }
 $("sizeBtn").addEventListener("click", ()=>setBig(!document.documentElement.classList.contains("big")));
 function refreshResume(){ document.querySelectorAll("[data-resume]").forEach(el=>{ const d=load(el.dataset.resume); el.hidden=!(isOpen(el.dataset.resume)&&d&&(d.contact.name||d.step>0)); }); }
 
 /* ---------- 啟動 ---------- */
 renderEvents(); renderLampBtn(); renderMySlips();
-loadSettings().then(()=>{ renderEvents(); renderLampBtn(); renderMySlips(); refreshResume();
+loadSettings().then(async ()=>{ renderEvents(); renderLampBtn(); renderMySlips(); refreshResume();
+  const q=new URLSearchParams(location.search);
+  if(q.get("print")){ const j=await openRecord(q.get("print"), q.get("tel")||"", "view");
+    if(j && j.ok && q.get("auto")) setTimeout(()=>window.print(), 500);
+    if(!j || !j.ok){ show("lookup"); $("lkRef").value=q.get("print"); $("lkErr").textContent=ERR_MSG(j&&j.error); }
+    return; }
+  if(q.has("lookup")){ show("lookup"); return; }
   // 帶 #lamp 或 #fahui-場次 進來，項目有開放就直接開啟表單
   const h=location.hash.slice(1); if(h && isOpen(h) && $("home").hidden===false){ const [f,ev]=keyToForm(h); S=load(h)||freshState(f,ev); show("form"); render(); }
 });
@@ -793,7 +951,7 @@ function applyLang(){
   setBig(document.documentElement.classList.contains("big"));
   renderStatic(); renderEvents(); renderLampBtn(); renderMySlips(); refreshResume();
   if(!$("form").hidden) render();
-  if(!$("done").hidden && LAST_SLIP) renderSlip(LAST_SLIP.ref, LAST_SLIP.dateISO);
+  if(!$("done").hidden && CUR) showRecord(CUR);
 }
 $("langBtn").addEventListener("click", ()=>{ LANG = EN() ? "zh" : "en"; try{ localStorage.setItem("tsuhui-lang", LANG); }catch(e){} applyLang(); });
 $("telNo").textContent=CONFIG.phone; $("faxNo").textContent=CONFIG.fax;

@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap">
+<script src="demo-backend.js"></script>
 <style>
 /* 後台：上方固定搜尋列，下方一筆一張卡；與報名頁同一套色彩與字體 */
 :root{
@@ -147,6 +148,11 @@ details.log li{margin:2px 0}
 .pwmsg.ok{color:var(--ok)} .pwmsg.bad{color:var(--red)}
 .empty{text-align:center;color:var(--muted);padding:40px 10px}
 .empty b{display:block;color:var(--ink);font-size:1.1rem;margin-bottom:6px}
+.chip .seat{font-family:var(--mono);font-weight:700;margin-left:6px}
+.chip.wl{background:var(--red-soft);color:var(--red)}
+.card.void{border-left:6px solid var(--muted);opacity:.7}
+.status.void{background:var(--line);color:var(--muted)}
+.tools{display:flex;flex-wrap:wrap;gap:4px 14px;width:100%}
 
 /* 報表 */
 .rpt-ctl{max-width:820px;margin:16px auto 0;display:grid;gap:12px}
@@ -306,7 +312,7 @@ details.log li{margin:2px 0}
       <div id="rScopeWrap"><div class="rlabel">哪一場？</div><div class="subtabs" id="rScope" role="group" aria-label="場次"></div></div>
       <div id="rTypeWrap"><div class="rlabel">燈種</div><div class="subtabs" id="rType" role="group" aria-label="燈種"></div></div>
       <div id="rSortWrap"><div class="rlabel">排列順序</div>
-        <div class="seg" id="rSort" role="group" aria-label="排列順序"><button type="button" data-rsort="ref">依報名先後（一家人排一起）</button><button type="button" data-rsort="zodiac">依生肖</button></div></div>
+        <div class="seg" id="rSort" role="group" aria-label="排列順序"><button type="button" data-rsort="seat">依燈號</button><button type="button" data-rsort="ref">依報名先後（一家人排一起）</button><button type="button" data-rsort="zodiac">依生肖</button></div></div>
       <div id="rPaidWrap"><div class="rlabel">要列出哪些人？</div>
         <div class="seg" id="rPaid" role="group" aria-label="繳費狀態"><button type="button" data-rp="all">全部（含未繳費）</button><button type="button" data-rp="paid">只列已繳清</button></div></div>
       <div id="rDateWrap"><div class="rlabel">只看某一天收的款？<span class="hint">（不選就是全部）</span></div>
@@ -330,6 +336,7 @@ details.log li{margin:2px 0}
           <button type="button" data-paid="all" aria-pressed="true">全部</button>
           <button type="button" data-paid="unpaid" aria-pressed="false">未繳費</button>
           <button type="button" data-paid="paid" aria-pressed="false">已繳清</button>
+          <button type="button" data-paid="void" aria-pressed="false">已取消</button>
         </div>
       </div>
       <div class="subtabs" id="subtabs" role="group" aria-label="項目篩選" hidden></div>
@@ -342,7 +349,7 @@ details.log li{margin:2px 0}
 <script>
 /* ================= 設定 ================= */
 const CONFIG = {
-  apiUrl: "",   // Google Apps Script 網址；留空 = 示範模式
+  apiUrl: "",   // Google Apps Script 網址；留空 = 示範模式（用 demo-backend.js，規則跟正式版一樣）
   lampTitle: "啟點光明燈暨安奉太歲",
   events: [     // 預設值；之後由「報名項目設定」管理
     {id:"2027-zhongyuan", name:"瑤池金母聖誕祈福消災超渡暨普渡大法會", date:"", status:"hidden"},
@@ -363,93 +370,31 @@ const fmtDate = iso => { const d=new Date(iso); return `${d.getMonth()+1}/${d.ge
 const money = n => n==null ? "—" : "$"+Number(n).toLocaleString();
 
 /* ================= 資料來源 ================= */
-// 示範模式：範例資料＋這台電腦上報名頁送出的測試資料；繳費狀態存在本機
-function sampleData(){
-  const t = d => new Date(Date.now()-d*36e5).toISOString();
-  const B = (y,m,d,h="") => ({lunar:{year:y,month:m,leap:false,day:d,hour:h},solar:null,entered:"lunar"});
-  return [
-    {ref:"L261018-2041", sample:true, paid:true, paidAt:t(20), form:"lamp", formTitle:CONFIG.lampTitle, submittedAt:t(52),
-     contact:{name:"王秀英",phone:"(718) 555-0142",address:"範例地址"},
-     lamps:[{name:"王秀英",gender:"女",birth:B(1958,8,12,"辰"),zodiac:"狗",age_xu:69,lampTypes:["個人光明燈","太歲燈"]},
-            {name:"李建國",gender:"男",birth:B(1955,3,3),zodiac:"羊",age_xu:72,lampTypes:["個人光明燈"]}],
-     chaodu:[],meals:[],totals:{all:360}},
-    {ref:"L261019-5528", sample:true, paid:false, form:"lamp", formTitle:CONFIG.lampTitle, submittedAt:t(30),
-     contact:{name:"張雅婷",phone:"(347) 555-0198",address:"範例地址"},
-     lamps:[{name:"張雅婷",gender:"女",birth:B(1986,11,2,"午"),zodiac:"虎",age_xu:41,lampTypes:["五路財神燈"]},
-            {name:"陳柏宇",gender:"男",birth:B(2012,6,18),zodiac:"龍",age_xu:15,lampTypes:["文昌燈","個人光明燈"]},
-            {name:"陳品妍",gender:"女",birth:B(2015,1,9),zodiac:"羊",age_xu:12,lampTypes:["文昌燈"]}],
-     chaodu:[],meals:[],totals:{all:480}},
-    {ref:"F261019-0377", sample:true, paid:false, form:"fahui", eventId:"2027-zhongyuan", formTitle:CONFIG.events[0].name, submittedAt:t(26),
-     contact:{name:"林美華",phone:"(917) 555-0111",address:"範例地址"},
-     lamps:[{name:"林美華",gender:"女",birth:B(1963,2,20),zodiac:"兔",age_xu:64,lampTypes:["蓮花福慧燈"]}],
-     chaodu:[{type:"往生者",name:"林德福",title:"先父",birth:B(1930,5,1),death:B(2019,9,9),age:90,sponsor:"林美華"},
-             {type:"歷代祖先",name:"林氏歷代祖先",title:"",birth:null,death:null,age:null,sponsor:"林美華"}],
-     meals:[{name:"林美華",amount:50}], totals:{all:430}},
-    {ref:"F261020-8812", sample:true, paid:true, paidAt:t(2), form:"fahui", eventId:"2027-spring-lidou", formTitle:CONFIG.events[1].name, submittedAt:t(6),
-     contact:{name:"黃志強",phone:"(718) 555-0175",address:"範例地址"},
-     lamps:[{name:"黃志強",gender:"男",birth:B(1972,7,7),zodiac:"鼠",age_xu:55,lampTypes:["蓮花福慧燈"]},
-            {name:"黃淑芬",gender:"女",birth:B(1975,10,30),zodiac:"兔",age_xu:52,lampTypes:["蓮花福慧燈"]}],
-     chaodu:[],meals:[],totals:{all:120}},
-  ];
+// 沒填 apiUrl 時用示範後端（demo-backend.js），規則跟正式版一模一樣，資料只存在這台電腦
+async function apiGet(q){
+  if(DEMO) return window.DemoBackend.get(q);
+  const r=await fetch(CONFIG.apiUrl+"?"+new URLSearchParams(q)); if(!r.ok) throw new Error(r.status); return r.json();
 }
-const LS = { get(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } },
-             set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} } };
-const API = {
-  async list(){
-    if(!DEMO){ const r=await fetch(`${CONFIG.apiUrl}?action=list&${authQS()}`); if(!r.ok) throw new Error(r.status); const j=await r.json(); if(!j.ok) throw new Error(j.error||"fail"); return j.rows; }
-    const paidMap = LS.get("tsuhui-demo-paid",{});
-    const shownEv = id => (SETTINGS.events.find(e=>e.id===id)||{}).status!=="hidden";
-    return [...sampleData().filter(r=>r.form==="lamp"||shownEv(r.eventId)), ...LS.get("tsuhui-demo-db",[])].map(r=> paidMap[r.ref] ? {...r, ...paidMap[r.ref]} : r);
-  },
-  // 收款：記錄經手人與時間，並留下每一次的修改紀錄
-  async setPaid(ref, paid, amount, prevLog){
-    const me=sess(), at=new Date().toISOString();
-    const entry={action: paid?"paid":"unpaid", by: me.name, byId: me.uid, at, amount};
-    const rec = {paid, paidAt: paid?at:null, paidBy: paid?me.name:null, paidById: paid?me.uid:null, payLog:[...(prevLog||[]), entry]};
-    if(!DEMO){ const r=await fetch(CONFIG.apiUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"setPaid",...auth(),ref,paid})}); const j=await r.json(); if(!j.ok) throw new Error("fail"); return j.record||rec; }
-    const m=LS.get("tsuhui-demo-paid",{}); m[ref]=rec; LS.set("tsuhui-demo-paid",m); return rec;
-  },
-};
+async function apiPost(b){
+  if(DEMO) return window.DemoBackend.post(b);
+  const r=await fetch(CONFIG.apiUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(b)});
+  if(!r.ok) throw new Error(r.status); return r.json();
+}
 // 登入狀態：{uid, pin, role:"admin"|"volunteer", name}
 function sess(){ try{ return JSON.parse(sessionStorage.getItem("tsuhui-admin")||"null"); }catch(e){ return window._sess||null; } }
 function setSess(v){ try{ v?sessionStorage.setItem("tsuhui-admin",JSON.stringify(v)):sessionStorage.removeItem("tsuhui-admin"); }catch(e){ window._sess=v; } }
 const auth = () => { const s=sess()||{}; return {uid:s.uid, pin:s.pin}; };
-const authQS = () => { const a=auth(); return `uid=${encodeURIComponent(a.uid||"")}&pin=${encodeURIComponent(a.pin||"")}`; };
-async function hashPw(pw){
-  try{ const b=await crypto.subtle.digest("SHA-256", new TextEncoder().encode("tsuhui:"+pw)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
-  catch(e){ let h=0; for(const c of "tsuhui:"+pw) h=(h*31+c.charCodeAt(0))|0; return "x"+h; }
-}
-// 示範模式的帳號存在本機；正式版存在堂裡的試算表（PIN 只存加密後的值）
-async function demoUsers(){
-  let u=LS.get("tsuhui-demo-users",null);
-  if(!u){ u=[{id:"u-admin",name:"管理員",role:"admin",pin:await hashPw("8888"),active:true},
-             {id:"u-wang",name:"王師姐",role:"volunteer",pin:await hashPw("1234"),active:true},
-             {id:"u-li",name:"李師兄",role:"volunteer",pin:await hashPw("5678"),active:true}]; LS.set("tsuhui-demo-users",u); }
-  return u;
-}
-const pub = u => ({id:u.id, name:u.name, role:u.role, active:u.active, mustChange:!!u.mustChange});
-API.users = async function(){ // 登入名單：只有名字，不含 PIN
-  if(!DEMO){ const r=await fetch(`${CONFIG.apiUrl}?action=users`); return (await r.json()).users; }
-  return (await demoUsers()).map(pub);
-};
-API.login = async function(uid, pin){
-  if(!DEMO){ const r=await fetch(`${CONFIG.apiUrl}?action=login&uid=${encodeURIComponent(uid)}&pin=${encodeURIComponent(pin)}`); const j=await r.json(); if(j.error==="locked") throw new Error("locked"); return j.ok?j.user:null; }
-  const u=(await demoUsers()).find(x=>x.id===uid&&x.active); return u && u.pin===await hashPw(pin) ? pub(u) : null;
-};
-// 帳號管理（負責人／堂主）：add / resetPin / setActive；個人：changeMyPin
-API.userOp = async function(op, data){
-  // 新的 PIN 用 newPin 傳，避免跟登入用的 pin 撞名
-  if(!DEMO){ const d={...data}; if("pin" in d){ d.newPin=d.pin; delete d.pin; }
-    const r=await fetch(CONFIG.apiUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"userOp",op,...d,...auth()})}); const j=await r.json(); if(!j.ok) throw new Error(j.error||"fail"); return; }
-  const list=await demoUsers(), me=sess(), meU=list.find(x=>x.id===me.uid);
-  if(!meU || meU.pin!==await hashPw(me.pin)) throw new Error("auth");
-  if(op==="changeMyPin"){ if(meU.pin!==await hashPw(data.cur)) throw new Error("cur"); if(await hashPw(data.pin)===meU.pin) throw new Error("same"); meU.pin=await hashPw(data.pin); meU.mustChange=false; }
-  else { if(meU.role!=="admin") throw new Error("auth");
-    if(op==="add"){ if(list.some(x=>x.name===data.name)) throw new Error("dup"); list.push({id:"u-"+Date.now().toString(36), name:data.name, role:data.role, pin:await hashPw(data.pin), active:true, mustChange:true}); }
-    if(op==="resetPin"){ const u=list.find(x=>x.id===data.id); u.pin=await hashPw(data.pin); u.mustChange=true; }
-    if(op==="setActive"){ const u=list.find(x=>x.id===data.id); if(u.id===me.uid) throw new Error("self"); u.active=data.active; }
-  }
-  LS.set("tsuhui-demo-users", list);
+const okOrThrow = j => { if(!j || !j.ok) throw new Error((j&&j.error)||"fail"); return j; };
+const API = {
+  async list(){ return okOrThrow(await apiGet({action:"list", ...auth()})).rows; },
+  // 收款、取消、分配燈位：後端會記錄經手人和時間
+  async setPaid(ref, paid){ return okOrThrow(await apiPost({action:"setPaid", ...auth(), ref, paid})).record; },
+  async setCancelled(ref, cancelled){ return okOrThrow(await apiPost({action:"setCancelled", ...auth(), ref, cancelled})).record; },
+  async assignSeats(ref){ return okOrThrow(await apiPost({action:"assignSeats", ...auth(), ref})).record; },
+  async users(){ return (await apiGet({action:"users"})).users; },   // 登入名單：只有名字，不含 PIN
+  async login(uid, pin){ const j=await apiGet({action:"login", uid, pin}); if(j.error==="locked") throw new Error("locked"); return j.ok?j.user:null; },
+  // 帳號管理（負責人／堂主）：add / resetPin / setActive；個人：changeMyPin。新的 PIN 用 newPin 傳，避免跟登入用的 pin 撞名
+  async userOp(op, data){ const d={...data}; if("pin" in d){ d.newPin=d.pin; delete d.pin; } okOrThrow(await apiPost({action:"userOp", op, ...d, ...auth()})); },
 };
 
 /* ================= 狀態 ================= */
@@ -483,6 +428,8 @@ function match(r, q){
   const ql=q.toLowerCase().replace(/[\s-]/g,""), qd=digits(q);
   const hits=new Set(); let ok=false;
   if(r.ref.toLowerCase().replace(/-/g,"").includes(ql)) ok=true;
+  // 燈號，例：A01-0512 或 a010512
+  if(ql.length>=3 && (r.lamps||[]).some(p=>Object.values(p.seats||{}).some(s=>s && s.toLowerCase().replace(/-/g,"").includes(ql)))) ok=true;
   if(qd.length>=3 && digits(r.contact.phone).includes(qd)) ok=true;
   const names=[r.contact.name, ...(r.lamps||[]).map(p=>p.name), ...(r.chaodu||[]).flatMap(c=>[c.name,c.sponsor]), ...(r.meals||[]).map(m=>m.name)];
   const qn=q.trim().toLowerCase();
@@ -495,49 +442,68 @@ const hl = (text, q) => { const t=esc(text); const k=q.trim(); if(!k || /^[\d\s(
 /* ================= 畫面 ================= */
 let SETTINGS = { lamp:{status:"open"}, events: CONFIG.events.map(e=>({...e})) };
 API.getSettings = async function(){
-  try{
-    if(!DEMO){ const r=await fetch(`${CONFIG.apiUrl}?action=settings`); if(r.ok){ const j=await r.json(); if(j.events) SETTINGS=j; } return SETTINGS; }
-    const st=LS.get("tsuhui-settings",null); if(st&&st.events) SETTINGS=st;
-  }catch(e){} return SETTINGS;
+  try{ const j=await apiGet({action:"settings"}); if(j && j.events) SETTINGS=j; }catch(e){} return SETTINGS;
 };
 API.saveSettings = async function(st){
-  st.updatedAt=new Date().toISOString();
-  if(!DEMO){ const r=await fetch(CONFIG.apiUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"saveSettings",...auth(),settings:st})}); const j=await r.json(); if(!j.ok) throw new Error("fail"); }
-  else LS.set("tsuhui-settings", st);
+  delete st.seatsLeft;
+  okOrThrow(await apiPost({action:"saveSettings", ...auth(), settings:st}));
   SETTINGS=st;
 };
 function formName(r){ return r.form==="lamp" ? CONFIG.lampTitle : (SETTINGS.events.find(e=>e.id===r.eventId)||{name:r.formTitle||"法會"}).name; }
+// 列印報名表：打開報名頁的列印畫面（跟信眾看到的一樣）
+function printURL(r){
+  const base = /\.html$/.test(location.pathname) ? "index.html" : "./";
+  return `${base}?print=${encodeURIComponent(r.ref)}&tel=${encodeURIComponent(digits(r.contact.phone))}&auto=1`;
+}
+const LOG_TEXT = l => ({paid:`標記已繳清（${money(l.amount)}）`, unpaid:"改回未繳費", cancel:"取消報名", restore:"恢復報名", seat:"分配候補燈位", edit:`信眾自己修改（應繳 ${money(l.amount)}）`}[l.action]||l.action);
+const hasWait = r => (r.lamps||[]).some(p=>Object.values(p.seats||{}).some(v=>!v));
 function cardHTML(r, m){
-  const q=F.q, paid=!!r.paid;
+  const q=F.q, paid=!!r.paid, void_=!!r.cancelled;
   const secDim = name => FAHUI_ITEMS.includes(F.item) && F.item!==name ? " dim" : "";
+  const seatChip = (p,t) => { const s=p.seats?p.seats[t]:undefined; const isLamp=r.form==="lamp";
+    return `<span class="chip${isLamp&&!s?" wl":""}">${esc(t)}${isLamp?`<span class="seat">${s?hl(s,q):"候補"}</span>`:""}</span>`; };
   const lampSec = (r.lamps||[]).length ? `<div class="sec${r.form==="lamp"?"":secDim("蓮花福慧燈")}"><h3>${r.form==="lamp"?"點燈":"蓮花福慧燈"}</h3>${r.lamps.map(p=>`
       <div class="person${LAMP_TYPES.includes(F.item)&&!(p.lampTypes||[]).includes(F.item)?" dim":""}"><span class="nm">${hl(p.name,q)}</span><span class="info">${p.gender?esc(p.gender)+"・":""}${esc(p.zodiac)}・${p.age_xu??""} 歲・${lunarText(p.birth)}</span>
-      ${r.form==="lamp"?`<div class="chips">${(p.lampTypes||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>`:""}</div>`).join("")}</div>` : "";
+      ${r.form==="lamp"?`<div class="chips">${(p.lampTypes||[]).map(t=>seatChip(p,t)).join("")}</div>`:""}</div>`).join("")}</div>` : "";
   const soulSec = (r.chaodu||[]).length ? `<div class="sec${secDim("超渡牌位")}"><h3>超渡牌位</h3>${r.chaodu.map(c=>`
       <div class="person"><span class="nm">${c.type==="往生者"?`${esc(c.title)} ${hl(c.name,q)}`:hl(c.name||c.type,q)}</span><span class="info">陽世報恩人 ${hl(c.sponsor,q)}</span></div>`).join("")}</div>` : "";
   const mealSec = (r.meals||[]).length ? `<div class="sec${secDim("供齋")}"><h3>供齋</h3>${r.meals.map(x=>`
       <div class="person"><span class="nm">${hl(x.name,q)}</span><span class="info">${money(x.amount)}</span></div>`).join("")}</div>` : "";
   const total = r.totals ? r.totals.all : null;
   let action;
-  if(confirming===r.ref) action = `<div class="confirm"><span>${paid?`確定要把 ${esc(r.ref)} 改回「未繳費」？`:`確定已收到現金 ${money(total)}？會記錄為「${esc(sess()?.name||"")}」經手。`}</span>
-      <button class="btn ${paid?"primary":"okb"} small" data-do="${paid?"unpay":"pay"}" data-ref="${esc(r.ref)}" type="button">確定</button>
-      <button class="btn ghost small" data-do="cancel" type="button">取消</button></div>`;
-  else action = paid ? `<button class="linkbtn" data-ask="${esc(r.ref)}" type="button">改回未繳費</button>`
-                     : `<button class="btn okb" data-ask="${esc(r.ref)}" type="button">收款：標記已繳清</button>`;
-  return `<article class="card ${paid?"paid":"unpaid"}">
+  if(confirming && confirming.ref===r.ref){
+    const k=confirming.kind;
+    const msg = k==="pay" ? `確定已收到現金 ${money(total)}？會記錄為「${esc(sess()?.name||"")}」經手。`
+      : k==="unpay" ? `確定要把 ${esc(r.ref)} 改回「未繳費」？`
+      : k==="void" ? `確定要取消 ${esc(r.ref)}？燈位會放出來給別人用。`
+      : `確定要恢復 ${esc(r.ref)}？會重新分配燈位（原位還空著就用原位）。`;
+    action = `<div class="confirm"><span>${msg}</span>
+      <button class="btn ${k==="pay"?"okb":"primary"} small" data-do="${k}" data-ref="${esc(r.ref)}" type="button">確定</button>
+      <button class="btn ghost small" data-do="back" type="button">返回</button></div>`;
+  }
+  else if(void_) action = `<button class="btn ghost small" data-ask="restore" data-ref="${esc(r.ref)}" type="button">恢復報名</button>`;
+  else action = paid ? `<button class="linkbtn" data-ask="unpay" data-ref="${esc(r.ref)}" type="button">改回未繳費</button>`
+                     : `<button class="btn okb" data-ask="pay" data-ref="${esc(r.ref)}" type="button">收款：標記已繳清</button>`;
+  const tools = `<div class="tools">
+      <a class="linkbtn" href="${printURL(r)}" target="_blank" rel="noopener">列印報名表</a>
+      ${!void_&&r.form==="lamp"&&hasWait(r)?`<button class="linkbtn" data-seat="${esc(r.ref)}" type="button">分配候補燈位</button>`:""}
+      ${!void_&&!paid&&!(confirming&&confirming.ref===r.ref)?`<button class="linkbtn" data-ask="void" data-ref="${esc(r.ref)}" type="button">取消報名</button>`:""}
+    </div>`;
+  const status = void_ ? `<span class="status void">已取消</span>` : `<span class="status ${paid?"paid":"unpaid"}">${paid?`已繳清 ${r.paidAt?fmtDate(r.paidAt):""}`:"待繳費"}</span>`;
+  return `<article class="card ${void_?"void":paid?"paid":"unpaid"}">
     <div class="card-head">
-      <div><div class="ref">${hl(r.ref,q.replace(/-/g,""))}</div><div class="meta">${esc(formName(r))}・報名 ${fmtDate(r.submittedAt)}${r.sample?'<span class="tag">範例</span>':""}${r.lang==="en"?'<span class="tag">英文報名</span>':""}</div></div>
-      <span class="status ${paid?"paid":"unpaid"}">${paid?`已繳清 ${r.paidAt?fmtDate(r.paidAt):""}`:"待繳費"}</span>${paid&&r.paidBy?`<span class="paidby">經手：${esc(r.paidBy)}</span>`:""}
+      <div><div class="ref">${hl(r.ref,q.replace(/-/g,""))}</div><div class="meta">${esc(formName(r))}・報名 ${fmtDate(r.submittedAt)}${r.sample?'<span class="tag">範例</span>':""}${r.lang==="en"?'<span class="tag">英文報名</span>':""}${r.updatedAt?'<span class="tag">信眾修改過</span>':""}${!void_&&hasWait(r)?'<span class="tag">有候補</span>':""}</div></div>
+      ${status}${paid&&r.paidBy?`<span class="paidby">經手：${esc(r.paidBy)}</span>`:""}
     </div>
     <div class="contact"><span>聯絡人 <b>${hl(r.contact.name,q)}</b></span><span class="phone">${esc(r.contact.phone)}</span></div>
     ${lampSec}${soulSec}${mealSec}
-    <div class="foot"><span class="amt"><small>應繳</small>${money(total)}</span>${action}</div>
-    ${(r.payLog||[]).length?`<details class="log"><summary>收款紀錄（${r.payLog.length}）</summary><ul>${r.payLog.map(l=>`<li>${fmtDate(l.at)}　${esc(l.by)}　${l.action==="paid"?`標記已繳清（${money(l.amount)}）`:"改回未繳費"}</li>`).join("")}</ul></details>`:""}
+    <div class="foot"><span class="amt"><small>應繳</small>${money(total)}</span>${action}${tools}</div>
+    ${(r.payLog||[]).length?`<details class="log"><summary>處理紀錄（${r.payLog.length}）</summary><ul>${r.payLog.map(l=>`<li>${fmtDate(l.at)}　${esc(l.by)}　${LOG_TEXT(l)}</li>`).join("")}</ul></details>`:""}
   </article>`;
 }
 function render(){
   const res = ROWS.map(r=>[r,match(r,F.q)]).filter(([r,m])=>m
-      && (F.paid==="all" || (F.paid==="paid")===!!r.paid)
+      && (F.paid==="void" ? r.cancelled : !r.cancelled && (F.paid==="all" || (F.paid==="paid")===!!r.paid))
       && inTab(r,F.form) && hasItem(r,F.item))
     .sort((a,b)=>b[0].submittedAt.localeCompare(a[0].submittedAt));
   const unpaid = res.filter(([r])=>!r.paid);
@@ -550,7 +516,7 @@ function buildFormFilter(){ renderTabs(); }
 function renderTabs(){
   const evs=SETTINGS.events.filter(e=>e.status!=="hidden" || ROWS.some(r=>r.eventId===e.id));
   const tabs=[["all","全部"],["lamp","點燈"],...evs.map(e=>[e.id,e.name])];
-  const cnt=t=>{ const rs=ROWS.filter(r=>inTab(r,t)); const u=rs.filter(r=>!r.paid).length; return `<span class="n">${rs.length}</span>${u?`<span class="n red" title="未繳費">${u}</span>`:""}`; };
+  const cnt=t=>{ const rs=ROWS.filter(r=>inTab(r,t)&&!r.cancelled); const u=rs.filter(r=>!r.paid).length; return `<span class="n">${rs.length}</span>${u?`<span class="n red" title="未繳費">${u}</span>`:""}`; };
   $("tabs").innerHTML=tabs.map(([v,t])=>`<button type="button" role="tab" data-tab="${esc(v)}" aria-selected="${F.form===v}">${esc(t)}${cnt(v)}</button>`).join("");
   const items = F.form==="all" ? [] : F.form==="lamp" ? LAMP_TYPES : FAHUI_ITEMS;
   $("subtabs").hidden=!items.length;
@@ -565,12 +531,24 @@ $("segPaid").addEventListener("click", e=>{ const b=e.target.closest("[data-paid
 $("tabs").addEventListener("click", e=>{ const b=e.target.closest("[data-tab]"); if(!b) return; F.form=b.dataset.tab; F.item="all"; confirming=null; render(); });
 $("subtabs").addEventListener("click", e=>{ const b=e.target.closest("[data-item]"); if(!b) return; F.item=b.dataset.item; confirming=null; render(); });
 $("list").addEventListener("click", async e=>{
-  const ask=e.target.closest("[data-ask]"); if(ask){ confirming=ask.dataset.ask; render(); return; }
-  const d=e.target.closest("[data-do]"); if(!d) return;
-  if(d.dataset.do==="cancel"){ confirming=null; render(); return; }
-  d.disabled=true; d.textContent="處理中…";
-  try{ const r=ROWS.find(x=>x.ref===d.dataset.ref); const rec=await API.setPaid(d.dataset.ref, d.dataset.do==="pay", r.totals?.all??null, r.payLog); Object.assign(r,rec); confirming=null; render(); }
-  catch(err){ d.disabled=false; d.textContent="確定"; d.closest(".confirm").querySelector("span").textContent="網路有問題，還沒存好。請再按一次「確定」。"; }
+  const ask=e.target.closest("[data-ask]"); if(ask){ confirming={ref:ask.dataset.ref, kind:ask.dataset.ask}; render(); return; }
+  const seat=e.target.closest("[data-seat]");
+  const d=e.target.closest("[data-do]");
+  if(!seat && !d) return;
+  if(d && d.dataset.do==="back"){ confirming=null; render(); return; }
+  const btn=seat||d, ref=seat?seat.dataset.seat:d.dataset.ref, kind=seat?"seat":d.dataset.do;
+  btn.disabled=true; btn.textContent="處理中…";
+  try{
+    const rec = kind==="pay"||kind==="unpay" ? await API.setPaid(ref, kind==="pay")
+      : kind==="void"||kind==="restore" ? await API.setCancelled(ref, kind==="void")
+      : await API.assignSeats(ref);
+    const r=ROWS.find(x=>x.ref===ref); Object.assign(r, rec); confirming=null; render();
+    if(kind==="seat" && hasWait(r)) alert("目前還是沒有空的燈位，這幾盞仍是候補。");
+  }catch(err){
+    btn.disabled=false; btn.textContent="確定";
+    const box=btn.closest(".confirm"); const msg = err.message==="paid" ? "已繳費的報名不能取消，請先改回未繳費。" : "網路有問題，還沒存好。請再按一次。";
+    if(box) box.querySelector("span").textContent=msg; else alert(msg);
+  }
 });
 
 async function enter(){
@@ -684,7 +662,7 @@ const RKINDS = [
   ["meal","供齋名單","供齋的人和功德金"],
   ["money","收款總表","應收、已收、誰經手"],
 ];
-const R = {kind:"lamp", scope:"", type:"all", paidOnly:false, date:"", sort:"ref"};
+const R = {kind:"lamp", scope:"", type:"all", paidOnly:false, date:"", sort:"seat"};
 // 有法會開放／暫停中，或已經有法會報名資料時，才顯示法會的三種報表
 const hasFahui = () => evList().length>0;
 const kindsShown = () => RKINDS.filter(([k])=>!["lotus","chaodu","meal"].includes(k) || hasFahui());
@@ -707,23 +685,29 @@ function table(head, rows, foot){
                 : `<tr><td colspan="${head.length}" class="none">目前沒有</td></tr>`}</tbody>${foot||""}</table></div>`;
 }
 function rRows(){
-  let rs = ROWS.filter(r=>inTab(r, R.kind==="lamp" ? "lamp" : R.scope || "lamp"));
+  let rs = ROWS.filter(r=>!r.cancelled && inTab(r, R.kind==="lamp" ? "lamp" : R.scope || "lamp"));   // 取消的不列
   if(R.paidOnly && R.kind!=="money") rs = rs.filter(r=>r.paid);
   return rs.slice().sort((a,b)=>a.submittedAt.localeCompare(b.submittedAt));
 }
 // 點燈名冊、蓮花福慧燈名冊共用：一人一列
 const ZODIAC = "鼠牛虎兔龍蛇馬羊猴雞狗豬";
-// 依生肖排序時：鼠→豬，同生肖年紀大的在前；其餘維持報名先後
-function sortPeople(list){
-  if(R.kind!=="lamp" || R.sort!=="zodiac") return list;
+// 依燈號：照牆上的順序，候補排最後；依生肖：鼠→豬，同生肖年紀大的在前；其餘維持報名先後
+const seatOf = (p,t) => t ? (p.seats||{})[t] : Object.values(p.seats||{}).filter(Boolean).sort()[0];
+function sortPeople(list, type){
+  if(R.kind!=="lamp") return list;
+  if(R.sort==="seat") return list.map((x,i)=>[x,i]).sort((a,b)=>{ const sa=seatOf(a[0].p,type)||"~", sb=seatOf(b[0].p,type)||"~"; return sa<sb?-1:sa>sb?1:a[1]-b[1]; }).map(x=>x[0]);
+  if(R.sort!=="zodiac") return list;
   return list.map((x,i)=>[x,i]).sort((a,b)=>{ const za=ZODIAC.indexOf(a[0].p.zodiac), zb=ZODIAC.indexOf(b[0].p.zodiac);
     return (za<0?99:za)-(zb<0?99:zb) || (b[0].p.age_xu||0)-(a[0].p.age_xu||0) || a[1]-b[1]; }).map(x=>x[0]);
 }
-function personTable(list){
-  list = sortPeople(list);
-  const head=["",["姓名",""],"信士／信女","生肖",["歲數","num"],"農曆生日","聯絡電話",["報名編號",""]];
+// type：點燈名冊的燈種，有的話多一欄燈號
+function personTable(list, type){
+  list = sortPeople(list, type);
+  const head=["", ...(type?[["燈號",""]]:[]), ["姓名",""],"信士／信女","生肖",["歲數","num"],"農曆生日","聯絡電話",["報名編號",""]];
   if(!R.paidOnly) head.push("繳費");
-  return table(head, list.map(({p,r},i)=>{ const c=[[i+1,"num"],[esc(p.name),"nm"],[gText(p.gender),"c"],[esc(p.zodiac),"c"],[p.age_xu!=null?p.age_xu+" 歲":"","num"],[esc(lunarText(p.birth)),"nw"],[esc(r.contact.phone),"nw"],[esc(r.ref),"mono"]]; if(!R.paidOnly) c.push(paidCell(r)); return c; }));
+  return table(head, list.map(({p,r},i)=>{ const st=type?(p.seats||{})[type]:null;
+    const c=[[i+1,"num"], ...(type?[[st?esc(st):`<span class="unp">候補</span>`,"mono"]]:[]), [esc(p.name),"nm"],[gText(p.gender),"c"],[esc(p.zodiac),"c"],[p.age_xu!=null?p.age_xu+" 歲":"","num"],[esc(lunarText(p.birth)),"nw"],[esc(r.contact.phone),"nw"],[esc(r.ref),"mono"]];
+    if(!R.paidOnly) c.push(paidCell(r)); return c; }));
 }
 // 總表：一人一列，每種燈一欄打勾
 function lampSummaryTable(rs){
@@ -732,7 +716,7 @@ function lampSummaryTable(rs){
   const head=["",["姓名",""],"信士／信女","生肖",["歲數","num"],"農曆生日",...LAMP_TYPES.map(t=>[short(t),"c"]),["盞數","num"],["報名編號",""]];
   if(!R.paidOnly) head.push("繳費");
   const rows = list.map(({p,r},i)=>{ const c=[[i+1,"num"],[esc(p.name),"nm"],[gText(p.gender),"c"],[esc(p.zodiac),"c"],[p.age_xu!=null?p.age_xu+" 歲":"","num"],esc(lunarText(p.birth)),
-    ...LAMP_TYPES.map(t=>[(p.lampTypes||[]).includes(t)?"✓":"","c"]),[(p.lampTypes||[]).length,"num"],[esc(r.ref),"mono"]]; if(!R.paidOnly) c.push(paidCell(r)); return c; });
+    ...LAMP_TYPES.map(t=>[(p.lampTypes||[]).includes(t)?((p.seats||{})[t]?esc(p.seats[t]):`<span class="unp">候補</span>`):"","c nw"]),[(p.lampTypes||[]).length,"num"],[esc(r.ref),"mono"]]; if(!R.paidOnly) c.push(paidCell(r)); return c; });
   const n = list.reduce((a,x)=>a+(x.p.lampTypes||[]).length,0);
   const foot = list.length ? `<tfoot><tr><td></td><td colspan="5">合計 ${list.length} 位</td>${LAMP_TYPES.map(t=>`<td class="c">${itemUnits(rs,t)}</td>`).join("")}<td class="num">${n}</td><td colspan="${R.paidOnly?1:2}"></td></tr></tfoot>` : "";
   return table(head, rows, foot);
@@ -746,7 +730,8 @@ function sheetLamp(rs){
   const sum = LAMP_TYPES.map(t=>`<span>${t} <b>${itemUnits(rs,t)}</b> 盞</span>`).join("");
   const secs = types.map((t,i)=>{
     const list = rs.flatMap(r=>(r.lamps||[]).filter(p=>(p.lampTypes||[]).includes(t)).map(p=>({p,r})));
-    return `<div class="rsec${i?" pb":""}"><h3>${t}<small>共 ${list.length} 盞</small></h3>${personTable(list)}</div>`;
+    const wl = list.filter(x=>!(x.p.seats||{})[t]).length;
+    return `<div class="rsec${i?" pb":""}"><h3>${t}<small>共 ${list.length} 盞${wl?`（候補 ${wl}）`:""}</small></h3>${personTable(list, t)}</div>`;
   }).join("");
   return {title: R.type==="all"?"點燈名冊":`點燈名冊・${R.type}`, sum: R.type==="all"?sum:"", body: secs};
 }
