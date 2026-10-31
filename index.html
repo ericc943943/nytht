@@ -703,11 +703,16 @@ function payload(ref){
 }
 async function submit(){
   const btn=$("nextBtn"); btn.disabled=true; btn.textContent=t("送出中…","Submitting…");
-  const ref=refNo(); const data=payload(ref);
+  // clientId：同一份報名重按「送出」時不變，後端靠它避免重複建立
+  if(!S.clientId){ S.clientId=uid()+uid(); save(); }
+  let ref=refNo(); const data=payload(ref); data.clientId=S.clientId;
   try{
     if(CONFIG.submitUrl){
       const r=await fetch(CONFIG.submitUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(data)});
       if(!r.ok) throw new Error(r.status);
+      const j=await r.json();
+      if(!j.ok){ const er=new Error(j.error||"fail"); er.code=j.error; throw er; }
+      ref=j.ref; data.ref=ref;   // 報名編號以後端為準
     } else { // 測試模式：存在這台電腦上，後台（admin.html）在同一台電腦打開就看得到
       try{ const db=JSON.parse(localStorage.getItem("tsuhui-demo-db")||"[]"); db.push(data); localStorage.setItem("tsuhui-demo-db", JSON.stringify(db)); }catch(e){}
       console.log("[測試模式] 報名資料", data); }
@@ -716,7 +721,10 @@ async function submit(){
     clearSaved(draftKey(S)); show("done");
   }catch(e){
     btn.disabled=false; btn.textContent=t("確認送出","Submit");
-    $("panel").insertAdjacentHTML("afterbegin",`<p class="errmsg" role="alert" style="font-size:1rem">${t("網路連線有問題，資料還沒送出。請稍等一下再按一次「確認送出」，已填的資料不會不見。","Connection problem — your form has not been sent yet. Please wait a moment and press \"Submit\" again. Nothing you entered will be lost.")}</p>`);
+    const msg = e.code==="closed"
+      ? t(`這個項目目前暫停報名，資料沒有送出。請洽堂裡：${CONFIG.phone}`,`Registration for this is currently closed, so your form was not sent. Please call the temple: ${CONFIG.phone}`)
+      : t("網路連線有問題，資料還沒送出。請稍等一下再按一次「確認送出」，已填的資料不會不見。","Connection problem — your form has not been sent yet. Please wait a moment and press \"Submit\" again. Nothing you entered will be lost.");
+    $("panel").insertAdjacentHTML("afterbegin",`<p class="errmsg" role="alert" style="font-size:1rem">${msg}</p>`);
     window.scrollTo({top:0});
   }
 }

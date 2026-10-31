@@ -396,7 +396,7 @@ const LS = { get(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse
              set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} } };
 const API = {
   async list(){
-    if(!DEMO){ const r=await fetch(`${CONFIG.apiUrl}?action=list&${authQS()}`); if(!r.ok) throw new Error(r.status); return (await r.json()).rows; }
+    if(!DEMO){ const r=await fetch(`${CONFIG.apiUrl}?action=list&${authQS()}`); if(!r.ok) throw new Error(r.status); const j=await r.json(); if(!j.ok) throw new Error(j.error||"fail"); return j.rows; }
     const paidMap = LS.get("tsuhui-demo-paid",{});
     const shownEv = id => (SETTINGS.events.find(e=>e.id===id)||{}).status!=="hidden";
     return [...sampleData().filter(r=>r.form==="lamp"||shownEv(r.eventId)), ...LS.get("tsuhui-demo-db",[])].map(r=> paidMap[r.ref] ? {...r, ...paidMap[r.ref]} : r);
@@ -433,12 +433,14 @@ API.users = async function(){ // 登入名單：只有名字，不含 PIN
   return (await demoUsers()).map(pub);
 };
 API.login = async function(uid, pin){
-  if(!DEMO){ const r=await fetch(`${CONFIG.apiUrl}?action=login&uid=${encodeURIComponent(uid)}&pin=${encodeURIComponent(pin)}`); const j=await r.json(); return j.ok?j.user:null; }
+  if(!DEMO){ const r=await fetch(`${CONFIG.apiUrl}?action=login&uid=${encodeURIComponent(uid)}&pin=${encodeURIComponent(pin)}`); const j=await r.json(); if(j.error==="locked") throw new Error("locked"); return j.ok?j.user:null; }
   const u=(await demoUsers()).find(x=>x.id===uid&&x.active); return u && u.pin===await hashPw(pin) ? pub(u) : null;
 };
 // 帳號管理（負責人／堂主）：add / resetPin / setActive；個人：changeMyPin
 API.userOp = async function(op, data){
-  if(!DEMO){ const r=await fetch(CONFIG.apiUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"userOp",op,...auth(),...data})}); const j=await r.json(); if(!j.ok) throw new Error(j.error||"fail"); return; }
+  // 新的 PIN 用 newPin 傳，避免跟登入用的 pin 撞名
+  if(!DEMO){ const d={...data}; if("pin" in d){ d.newPin=d.pin; delete d.pin; }
+    const r=await fetch(CONFIG.apiUrl,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"userOp",op,...d,...auth()})}); const j=await r.json(); if(!j.ok) throw new Error(j.error||"fail"); return; }
   const list=await demoUsers(), me=sess(), meU=list.find(x=>x.id===me.uid);
   if(!meU || meU.pin!==await hashPw(me.pin)) throw new Error("auth");
   if(op==="changeMyPin"){ if(meU.pin!==await hashPw(data.cur)) throw new Error("cur"); if(await hashPw(data.pin)===meU.pin) throw new Error("same"); meU.pin=await hashPw(data.pin); meU.mustChange=false; }
@@ -591,7 +593,7 @@ $("whoList").addEventListener("click", e=>{ const b=e.target.closest("[data-uid]
 $("whoBack").addEventListener("click", showLogin);
 $("loginBtn").addEventListener("click", async ()=>{
   const pin=$("pw").value.trim(); if(!pin){ $("loginErr").textContent="請輸入 PIN 碼。"; return; }
-  let u=null; try{ u=await API.login(PICK.uid, pin); }catch(e){ $("loginErr").textContent="網路有問題，請稍後再試。"; return; }
+  let u=null; try{ u=await API.login(PICK.uid, pin); }catch(e){ $("loginErr").textContent = e.message==="locked" ? "PIN 碼打錯太多次，請 15 分鐘後再試，或請負責人幫您重設 PIN 碼。" : "網路有問題，請稍後再試。"; return; }
   if(!u){ $("loginErr").textContent="PIN 碼不正確，請再試一次。"; $("pw").value=""; return; }
   setSess({uid:u.id, pin, role:u.role, name:u.name});
   if(u.mustChange){ $("pinStep").hidden=true; $("forceStep").hidden=false; $("forceName").textContent=u.name; $("loginErr").textContent=""; $("fpNew").focus(); return; }

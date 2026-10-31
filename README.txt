@@ -4,6 +4,7 @@
   index.html   報名頁（網址首頁）：點燈報名、法會報名、繳費單
   admin.html   後台（網址 /admin）：搜尋、收款、密碼設定
   vercel.json  讓網址不用加 .html
+  backend/     正式後端（Google 試算表＋Apps Script）：Code.gs 和設定說明.txt
 
 目前狀態：示範版
   - 報名資料只存在填寫者自己的瀏覽器，堂裡收不到。
