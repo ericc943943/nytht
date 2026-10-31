@@ -428,7 +428,7 @@ function match(r, q){
   const ql=q.toLowerCase().replace(/[\s-]/g,""), qd=digits(q);
   const hits=new Set(); let ok=false;
   if(r.ref.toLowerCase().replace(/-/g,"").includes(ql)) ok=true;
-  // 燈號，例：A01-0512 或 a010512
+  // 燈號，例：A010512（大小寫都可以）
   if(ql.length>=3 && (r.lamps||[]).some(p=>Object.values(p.seats||{}).some(s=>s && s.toLowerCase().replace(/-/g,"").includes(ql)))) ok=true;
   if(qd.length>=3 && digits(r.contact.phone).includes(qd)) ok=true;
   const names=[r.contact.name, ...(r.lamps||[]).map(p=>p.name), ...(r.chaodu||[]).flatMap(c=>[c.name,c.sponsor]), ...(r.meals||[]).map(m=>m.name)];

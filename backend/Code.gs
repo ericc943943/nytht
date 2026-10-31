@@ -20,7 +20,7 @@ const PRICES = {
   lotus: 60,     // 法會：蓮花福慧燈，每位
   chaodu: 160,   // 法會：超渡牌位，每牌位
 };
-// 燈位：每種燈牆上的排列。燈號 = 代碼-排排個個，例：A01-0512 ＝ 光明燈第 5 排第 12 個
+// 燈位：每種燈牆上的排列。燈號 = 代碼＋排排＋個個，例：A010512 ＝ 光明燈第 5 排第 12 個
 const SEATS = {
   "個人光明燈": { code: "A01", perRow: 30, rows: 20 },
   "文昌燈":     { code: "A02", perRow: 20, rows: 20 },
@@ -172,7 +172,7 @@ function calcTotals_(d) {
 }
 
 /* ================= 燈位 ================= */
-const seatId_ = (cfg, r, c) => cfg.code + "-" + ("0" + r).slice(-2) + ("0" + c).slice(-2);
+const seatId_ = (cfg, r, c) => cfg.code + ("0" + r).slice(-2) + ("0" + c).slice(-2);
 
 // 目前被佔用的燈位（已取消的不算；exceptRef 是正在修改的那一筆）
 function usedSeats_(exceptRef) {
@@ -210,7 +210,7 @@ function assignSeats_(d, used, prev) {
 function seatsLeft_() {
   const used = usedSeats_(""), left = {};
   Object.keys(SEATS).forEach(t => {
-    const cfg = SEATS[t], prefix = cfg.code + "-";
+    const cfg = SEATS[t], prefix = cfg.code;
     let n = 0; used.forEach(id => { if (id.indexOf(prefix) === 0) n++; });
     left[t] = cfg.rows * cfg.perRow - n;
   });
