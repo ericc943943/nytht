@@ -213,13 +213,14 @@ function submit_(d) {
       return { ok: true, ref: rec.ref, record: publicRecord_(rec), duplicate: true };
     }
   }
-  // 報名編號由這裡決定，確保不重複（格式：L/F + yymmdd + - + 4 碼）
-  const existing = new Set(last > 1 ? sh.getRange(2, 1, last - 1, 1).getValues().map(r => String(r[0])) : []);
+  // 報名編號由這裡決定：L（點燈）／F（法會）＋ yymmdd ＋ - ＋當天流水號，例：L261031-001
   const tz = Session.getScriptTimeZone() || "America/New_York";
   const prefix = (d.form === "lamp" ? "L" : "F") + Utilities.formatDate(new Date(), tz, "yyMMdd") + "-";
-  let ref = "";
-  for (let i = 0; !ref && i < 200; i++) { const c = prefix + ("000" + Math.floor(Math.random() * 10000)).slice(-4); if (!existing.has(c)) ref = c; }
-  if (!ref) return { ok: false, error: "ref" };
+  let maxNo = 0;
+  if (last > 1) sh.getRange(2, 1, last - 1, 1).getValues().forEach(r => {
+    const v = String(r[0]); if (v.indexOf(prefix) === 0) maxNo = Math.max(maxNo, Number(v.slice(prefix.length)) || 0);
+  });
+  const ref = prefix + ("00" + (maxNo + 1)).slice(-Math.max(3, String(maxNo + 1).length));
 
   cleanData_(d);
   d.totals = calcTotals_(d);                     // 金額一律在這裡重新計算
@@ -360,17 +361,19 @@ function phoneMatch_(stored, given) {
   const a = digits_(stored), b = digits_(given);
   return b.length >= 7 && (a === b || a.slice(-10) === b.slice(-10));
 }
-// 用報名編號＋電話找自己的報名；同一個編號連續打錯會暫時鎖住
+// 用報名編號＋電話找自己的報名。同一個編號、或同一支電話連續打錯，都會暫時鎖住
+// （編號是連號，所以也要擋「拿一支電話一個一個試編號」）
 function lookup_(ref, phone) {
-  const cache = CacheService.getScriptCache(), key = "lk-" + String(ref || "").toUpperCase();
-  const fails = Number(cache.get(key) || 0);
-  if (fails >= MAX_FAILS) return { ok: false, error: "locked" };
+  const cache = CacheService.getScriptCache();
+  const keys = ["lk-" + String(ref || "").trim().toUpperCase(), "lkp-" + digits_(phone).slice(-10)];
+  const fails = keys.map(k => Number(cache.get(k) || 0));
+  if (fails.some(n => n >= MAX_FAILS)) return { ok: false, error: "locked" };
   const f = findRow_(ref);
   if (!f || !phoneMatch_(f.rec.contact && f.rec.contact.phone, phone)) {
-    cache.put(key, String(fails + 1), LOCK_MINUTES * 60);
+    keys.forEach((k, i) => cache.put(k, String(fails[i] + 1), LOCK_MINUTES * 60));
     return { ok: false, error: "not-found" };
   }
-  if (fails) cache.remove(key);
+  keys.forEach((k, i) => { if (fails[i]) cache.remove(k); });
   return { ok: true, record: publicRecord_(f.rec) };
 }
 // 繳費前可以修改；修改後重新計算金額，原本的燈位盡量保留
