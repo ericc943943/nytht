@@ -22,7 +22,7 @@ const PRICES = {
 };
 // 燈位：每種燈牆上的排列。燈號 = 代碼＋排排＋個個，例：A010512 ＝ 光明燈第 5 排第 12 個
 const SEATS = {
-  "個人光明燈": { code: "A01", perRow: 30, rows: 20 },
+  "個人光明燈": { code: "A01", perRow: 30, rows: 60 },
   "文昌燈":     { code: "A02", perRow: 20, rows: 20 },
   "太歲燈":     { code: "A03", perRow: 30, rows: 19 },
   "五路財神燈": { code: "A05", perRow: 30, rows: 70 },
