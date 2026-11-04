@@ -269,7 +269,7 @@ details.log li{margin:2px 0}
         </div>
         <label for="lampYear" style="margin-top:8px">點燈年度</label>
         <input id="lampYear" type="number" inputmode="numeric" min="2020" max="2100">
-        <p class="hint" id="lampYearHint">報名頁和報名表上會顯示這個年度，歲數也照這一年算。換年度後，燈號會從 A010101 重新排，舊年度的資料都會保留。</p>
+        <p class="hint" id="lampYearHint">報名頁和報名表上會顯示這個年度，歲數也照這一年算。換年度後，燈號會從 光010101 重新排，舊年度的資料都會保留。</p>
       </div>
       <div class="pwcard">
         <h3>法會場次</h3>
@@ -426,6 +426,12 @@ function itemUnits(rows,item){
 }
 const UNIT = item => LAMP_TYPES.includes(item)?"盞":item==="超渡牌位"?"個牌位":"位";
 
+/* ================= 燈號 ================= */
+// 系統裡存 G010512，畫面顯示 光010512
+const SEAT_LABEL = {G:"光", W:"文", T:"太", C:"財"};
+const seatLabel = s => s ? (SEAT_LABEL[s[0]]||s[0]) + s.slice(1) : "";
+const seatQuery = q => { let x=String(q||"").trim().replace(/[\s-]/g,""); Object.entries(SEAT_LABEL).forEach(([k,v])=>{ x=x.split(v).join(k); }); return x.toLowerCase(); };
+
 /* ================= 搜尋 ================= */
 // 回傳 null（不符合）或 {hits:Set(人名)}：電話比數字、編號忽略大小寫與「-」、姓名比所有出現的名字
 function match(r, q){
@@ -433,8 +439,9 @@ function match(r, q){
   const ql=q.toLowerCase().replace(/[\s-]/g,""), qd=digits(q);
   const hits=new Set(); let ok=false;
   if(r.ref.toLowerCase().replace(/-/g,"").includes(ql)) ok=true;
-  // 燈號，例：A010512（大小寫都可以）
-  if(ql.length>=3 && (r.lamps||[]).some(p=>Object.values(p.seats||{}).some(s=>s && s.toLowerCase().replace(/-/g,"").includes(ql)))) ok=true;
+  // 燈號：打「光010512」「G010512」「g010512」或只打數字（至少 3 碼）都找得到
+  const qs = seatQuery(q);
+  if(qs.length>=3 && (r.lamps||[]).some(p=>Object.values(p.seats||{}).some(s=>s && s.toLowerCase().includes(qs)))) ok=true;
   if(qd.length>=3 && digits(r.contact.phone).includes(qd)) ok=true;
   const names=[r.contact.name, ...(r.lamps||[]).map(p=>p.name), ...(r.chaodu||[]).flatMap(c=>[c.name,c.sponsor]), ...(r.meals||[]).map(m=>m.name)];
   const qn=q.trim().toLowerCase();
@@ -470,7 +477,7 @@ function cardHTML(r, m){
   const q=F.q, paid=!!r.paid, void_=!!r.cancelled;
   const secDim = name => FAHUI_ITEMS.includes(F.item) && F.item!==name ? " dim" : "";
   const seatChip = (p,t) => { const s=p.seats?p.seats[t]:undefined; const isLamp=r.form==="lamp";
-    return `<span class="chip${isLamp&&!s?" wl":""}">${esc(t)}${isLamp?`<span class="seat">${s?hl(s,q):"候補"}</span>`:""}</span>`; };
+    return `<span class="chip${isLamp&&!s?" wl":""}">${esc(t)}${isLamp?`<span class="seat">${s?hl(seatLabel(s),q):"候補"}</span>`:""}</span>`; };
   const lampSec = (r.lamps||[]).length ? `<div class="sec${r.form==="lamp"?"":secDim("蓮花福慧燈")}"><h3>${r.form==="lamp"?"點燈":"蓮花福慧燈"}</h3>${r.lamps.map(p=>`
       <div class="person${LAMP_TYPES.includes(F.item)&&!(p.lampTypes||[]).includes(F.item)?" dim":""}"><span class="nm">${hl(p.name,q)}</span><span class="info">${p.gender?esc(p.gender)+"・":""}${esc(p.zodiac)}・${p.age_xu??""} 歲・${lunarText(p.birth)}</span>
       ${r.form==="lamp"?`<div class="chips">${(p.lampTypes||[]).map(t=>seatChip(p,t)).join("")}</div>`:""}</div>`).join("")}</div>` : "";
@@ -720,7 +727,7 @@ function personTable(list, type){
   const head=["", ...(type?[["燈號",""]]:[]), ["姓名",""],"信士／信女","生肖",["歲數","num"],"農曆生日","聯絡電話",["報名編號",""]];
   if(!R.paidOnly) head.push("繳費");
   return table(head, list.map(({p,r},i)=>{ const st=type?(p.seats||{})[type]:null;
-    const c=[[i+1,"num"], ...(type?[[st?esc(st):`<span class="unp">候補</span>`,"mono"]]:[]), [esc(p.name),"nm"],[gText(p.gender),"c"],[esc(p.zodiac),"c"],[p.age_xu!=null?p.age_xu+" 歲":"","num"],[esc(lunarText(p.birth)),"nw"],[esc(r.contact.phone),"nw"],[esc(r.ref),"mono"]];
+    const c=[[i+1,"num"], ...(type?[[st?esc(seatLabel(st)):`<span class="unp">候補</span>`,"mono"]]:[]), [esc(p.name),"nm"],[gText(p.gender),"c"],[esc(p.zodiac),"c"],[p.age_xu!=null?p.age_xu+" 歲":"","num"],[esc(lunarText(p.birth)),"nw"],[esc(r.contact.phone),"nw"],[esc(r.ref),"mono"]];
     if(!R.paidOnly) c.push(paidCell(r)); return c; }));
 }
 // 總表：一人一列，每種燈一欄打勾
@@ -730,7 +737,7 @@ function lampSummaryTable(rs){
   const head=["",["姓名",""],"信士／信女","生肖",["歲數","num"],"農曆生日",...LAMP_TYPES.map(t=>[short(t),"c"]),["盞數","num"],["報名編號",""]];
   if(!R.paidOnly) head.push("繳費");
   const rows = list.map(({p,r},i)=>{ const c=[[i+1,"num"],[esc(p.name),"nm"],[gText(p.gender),"c"],[esc(p.zodiac),"c"],[p.age_xu!=null?p.age_xu+" 歲":"","num"],esc(lunarText(p.birth)),
-    ...LAMP_TYPES.map(t=>[(p.lampTypes||[]).includes(t)?((p.seats||{})[t]?esc(p.seats[t]):`<span class="unp">候補</span>`):"","c nw"]),[(p.lampTypes||[]).length,"num"],[esc(r.ref),"mono"]]; if(!R.paidOnly) c.push(paidCell(r)); return c; });
+    ...LAMP_TYPES.map(t=>[(p.lampTypes||[]).includes(t)?((p.seats||{})[t]?esc(seatLabel(p.seats[t])):`<span class="unp">候補</span>`):"","c nw"]),[(p.lampTypes||[]).length,"num"],[esc(r.ref),"mono"]]; if(!R.paidOnly) c.push(paidCell(r)); return c; });
   const n = list.reduce((a,x)=>a+(x.p.lampTypes||[]).length,0);
   const foot = list.length ? `<tfoot><tr><td></td><td colspan="5">合計 ${list.length} 位</td>${LAMP_TYPES.map(t=>`<td class="c">${itemUnits(rs,t)}</td>`).join("")}<td class="num">${n}</td><td colspan="${R.paidOnly?1:2}"></td></tr></tfoot>` : "";
   return table(head, rows, foot);

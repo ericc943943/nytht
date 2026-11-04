@@ -102,12 +102,14 @@ const PRICES = {
   lotus: 60,     // 法會：蓮花福慧燈，每位
   chaodu: 160,   // 法會：超渡牌位，每牌位
 };
-// 燈位：每種燈牆上的排列。燈號 = 代碼＋排排＋個個，例：A010512 ＝ 光明燈第 5 排第 12 個
+// 燈位：每種燈牆上的排列。
+// 燈號 = 字＋燈種代碼（給燈號查詢機用）＋排＋第幾個，例：光010512 ＝ 光明燈第 5 排第 12 個。
+// 系統裡存成英文字母（letter，例 G010512），單據和後台一律顯示國字（label）。
 const SEATS = {
-  "個人光明燈": { code: "A01", perRow: 30, rows: 60 },
-  "文昌燈":     { code: "A02", perRow: 20, rows: 60 },
-  "太歲燈":     { code: "A03", perRow: 30, rows: 39 },
-  "五路財神燈": { code: "A05", perRow: 30, rows: 70 },
+  "個人光明燈": { letter: "G", label: "光", code: "01", perRow: 30, rows: 60 },
+  "文昌燈":     { letter: "W", label: "文", code: "02", perRow: 20, rows: 60 },
+  "太歲燈":     { letter: "T", label: "太", code: "03", perRow: 30, rows: 39 },
+  "五路財神燈": { letter: "C", label: "財", code: "05", perRow: 30, rows: 70 },
 };
 const DEFAULT_LAMP_YEAR = 2027;   // 點燈年度：之後在後台「設定」修改
 const DEFAULT_SETTINGS = {
@@ -268,7 +270,9 @@ function applyAges_(d, year) {
 }
 
 /* ================= 燈位 ================= */
-const seatId_ = (cfg, r, c) => cfg.code + ("0" + r).slice(-2) + ("0" + c).slice(-2);
+const seatId_ = (cfg, r, c) => cfg.letter + cfg.code + ("0" + r).slice(-2) + ("0" + c).slice(-2);
+// 顯示用：G010512 → 光010512
+const seatLabel_ = id => { if (!id) return ""; const t = Object.keys(SEATS).find(k => SEATS[k].letter === id[0]); return t ? SEATS[t].label + id.slice(1) : id; };
 
 // 目前被佔用的燈位（只算同一個點燈年度；已取消的不算；exceptRef 是正在修改的那一筆）
 function usedSeats_(exceptRef, year) {
@@ -307,7 +311,7 @@ function assignSeats_(d, used, prev) {
 function seatsLeft_(year) {
   const used = usedSeats_("", year), left = {};
   Object.keys(SEATS).forEach(t => {
-    const cfg = SEATS[t], prefix = cfg.code;
+    const cfg = SEATS[t], prefix = cfg.letter + cfg.code;
     let n = 0; used.forEach(id => { if (id.indexOf(prefix) === 0) n++; });
     left[t] = cfg.rows * cfg.perRow - n;
   });
@@ -316,7 +320,7 @@ function seatsLeft_(year) {
 const SHORT_ = { "個人光明燈": "光明燈", "五路財神燈": "財神燈" };
 function seatText_(d) {
   return (d.lamps || []).filter(p => p.seats && Object.keys(p.seats).length)
-    .map(p => p.name + "：" + Object.keys(p.seats).map(t => (SHORT_[t] || t) + " " + (p.seats[t] || "候補")).join("、")).join("\n");
+    .map(p => p.name + "：" + Object.keys(p.seats).map(t => (SHORT_[t] || t) + " " + (seatLabel_(p.seats[t]) || "候補")).join("、")).join("\n");
 }
 
 /* ================= 讀寫一筆報名 ================= */

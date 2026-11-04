@@ -276,7 +276,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
         <p class="desc" data-en="All ceremonies use the same form. You can register for:">各場法會都用同一張報名表，可報名以下項目：</p>
         <ul class="items">
           <li><span data-en="Memorial tablets for deliverance (deceased family, ancestors, karmic creditors, land guardian spirit, unborn child spirits)">超渡牌位（往生者、歷代祖先、冤親債主、地基主、水子靈等）</span><span id="pChaodu"></span></li>
-          <li><span data-en="Lotus Blessing Lamp (for blessings and protection)">祈福消災點燈・蓮花福慧燈</span><span id="pLotus"></span></li>
+          <li><span data-en="Lotus Lamp (for blessings and protection)">祈福消災點燈・蓮花福慧燈</span><span id="pLotus"></span></li>
           <li><span data-en="Food offering for wandering spirits">供齋（供養十方孤魂）</span><span data-en="Any amount">功德金隨喜</span></li>
         </ul>
         <div class="legend" style="margin-top:6px" data-en="Ceremonies">法會場次</div>
@@ -355,10 +355,10 @@ const CONFIG = {
     year: 2027,   // 預設的點燈年度；正式使用時以後台「設定」為準
     // price：每盞金額（美元）；留 null 則不顯示金額。en／enDesc：英文介面用的名稱和說明
     types: [
-      {k:"guangming", name:"個人光明燈", short:"光明燈", price:120, en:"Bright Blessing Lamp", enDesc:"For peace, good health and a bright year ahead"},
-      {k:"taisui",    name:"太歲燈",     short:"太歲燈", price:120, en:"Tai Sui Lamp",   enDesc:"Tai Sui is the guardian deity of the year. Light this lamp for protection, especially if your zodiac sign clashes with Tai Sui this year"},
-      {k:"caishen",   name:"五路財神燈", short:"財神燈", price:120, en:"Wealth God Lamp", enDesc:"Prays to the Gods of Wealth for prosperity in work and business"},
-      {k:"wenchang",  name:"文昌燈",     short:"文昌燈", price:120, en:"Wenchang Lamp", enDesc:"Prays to Wenchang, the deity of learning, for studies, exams and career"},
+      {k:"guangming", name:"個人光明燈", short:"光明燈", price:120, en:"Lamp of Blessing", enDesc:"For peace, good health and a bright year ahead"},
+      {k:"taisui",    name:"太歲燈",     short:"太歲燈", price:120, en:"Lamp of Annual Taisui", enDesc:"Tai Sui is the guardian deity of the year. Light this lamp for protection, especially if your zodiac sign clashes with Tai Sui this year"},
+      {k:"caishen",   name:"五路財神燈", short:"財神燈", price:120, en:"Lamp of Wealth and Fortune", enDesc:"Prays to the Gods of Wealth for prosperity in work and business"},
+      {k:"wenchang",  name:"文昌燈",     short:"文昌燈", price:120, en:"Lamp of Wenchang", enDesc:"Prays to Wenchang, the deity of learning, for studies, exams and career"},
     ],
   },
   // 法會場次的預設值。正式使用時，開放哪些項目由後台「報名項目設定」決定，會蓋過這裡的設定。
@@ -537,14 +537,14 @@ const VIEWS = {
   pick(){ const w=S.want; const card=(k,ti,sm)=>`<label class="pickcard"><input type="checkbox" data-path="want.${k}"${w[k]?" checked":""}><span><b>${ti}</b><small>${sm}</small></span></label>`;
     return `<h2>${t("要報名哪些項目？","What would you like to register for?")}</h2><p class="lead">${t("可以勾選一項或多項。","Choose one or more.")}</p>
     <div class="pick" data-err="want">
-      ${card("lamp",t("祈福消災點燈・蓮花福慧燈","Lotus Blessing Lamp（蓮花福慧燈）"),t(`每位 $${CONFIG.prices.lamp}`,`$${CONFIG.prices.lamp} per person`))}
+      ${card("lamp",t("祈福消災點燈・蓮花福慧燈","Lotus Lamp（蓮花福慧燈）"),t(`每位 $${CONFIG.prices.lamp}`,`$${CONFIG.prices.lamp} per person`))}
       ${card("chaodu",t("超渡牌位","Memorial tablet for deliverance（超渡牌位）"),t(`每牌位 $${CONFIG.prices.chaodu}`,`$${CONFIG.prices.chaodu} per tablet`))}
       ${card("meal",t("供齋（供養十方孤魂）","Food offering for wandering spirits（供齋）"),t("功德金隨喜","Donation of any amount"))}
     </div>`; },
 
   lamp(){ const LF=isLampForm(); return `<h2>${t("點燈名單","Who is the lamp for?")}</h2><p class="lead">${LF
       ? t("請填每一位要點燈的人，並勾選要點哪幾盞燈。","Enter each person who will have a lamp, and check which lamps.")
-      : t(`蓮花福慧燈每位 $${CONFIG.prices.lamp}。請填每一位要點燈的人。`,`Lotus Blessing Lamp: $${CONFIG.prices.lamp} per person. Enter each person.`)}${t("生日用農曆或國曆都可以，堂裡會依生肖與年紀辦理制改。",
+      : t(`蓮花福慧燈每位 $${CONFIG.prices.lamp}。請填每一位要點燈的人。`,`Lotus Lamp: $${CONFIG.prices.lamp} per person. Enter each person.`)}${t("生日用農曆或國曆都可以，堂裡會依生肖與年紀辦理制改。",
       " The birthday can be on the lunar or the Western calendar. The temple uses each person's zodiac sign and age for the ceremony. Ages are counted the traditional Chinese way (everyone is 1 at birth and a year older each Lunar New Year).")}</p>
     ${S.lamps.map((p,i)=>`<div class="entry">
       <div class="entry-head"><h3>${t(`第 ${i+1} 位`,`Person ${i+1}`)}</h3>${S.lamps.length>1?`<button class="linkbtn" data-del="lamps:${p.id}" type="button">${t("刪除這位","Remove")}</button>`:""}</div>
@@ -621,7 +621,7 @@ function summaryHTML(editable){
     h+=`<div class="sum"><ul style="margin:8px 0">${CONFIG.lampForm.types.map(tp=>[tp,T.byType[tp.k]]).filter(([,x])=>x.count).map(([tp,x])=>`<li class="amt-line"><span>${lampName(tp)}</span><span>${t(`${x.count} 盞`,`× ${x.count}`)}${x.amount!=null?`・${usd(x.amount)}`:""}</span></li>`).join("")}</ul></div>`;
     if(T.all!=null) h+=`<div class="total"><span>${t("合計","Total")}</span><span class="amt">${usd(T.all)}</span></div>`;
     return h; }
-  if(S.want.lamp) h+=`<div class="sum"><h3>${t(`點燈・蓮花福慧燈（${S.lamps.length} 位）`,`Lotus Blessing Lamp (${S.lamps.length})`)}${go("lamp")}</h3><ul>${S.lamps.map(p=>
+  if(S.want.lamp) h+=`<div class="sum"><h3>${t(`點燈・蓮花福慧燈（${S.lamps.length} 位）`,`Lotus Lamp (${S.lamps.length})`)}${go("lamp")}</h3><ul>${S.lamps.map(p=>
       `<li>${personLine(p)}<span class="sub">${birthLine(p)}</span></li>`).join("")}</ul></div>`;
   if(S.want.chaodu) h+=`<div class="sum"><h3>${t(`超渡牌位（${S.souls.length} 個）`,`Memorial tablets (${S.souls.length})`)}${go("chaodu")}</h3><ul>${S.souls.map(p=>{
       const b=toLunar(p.birth), d=toLunar(p.death);
@@ -758,7 +758,10 @@ async function submit(){
 const money = n => n==null ? t("請洽堂裡","Please ask the temple") : "$"+Number(n).toLocaleString();
 const LAMP_BY_NAME = Object.fromEntries(CONFIG.lampForm.types.map(x=>[x.name,x]));
 const lampShort = n => { const x=LAMP_BY_NAME[n]; return x ? (EN()?`${x.en}（${x.short}）`:x.short) : n; };
-const seatHTML = s => s ? `<span class="seat">${esc(s)}</span>` : `<span class="wait">${t("候補","Waitlist")}</span>`;
+// 燈號：系統裡是 G010512，畫面和單據顯示 光010512
+const SEAT_LABEL = {G:"光", W:"文", T:"太", C:"財"};
+const seatLabel = s => s ? (SEAT_LABEL[s[0]]||s[0]) + s.slice(1) : "";
+const seatHTML = s => s ? `<span class="seat">${esc(seatLabel(s))}</span>` : `<span class="wait">${t("候補","Waitlist")}</span>`;
 const recLunar = b => b&&b.lunar ? {y:b.lunar.year, m:b.lunar.month, leap:!!b.lunar.leap, d:b.lunar.day, h:b.lunar.hour||""} : null;
 const recBirth = b => { const L=recLunar(b); if(!L) return ""; const sol=b.entered==="solar"&&b.solar?solarText({y:b.solar.year,m:b.solar.month,d:b.solar.day}):"";
   return EN() ? `${sol?`Born ${sol} · `:""}Lunar: ${lunarText(L)}` : `農曆 ${lunarText(L)}${sol?`（${sol}）`:""}`; };
@@ -772,7 +775,7 @@ function chargeLinesOf(r){
   if(r.form==="lamp") return CONFIG.lampForm.types.map(tp=>{ const n=(r.lamps||[]).filter(p=>(p.lampTypes||[]).includes(tp.name)).length;
       return n ? [t(`${tp.name} × ${n} 盞`,`${lampName(tp)} × ${n}`), n*(tp.price||0)] : null; }).filter(Boolean);
   const a=[];
-  if((r.lamps||[]).length) a.push([t(`蓮花福慧燈 × ${r.lamps.length} 位`,`Lotus Blessing Lamp（蓮花福慧燈）× ${r.lamps.length}`), T.lamp]);
+  if((r.lamps||[]).length) a.push([t(`蓮花福慧燈 × ${r.lamps.length} 位`,`Lotus Lamp（蓮花福慧燈）× ${r.lamps.length}`), T.lamp]);
   if((r.chaodu||[]).length) a.push([t(`超渡 × ${r.chaodu.length} 牌位`,`Memorial tablet（超渡牌位）× ${r.chaodu.length}`), T.chaodu]);
   if((r.meals||[]).length) a.push([t("供齋功德金","Food offering（供齋）"), T.meal]);
   return a;
@@ -804,7 +807,7 @@ function formHTML(r){
       <div class="f-qr" aria-hidden="true">${qrSVG(r.ref)}</div>
     </div>
     ${sec(t("聯絡人","Contact"), `<div><b>${esc(r.contact.name)}</b>　<span style="white-space:nowrap">${esc(r.contact.phone)}</span></div><div class="f-sub">${esc(r.contact.address)}</div>`)}
-    ${sec(isLamp?t("點燈名單與燈號","Lamps and lamp numbers"):t("蓮花福慧燈","Lotus Blessing Lamp"), persons)}
+    ${sec(isLamp?t("點燈名單與燈號","Lamps and lamp numbers"):t("蓮花福慧燈","Lotus Lamp"), persons)}
     ${sec(t("超渡牌位","Memorial tablets"), souls)}
     ${sec(t("供齋","Food offering"), meals)}
     ${r.note?sec(t("備註","Notes"), `<div class="f-sub">${esc(r.note)}</div>`):""}
