@@ -77,6 +77,7 @@ html[lang="en"] .slip-head .doc{letter-spacing:.03em;font-size:1.1rem}
 .chips li{background:var(--gold-soft);color:var(--ink);border-radius:999px;padding:4px 14px;font-size:.95rem}
 .chips.row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .chips.row li{text-align:center;padding:5px 4px;white-space:nowrap}
+.yr{display:block;font-size:.8em;color:var(--gold);letter-spacing:.06em;margin-bottom:2px}
 .lampprice{font-weight:700;color:var(--gold);margin:-4px 0 12px;font-size:1.05rem}
 .lamppick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .lamppick .pickcard{padding:12px 14px}
@@ -351,6 +352,7 @@ const CONFIG = {
   lampForm: {
     title: "啟點光明燈暨安奉太歲",
     titleEn: "Lamp Lighting & Tai Sui Blessing",
+    year: 2027,   // 預設的點燈年度；正式使用時以後台「設定」為準
     // price：每盞金額（美元）；留 null 則不顯示金額。en／enDesc：英文介面用的名稱和說明
     types: [
       {k:"guangming", name:"個人光明燈", short:"光明燈", price:120, en:"Bright Blessing Lamp", enDesc:"For peace, good health and a bright year ahead"},
@@ -401,6 +403,11 @@ const eventName = e => EN() && CONFIG.eventsEn[e.id] ? CONFIG.eventsEn[e.id] : e
 const hasLunar = typeof window.Solar !== "undefined";
 const NOW_Y = new Date().getFullYear();
 const curLunarYear = (()=>{try{ if(hasLunar){const d=new Date();return Solar.fromYmd(d.getFullYear(),d.getMonth()+1,d.getDate()).getLunar().getYear()} }catch(e){} return NOW_Y })();
+// 點燈年度（後台「設定」決定）：歲數照這一年算，報名表上標「2027 丁未年」
+const lampYear = () => Number((SETTINGS.lamp && SETTINGS.lamp.year) || CONFIG.lampForm.year);
+const ganzhi = y => "甲乙丙丁戊己庚辛壬癸"[((y-4)%10+10)%10] + "子丑寅卯辰巳午未申酉戌亥"[((y-4)%12+12)%12];
+const yearText = y => EN() ? `${y} (Year of the ${ZODIAC_EN[zodiacOf(y)]})` : `${y} ${ganzhi(y)}年`;
+const ageFor = L => L ? (isLampForm() ? lampYear() : curLunarYear) - L.y + 1 : "";
 const zodiacOf = y => ZODIAC[((y-4)%12+12)%12];
 const roc = y => y>1911 ? "民國"+(y-1911)+"年" : "民國前"+(1912-y)+"年";
 const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -437,7 +444,7 @@ const isOpen = key => key==="lamp" ? SETTINGS.lamp.status==="open" : (EVENTS().f
 const curEvent = () => EVENTS().find(e=>e.id===S.eventId) || {name:"法會", date:""};
 const isLampForm = () => S.form==="lamp";
 const formTitleZh = () => isLampForm() ? CONFIG.lampForm.title : curEvent().name;   // 存檔用，一律中文
-const formTitle = () => isLampForm() ? t(CONFIG.lampForm.title, CONFIG.lampForm.titleEn) : eventName(curEvent());
+const formTitle = () => isLampForm() ? `${yearText(lampYear())} ${t(CONFIG.lampForm.title, CONFIG.lampForm.titleEn)}` : eventName(curEvent());
 function save(){ if(S.editRef) return; try{localStorage.setItem(KEY(draftKey(S)), JSON.stringify(S))}catch(e){} }   // 修改舊報名時不存草稿
 function load(k){ const [f,ev]=keyToForm(k); try{const v=localStorage.getItem(KEY(k)); const d=v?JSON.parse(v):null; return d&&d.contact?Object.assign(freshState(f,ev),d,{form:f,eventId:ev}):null}catch(e){return null} }
 function clearSaved(k){ try{localStorage.removeItem(KEY(k))}catch(e){} }
@@ -604,8 +611,8 @@ function summaryHTML(editable){
       ? `${p.birth.cal==="solar"?`Born ${solarText(p.birth)} · `:""}Lunar: ${lunarText(L)}`
       : `農曆 ${lunarText(L)}${p.birth.cal==="solar"?`（${solarText(p.birth)}）`:""}`; };
   const personLine = p => { const L=toLunar(p.birth); return EN()
-      ? `${esc(p.name)} (${genderText(p.gender)}) · ${L?zText(zodiacOf(L.y)):""} · age ${L?curLunarYear-L.y+1:""}`
-      : `${esc(p.name)}（${p.gender}）・生肖${L?zodiacOf(L.y):""}・${L?curLunarYear-L.y+1:""} 歲`; };
+      ? `${esc(p.name)} (${genderText(p.gender)}) · ${L?zText(zodiacOf(L.y)):""} · age ${ageFor(L)}`
+      : `${esc(p.name)}（${p.gender}）・生肖${L?zodiacOf(L.y):""}・${ageFor(L)} 歲`; };
   let h=`<div class="sum"><h3>${t("聯絡人","Contact")} ${go("contact")}</h3><ul><li>${esc(S.contact.name)}・${esc(S.contact.phone)}<span class="sub">${esc(S.contact.address)}</span></li></ul></div>`;
   if(!isLampForm()){ const ev=curEvent(); h=`<div class="sum"><h3>${t("報名法會","Ceremony")}</h3><ul><li>${esc(eventName(ev))}${ev.date?`<span class="sub">${esc(ev.date)}</span>`:""}</li></ul></div>`+h; }
   if(isLampForm()){
@@ -637,8 +644,8 @@ function updDerived(kind,id){
   const el=$("dv-"+id); if(!el) return;
   if(kind==="lamp"){ const p=find("lamps",id); const L=toLunar(p.birth);
     el.innerHTML = L ? (EN()
-      ? `<span>Zodiac <b>${zText(zodiacOf(L.y))}</b></span><span>Age <b>${curLunarYear-L.y+1}</b></span>${p.birth.cal==="solar"?`<span>Lunar: ${lunarText(L)}</span>`:""}`
-      : `<span>生肖 <b>${zodiacOf(L.y)}</b></span><span><b>${curLunarYear-L.y+1}</b> 歲</span>${p.birth.cal==="solar"?`<span>農曆 ${lunarText(L)}</span>`:""}`) : "";
+      ? `<span>Zodiac <b>${zText(zodiacOf(L.y))}</b></span><span>Age in ${isLampForm()?lampYear():curLunarYear} <b>${ageFor(L)}</b></span>${p.birth.cal==="solar"?`<span>Lunar: ${lunarText(L)}</span>`:""}`
+      : `<span>生肖 <b>${zodiacOf(L.y)}</b></span><span>${isLampForm()?`${lampYear()} 年`:""} <b>${ageFor(L)}</b> 歲</span>${p.birth.cal==="solar"?`<span>農曆 ${lunarText(L)}</span>`:""}`) : "";
   } else { const p=find("souls",id); if(p.type!=="往生者"){el.innerHTML="";return}
     const b=toLunar(p.birth), d=toLunar(p.death);
     if(b&&d){ const a=d.y-b.y+1; const inp=document.querySelector(`[data-path="souls.${id}.age"]`);
@@ -715,7 +722,7 @@ function payload(){
     form:S.form, eventId:S.eventId, formTitle:formTitleZh(), lang:LANG,
     contact:{name:S.contact.name.trim(), phone:S.contact.phone.trim(), address:S.contact.address.trim()}, note:S.note,
     // pid：每個人固定的代號，修改時靠它保留原本的燈位
-    lamps: (isLampForm()||S.want.lamp) ? S.lamps.map(p=>{const L=toLunar(p.birth); return {pid:p.id, name:p.name.trim(), gender:p.gender, birth:dateOut(p.birth), zodiac:L?zodiacOf(L.y):"", age_xu:L?curLunarYear-L.y+1:null, lampTypes: isLampForm()?lampTypeNames(p):["蓮花福慧燈"]};}) : [],
+    lamps: (isLampForm()||S.want.lamp) ? S.lamps.map(p=>{const L=toLunar(p.birth); return {pid:p.id, name:p.name.trim(), gender:p.gender, birth:dateOut(p.birth), zodiac:L?zodiacOf(L.y):"", age_xu:L?ageFor(L):null, lampTypes: isLampForm()?lampTypeNames(p):["蓮花福慧燈"]};}) : [],
     chaodu: isLampForm() ? [] : S.want.chaodu ? S.souls.map(p=>({type:p.type, name:p.name.trim(), title:p.title.trim(), birth:dateOut(p.birth), death:dateOut(p.death), age:p.age?+p.age:null, sponsor:p.sponsor.trim()})) : [],
     meals: !isLampForm() && S.want.meal ? S.meals.map(m=>({name:m.name.trim(), amount:+m.amount})) : [],
   };
@@ -755,8 +762,9 @@ const seatHTML = s => s ? `<span class="seat">${esc(s)}</span>` : `<span class="
 const recLunar = b => b&&b.lunar ? {y:b.lunar.year, m:b.lunar.month, leap:!!b.lunar.leap, d:b.lunar.day, h:b.lunar.hour||""} : null;
 const recBirth = b => { const L=recLunar(b); if(!L) return ""; const sol=b.entered==="solar"&&b.solar?solarText({y:b.solar.year,m:b.solar.month,d:b.solar.day}):"";
   return EN() ? `${sol?`Born ${sol} · `:""}Lunar: ${lunarText(L)}` : `農曆 ${lunarText(L)}${sol?`（${sol}）`:""}`; };
-const recTitle = r => r.form==="lamp" ? t(CONFIG.lampForm.title, CONFIG.lampForm.titleEn) : eventName(EVENTS().find(e=>e.id===r.eventId)||{id:r.eventId, name:r.formTitle||"法會"});
-const recTitleZh = r => r.form==="lamp" ? CONFIG.lampForm.title : (EVENTS().find(e=>e.id===r.eventId)||{name:r.formTitle||"法會"}).name;
+const recYear = r => Number(r.lampYear || lampYear());
+const recTitle = r => r.form==="lamp" ? `${yearText(recYear(r))} ${t(CONFIG.lampForm.title, CONFIG.lampForm.titleEn)}` : eventName(EVENTS().find(e=>e.id===r.eventId)||{id:r.eventId, name:r.formTitle||"法會"});
+const recTitleZh = r => r.form==="lamp" ? `${recYear(r)} ${ganzhi(recYear(r))}年 ${CONFIG.lampForm.title}` : (EVENTS().find(e=>e.id===r.eventId)||{name:r.formTitle||"法會"}).name;
 const gText = g => EN() ? genderText(g) : (g==="男"?"信士":g==="女"?"信女":"");
 const dateText = iso => iso ? new Date(iso).toLocaleDateString(t("zh-TW","en-US"),{year:"numeric",month:"long",day:"numeric"}) : "";
 function chargeLinesOf(r){
@@ -788,7 +796,7 @@ function formHTML(r){
   const meals = (r.meals||[]).map(m=>`<div class="f-person" style="display:flex;justify-content:space-between"><b>${esc(m.name)}</b><span>${money(m.amount)}</span></div>`).join("");
   const sec = (title, body) => body ? `<div class="f-sec"><h4>${title}</h4>${body}</div>` : "";
   const top = `<section class="regform">
-    ${head(t(isLamp?"點燈報名表":"法會報名表", isLamp?"Lamp Registration":"Ceremony Registration"), t("Registration Form","報名表"))}
+    ${head(isLamp?t(`${recYear(r)} 點燈報名表`,`${recYear(r)} Lamp Registration`):t("法會報名表","Ceremony Registration"), t("Registration Form","報名表"))}
     <div class="f-title">${esc(recTitle(r))}${EN()?`<br><span style="font-size:.9em">${esc(recTitleZh(r))}</span>`:""}</div>
     <div class="f-meta">
       <div><span class="lbl">${t("報名編號","Registration No.")}</span><div class="f-ref">${esc(r.ref)}</div>
@@ -810,7 +818,7 @@ function formHTML(r){
     : chargeLinesOf(r).map(([a,b])=>`<li>${a}　${money(b)}</li>`).join("");
   const stub = `<div class="cut">✂ ${t("沿虛線剪下，下半部為收執聯","Cut here — the bottom part is your receipt")}</div>
   <section class="stub">
-    ${head(t("收執聯","Receipt"), t("Receipt","收執聯"))}
+    ${head(isLamp?t(`${recYear(r)} 點燈收執聯`,`${recYear(r)} Lamp Receipt`):t("收執聯","Receipt"), t("Receipt","收執聯"))}
     <div class="f-meta" style="margin-top:8px"><div><span class="lbl">${t("報名編號","Registration No.")}</span><div class="f-ref">${esc(r.ref)}</div></div>
       <div style="text-align:right"><span class="lbl">${t("聯絡人","Contact")}</span><b>${esc(r.contact.name)}</b></div></div>
     <div class="f-sec"><h4>${esc(recTitle(r))}</h4><ul class="stub-list">${stubList}</ul></div>
@@ -922,7 +930,7 @@ function refreshResume(){ document.querySelectorAll("[data-resume]").forEach(el=
 
 /* ---------- 啟動 ---------- */
 renderEvents(); renderLampBtn(); renderMySlips();
-loadSettings().then(async ()=>{ renderEvents(); renderLampBtn(); renderMySlips(); refreshResume();
+loadSettings().then(async ()=>{ renderStatic(); renderEvents(); renderLampBtn(); renderMySlips(); refreshResume();
   const q=new URLSearchParams(location.search);
   if(q.get("print")){ const j=await openRecord(q.get("print"), q.get("tel")||"", "view");
     if(j && j.ok && q.get("auto")) setTimeout(()=>window.print(), 500);
@@ -933,7 +941,7 @@ loadSettings().then(async ()=>{ renderEvents(); renderLampBtn(); renderMySlips()
   const h=location.hash.slice(1); if(h && isOpen(h) && $("home").hidden===false){ const [f,ev]=keyToForm(h); S=load(h)||freshState(f,ev); show("form"); render(); }
 });
 function renderStatic(){
-  $("lampTitle").innerHTML = EN() ? `${esc(CONFIG.lampForm.titleEn)}<span class="en-sub">${esc(CONFIG.lampForm.title)}</span>` : esc(CONFIG.lampForm.title);
+  $("lampTitle").innerHTML = `<span class="yr">${esc(yearText(lampYear()))}</span>` + (EN() ? `${esc(CONFIG.lampForm.titleEn)}<span class="en-sub">${esc(CONFIG.lampForm.title)}</span>` : esc(CONFIG.lampForm.title));
   const TT=CONFIG.lampForm.types, same=TT.every(x=>x.price&&x.price===TT[0].price);
   $("lampPrice").textContent = same ? t(`每盞 $${TT[0].price}`,`$${TT[0].price} per lamp`) : "";
   $("lampChips").innerHTML=TT.map(x=>`<li>${EN()?esc(x.en):x.short||x.name}${!same&&x.price?` $${x.price}`:""}</li>`).join("");

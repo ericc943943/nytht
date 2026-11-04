@@ -267,6 +267,9 @@ details.log li{margin:2px 0}
         <div class="seg" id="lampSeg" role="group" aria-label="點燈報名狀態">
           <button type="button" data-ls="open">開放報名</button><button type="button" data-ls="paused">暫停</button>
         </div>
+        <label for="lampYear" style="margin-top:8px">點燈年度</label>
+        <input id="lampYear" type="number" inputmode="numeric" min="2020" max="2100">
+        <p class="hint" id="lampYearHint">報名頁和報名表上會顯示這個年度，歲數也照這一年算。換年度後，燈號會從 A010101 重新排，舊年度的資料都會保留。</p>
       </div>
       <div class="pwcard">
         <h3>法會場次</h3>
@@ -310,6 +313,7 @@ details.log li{margin:2px 0}
       <div class="rlabel">要哪一種報表？</div>
       <div class="rkinds" id="rKinds" role="group" aria-label="報表種類"></div>
       <div id="rScopeWrap"><div class="rlabel">哪一場？</div><div class="subtabs" id="rScope" role="group" aria-label="場次"></div></div>
+      <div id="rYearWrap"><div class="rlabel">點燈年度</div><div class="subtabs" id="rYear" role="group" aria-label="點燈年度"></div></div>
       <div id="rTypeWrap"><div class="rlabel">燈種</div><div class="subtabs" id="rType" role="group" aria-label="燈種"></div></div>
       <div id="rSortWrap"><div class="rlabel">排列順序</div>
         <div class="seg" id="rSort" role="group" aria-label="排列順序"><button type="button" data-rsort="seat">依燈號</button><button type="button" data-rsort="ref">依報名先後（一家人排一起）</button><button type="button" data-rsort="zodiac">依生肖</button></div></div>
@@ -401,7 +405,8 @@ const API = {
 let ROWS = [], F = {q:"", paid:"all", form:"all", item:"all"}, confirming = null;
 const LAMP_TYPES = ["個人光明燈","太歲燈","五路財神燈","文昌燈"];
 const FAHUI_ITEMS = ["超渡牌位","蓮花福慧燈","供齋"];
-const inTab = (r,tab) => tab==="all" || (tab==="lamp" ? r.form==="lamp" : r.form!=="lamp" && r.eventId===tab);
+// 「點燈」分頁只看目前的點燈年度；舊年度的在「全部」裡找得到，報表可以選年度
+const inTab = (r,tab) => tab==="all" || (tab==="lamp" ? r.form==="lamp" && recYear(r)===curYear() : r.form!=="lamp" && r.eventId===tab);
 function hasItem(r,item){
   if(item==="all") return true;
   if(LAMP_TYPES.includes(item)) return (r.lamps||[]).some(p=>(p.lampTypes||[]).includes(item));
@@ -449,7 +454,11 @@ API.saveSettings = async function(st){
   okOrThrow(await apiPost({action:"saveSettings", ...auth(), settings:st}));
   SETTINGS=st;
 };
-function formName(r){ return r.form==="lamp" ? CONFIG.lampTitle : (SETTINGS.events.find(e=>e.id===r.eventId)||{name:r.formTitle||"法會"}).name; }
+const ganzhi = y => "甲乙丙丁戊己庚辛壬癸"[((y-4)%10+10)%10] + "子丑寅卯辰巳午未申酉戌亥"[((y-4)%12+12)%12];
+const curYear = () => Number((SETTINGS.lamp&&SETTINGS.lamp.year)||2027);
+const recYear = r => Number(r.lampYear||curYear());
+const yearTitle = y => `${y} ${ganzhi(y)}年 ${CONFIG.lampTitle}`;
+function formName(r){ return r.form==="lamp" ? yearTitle(recYear(r)) : (SETTINGS.events.find(e=>e.id===r.eventId)||{name:r.formTitle||"法會"}).name; }
 // 列印報名表：打開報名頁的列印畫面（跟信眾看到的一樣）
 function printURL(r){
   const base = /\.html$/.test(location.pathname) ? "index.html" : "./";
@@ -515,7 +524,7 @@ function render(){
 function buildFormFilter(){ renderTabs(); }
 function renderTabs(){
   const evs=SETTINGS.events.filter(e=>e.status!=="hidden" || ROWS.some(r=>r.eventId===e.id));
-  const tabs=[["all","全部"],["lamp","點燈"],...evs.map(e=>[e.id,e.name])];
+  const tabs=[["all","全部"],["lamp",`點燈 ${curYear()}`],...evs.map(e=>[e.id,e.name])];
   const cnt=t=>{ const rs=ROWS.filter(r=>inTab(r,t)&&!r.cancelled); const u=rs.filter(r=>!r.paid).length; return `<span class="n">${rs.length}</span>${u?`<span class="n red" title="未繳費">${u}</span>`:""}`; };
   $("tabs").innerHTML=tabs.map(([v,t])=>`<button type="button" role="tab" data-tab="${esc(v)}" aria-selected="${F.form===v}">${esc(t)}${cnt(v)}</button>`).join("");
   const items = F.form==="all" ? [] : F.form==="lamp" ? LAMP_TYPES : FAHUI_ITEMS;
@@ -591,6 +600,7 @@ let DRAFT=null;
 const ST_LABEL=[["open","開放報名"],["paused","暫停"],["hidden","不顯示"]];
 function renderItems(){
   $("lampName").textContent=CONFIG.lampTitle;
+  $("lampYear").value = DRAFT.lamp.year || "";
   $("lampSeg").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.ls===DRAFT.lamp.status));
   $("evRows").innerHTML = DRAFT.events.map((e,i)=>`<div class="evrow">
       <label for="evn${i}"><b>法會名稱</b></label><input id="evn${i}" data-ev="${i}" data-f="name" value="${esc(e.name)}">
@@ -598,6 +608,7 @@ function renderItems(){
       <div class="seg" role="group" aria-label="報名狀態">${ST_LABEL.map(([v,t])=>`<button type="button" data-ev="${i}" data-st="${v}" aria-pressed="${e.status===v}">${t}</button>`).join("")}</div>
     </div>`).join("");
 }
+$("lampYear").addEventListener("input", e=>{ DRAFT.lamp.year = Number(e.target.value)||""; });
 $("lampSeg").addEventListener("click", e=>{ const b=e.target.closest("[data-ls]"); if(!b) return; DRAFT.lamp.status=b.dataset.ls; renderItems(); });
 $("evRows").addEventListener("click", e=>{ const b=e.target.closest("[data-st]"); if(!b) return; DRAFT.events[+b.dataset.ev].status=b.dataset.st; renderItems(); });
 $("evRows").addEventListener("input", e=>{ const t=e.target; if(t.dataset.ev==null) return; DRAFT.events[+t.dataset.ev][t.dataset.f]=t.value; });
@@ -605,6 +616,7 @@ $("evAdd").addEventListener("click", ()=>{ DRAFT.events.push({id:"ev-"+Date.now(
 $("itemsSave").addEventListener("click", async ()=>{
   const m=$("itemsMsg");
   if(DRAFT.events.some(e=>!e.name.trim())){ m.textContent="每一場法會都要填名稱。"; m.className="pwmsg bad"; return; }
+  const y=Number(DRAFT.lamp.year); if(!(y>=2020&&y<=2100)){ m.textContent="請填正確的點燈年度，例如 2027。"; m.className="pwmsg bad"; return; }
   DRAFT.events.forEach(e=>{ e.name=e.name.trim(); e.date=(e.date||"").trim(); });
   try{ await API.saveSettings(JSON.parse(JSON.stringify(DRAFT))); m.textContent="已儲存。報名頁重新整理後就會套用。"; m.className="pwmsg ok"; buildFormFilter(); }
   catch(err){ m.textContent="儲存失敗，請重新登入後再試。"; m.className="pwmsg bad"; }
@@ -662,7 +674,8 @@ const RKINDS = [
   ["meal","供齋名單","供齋的人和功德金"],
   ["money","收款總表","應收、已收、誰經手"],
 ];
-const R = {kind:"lamp", scope:"", type:"all", paidOnly:false, date:"", sort:"seat"};
+const R = {kind:"lamp", scope:"", type:"all", paidOnly:false, date:"", sort:"seat", year:0};
+const lampYears = () => [...new Set([curYear(), ...ROWS.filter(r=>r.form==="lamp").map(recYear)])].sort((a,b)=>b-a);
 // 有法會開放／暫停中，或已經有法會報名資料時，才顯示法會的三種報表
 const hasFahui = () => evList().length>0;
 const kindsShown = () => RKINDS.filter(([k])=>!["lotus","chaodu","meal"].includes(k) || hasFahui());
@@ -670,7 +683,7 @@ const gText = g => g==="男"?"信士":g==="女"?"信女":"";
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 const mdText = s => { const [y,m,d]=s.split("-"); return `${+m}/${+d}`; };
 const evList = () => SETTINGS.events.filter(e=>e.status!=="hidden" || ROWS.some(r=>r.eventId===e.id));
-const scopeName = s => s==="all" ? "全部報名" : s==="lamp" ? CONFIG.lampTitle : (SETTINGS.events.find(e=>e.id===s)||{name:"法會"}).name;
+const scopeName = s => s==="all" ? "全部報名" : s==="lamp" ? yearTitle(R.year||curYear()) : (SETTINGS.events.find(e=>e.id===s)||{name:"法會"}).name;
 function rScopes(){
   if(R.kind==="lamp") return [];
   const evs = evList().map(e=>[e.id,e.name]);
@@ -685,7 +698,8 @@ function table(head, rows, foot){
                 : `<tr><td colspan="${head.length}" class="none">目前沒有</td></tr>`}</tbody>${foot||""}</table></div>`;
 }
 function rRows(){
-  let rs = ROWS.filter(r=>!r.cancelled && inTab(r, R.kind==="lamp" ? "lamp" : R.scope || "lamp"));   // 取消的不列
+  const sc = R.kind==="lamp" ? "lamp" : R.scope || "lamp";
+  let rs = ROWS.filter(r=>!r.cancelled && (sc==="lamp" ? r.form==="lamp" && recYear(r)===R.year : inTab(r, sc) && (r.form!=="lamp" || recYear(r)===R.year)));   // 取消的不列
   if(R.paidOnly && R.kind!=="money") rs = rs.filter(r=>r.paid);
   return rs.slice().sort((a,b)=>a.submittedAt.localeCompare(b.submittedAt));
 }
@@ -795,7 +809,7 @@ function sheetMoney(rs){
   }
   // 項目明細：全部時分「點燈」和各場法會
   const groups = R.scope==="all"
-    ? [["lamp","點燈"], ...evList().map(e=>[e.id,e.name])].map(([id,nm])=>[nm, rs.filter(r=>inTab(r,id)), id==="lamp"]).filter(g=>g[1].length)
+    ? [["lamp","點燈"], ...evList().map(e=>[e.id,e.name])].map(([id,nm])=>[nm, rs.filter(r=>id==="lamp" ? r.form==="lamp" : inTab(r,id)), id==="lamp"]).filter(g=>g[1].length)
     : [[scopeName(R.scope), rs, R.scope==="lamp"]];
   let iRows=[], iTotal=0;
   groups.forEach(([nm,g,isLamp])=>{ if(multi) iRows.push({grp:esc(nm)}); itemLines(g,isLamp).forEach(l=>{ iTotal+=l[4]; iRows.push(l.slice(0,4)); }); });
@@ -806,6 +820,10 @@ function sheetMoney(rs){
 function renderReport(){
   // 控制項
   if(!kindsShown().some(([k])=>k===R.kind)) R.kind="lamp";
+  const yrs = lampYears(); if(!yrs.includes(R.year)) R.year = curYear();
+  const lampInScope = R.kind==="lamp" || (R.kind==="money" && (R.scope==="lamp"||R.scope==="all"));
+  $("rYearWrap").hidden = !(lampInScope && yrs.length>1);
+  $("rYear").innerHTML = yrs.map(y=>`<button type="button" data-ry="${y}" aria-pressed="${R.year===y}">${y} ${ganzhi(y)}年</button>`).join("");
   $("rKinds").innerHTML = kindsShown().map(([k,t,d])=>`<button type="button" data-rk="${k}" aria-pressed="${R.kind===k}"><b>${t}</b><small>${d}</small></button>`).join("");
   const scopes = rScopes();
   if(scopes.length && !scopes.some(s=>s[0]===R.scope)) R.scope = scopes[0][0];
@@ -823,7 +841,7 @@ function renderReport(){
   const rs = rRows();
   const s = ({lamp:sheetLamp, lotus:sheetLotus, chaodu:sheetChaodu, meal:sheetMeal, money:sheetMoney})[R.kind](rs);
   const now = new Date();
-  const sub = [R.kind==="lamp"?CONFIG.lampTitle:scopeName(R.scope), R.kind==="money"?"":(R.paidOnly?"只列已繳清":"含未繳費"), DEMO?"示範資料":""].filter(Boolean).map(esc).join("｜");
+  const sub = [R.kind==="lamp"?yearTitle(R.year):scopeName(R.scope), R.kind==="money"?"":(R.paidOnly?"只列已繳清":"含未繳費"), DEMO?"示範資料":""].filter(Boolean).map(esc).join("｜");
   $("sheet").innerHTML = `<div class="sh-head"><div class="sh-org">紐約花蓮慈惠堂</div><h2>${esc(s.title)}</h2><div class="sh-sub">${sub}</div></div>
     ${s.sum?`<div class="sh-sum">${s.sum}</div>`:""}${s.body}
     <div class="sh-foot">列印時間 ${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}・${esc(sess()?.name||"")}</div>`;
@@ -840,6 +858,7 @@ $("rPrint").addEventListener("click", ()=>window.print());
 $("rKinds").addEventListener("click", e=>{ const b=e.target.closest("[data-rk]"); if(!b) return; R.kind=b.dataset.rk; if(R.kind==="money") R.scope="all"; renderReport(); });
 $("rScope").addEventListener("click", e=>{ const b=e.target.closest("[data-rs]"); if(!b) return; R.scope=b.dataset.rs; renderReport(); });
 $("rType").addEventListener("click", e=>{ const b=e.target.closest("[data-rt]"); if(!b) return; R.type=b.dataset.rt; renderReport(); });
+$("rYear").addEventListener("click", e=>{ const b=e.target.closest("[data-ry]"); if(!b) return; R.year=Number(b.dataset.ry); renderReport(); });
 $("rSort").addEventListener("click", e=>{ const b=e.target.closest("[data-rsort]"); if(!b) return; R.sort=b.dataset.rsort; renderReport(); });
 $("rPaid").addEventListener("click", e=>{ const b=e.target.closest("[data-rp]"); if(!b) return; R.paidOnly=b.dataset.rp==="paid"; renderReport(); });
 $("rDate").addEventListener("change", e=>{ R.date=e.target.value; renderReport(); });

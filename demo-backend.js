@@ -109,8 +109,9 @@ const SEATS = {
   "太歲燈":     { code: "A03", perRow: 30, rows: 19 },
   "五路財神燈": { code: "A05", perRow: 30, rows: 23 },
 };
+const DEFAULT_LAMP_YEAR = 2027;   // 點燈年度：之後在後台「設定」修改
 const DEFAULT_SETTINGS = {
-  lamp: { status: "open" },
+  lamp: { status: "open", year: DEFAULT_LAMP_YEAR },
   events: [
     { id: "2027-zhongyuan", name: "瑤池金母聖誕祈福消災超渡暨普渡大法會", date: "", status: "hidden" },
     { id: "2027-spring-lidou", name: "春季祈安禮斗法會", date: "", status: "hidden" },
@@ -122,8 +123,8 @@ const MAX_FAILS = 8;          // PIN 或查詢連續打錯幾次就暫時鎖住
 const LOCK_MINUTES = 15;
 
 const SHEET = { reg: "報名", users: "帳號", settings: "設定" };
-const REG_HEAD = ["報名編號", "報名時間", "表單", "場次", "聯絡人", "電話", "住址", "應繳", "已繳清", "收款時間", "經手人", "語言", "備註", "收款紀錄", "送出代碼", "完整資料", "已取消", "燈位"];
-const C = { ref: 1, time: 2, form: 3, event: 4, name: 5, phone: 6, address: 7, total: 8, paid: 9, paidAt: 10, paidBy: 11, lang: 12, note: 13, log: 14, cid: 15, json: 16, cancelled: 17, seats: 18 };
+const REG_HEAD = ["報名編號", "報名時間", "表單", "場次", "聯絡人", "電話", "住址", "應繳", "已繳清", "收款時間", "經手人", "語言", "備註", "收款紀錄", "送出代碼", "完整資料", "已取消", "燈位", "點燈年度"];
+const C = { ref: 1, time: 2, form: 3, event: 4, name: 5, phone: 6, address: 7, total: 8, paid: 9, paidAt: 10, paidBy: 11, lang: 12, note: 13, log: 14, cid: 15, json: 16, cancelled: 17, seats: 18, year: 19 };
 const USER_HEAD = ["id", "姓名", "身分", "PIN（加密）", "啟用", "待改PIN"];
 
 /* ================= 第一次使用：建立分頁與管理員帳號 ================= */
@@ -155,7 +156,7 @@ function doGet(e) {
   const p = e.parameter || {};
   try {
     switch (p.action) {
-      case "settings": { const s = getSettings_(); s.seatsLeft = seatsLeft_(); return out_(s); }
+      case "settings": { const s = getSettings_(); s.lamp.year = lampYear_(s); s.seatsLeft = seatsLeft_(s.lamp.year); return out_(s); }
       case "users":    return out_({ users: readUsers_().map(pub_) });
       case "login": {
         if (isLocked_(p.uid)) return out_({ ok: false, error: "locked" });
@@ -224,11 +225,15 @@ function submit_(d) {
 
   cleanData_(d);
   d.totals = calcTotals_(d);                     // 金額一律在這裡重新計算
-  if (d.form === "lamp") assignSeats_(d, usedSeats_(""), null);
+  if (d.form === "lamp") {
+    d.lampYear = lampYear_(st);                  // 點燈年度以後台設定為準
+    applyAges_(d, d.lampYear);
+    assignSeats_(d, usedSeats_("", d.lampYear), null);
+  }
   d.ref = ref; d.paid = false; d.cancelled = false; d.submittedAt = new Date().toISOString();
   const evName = d.form === "lamp" ? "點燈" : ((st.events.find(x => x.id === d.eventId) || {}).name || d.formTitle || "法會");
   sh.appendRow([ref, new Date(), d.form === "lamp" ? "點燈" : "法會", evName, d.contact.name || "", d.contact.phone || "", d.contact.address || "",
-                d.totals.all, false, "", "", d.lang === "en" ? "英文" : "中文", d.note || "", "[]", d.clientId || "", JSON.stringify(d), false, seatText_(d)]);
+                d.totals.all, false, "", "", d.lang === "en" ? "英文" : "中文", d.note || "", "[]", d.clientId || "", JSON.stringify(d), false, seatText_(d), d.lampYear || ""]);
   return { ok: true, ref: ref, record: publicRecord_(d) };
 }
 
@@ -254,16 +259,25 @@ function calcTotals_(d) {
   return { lamp: lamp, chaodu: chaodu, meal: meal, all: lamp + chaodu + meal };
 }
 
+/* ================= 點燈年度 ================= */
+const lampYear_ = st => Number((st && st.lamp && st.lamp.year) || DEFAULT_LAMP_YEAR);
+const recYear_ = d => Number(d.lampYear || DEFAULT_LAMP_YEAR);   // 沒有年度的舊資料當作預設年度
+// 歲數照點燈那一年的農曆年算（出生那年算 1 歲）
+function applyAges_(d, year) {
+  (d.lamps || []).forEach(p => { const y = p.birth && p.birth.lunar && Number(p.birth.lunar.year); p.age_xu = y ? year - y + 1 : null; });
+}
+
 /* ================= 燈位 ================= */
 const seatId_ = (cfg, r, c) => cfg.code + ("0" + r).slice(-2) + ("0" + c).slice(-2);
 
-// 目前被佔用的燈位（已取消的不算；exceptRef 是正在修改的那一筆）
-function usedSeats_(exceptRef) {
+// 目前被佔用的燈位（只算同一個點燈年度；已取消的不算；exceptRef 是正在修改的那一筆）
+function usedSeats_(exceptRef, year) {
   const used = new Set(), sh = sheet_(SHEET.reg), n = sh.getLastRow() - 1;
   if (n < 1) return used;
   sh.getRange(2, 1, n, REG_HEAD.length).getValues().forEach(r => {
     if (r[C.cancelled - 1] === true || String(r[0]) === String(exceptRef)) return;
     let d = {}; try { d = JSON.parse(r[C.json - 1]); } catch (e) { return; }
+    if (d.form !== "lamp" || recYear_(d) !== Number(year)) return;
     (d.lamps || []).forEach(p => Object.keys(p.seats || {}).forEach(t => { if (p.seats[t]) used.add(p.seats[t]); }));
   });
   return used;
@@ -290,8 +304,8 @@ function assignSeats_(d, used, prev) {
     p.seats = seats;
   });
 }
-function seatsLeft_() {
-  const used = usedSeats_(""), left = {};
+function seatsLeft_(year) {
+  const used = usedSeats_("", year), left = {};
   Object.keys(SEATS).forEach(t => {
     const cfg = SEATS[t], prefix = cfg.code;
     let n = 0; used.forEach(id => { if (id.indexOf(prefix) === 0) n++; });
@@ -387,11 +401,11 @@ function update_(b) {
   if (!d.contact) return { ok: false, error: "bad-data" };
   cleanData_(d);
   // 不能改的欄位沿用原本的
-  ["ref", "form", "eventId", "formTitle", "submittedAt", "clientId", "lang"].forEach(k => { d[k] = old[k]; });
+  ["ref", "form", "eventId", "formTitle", "submittedAt", "clientId", "lang", "lampYear"].forEach(k => { d[k] = old[k]; });
   if (b.data.lang) d.lang = b.data.lang;
   d.updatedAt = new Date().toISOString();
   d.totals = calcTotals_(d);
-  if (d.form === "lamp") assignSeats_(d, usedSeats_(old.ref), old);
+  if (d.form === "lamp") { applyAges_(d, recYear_(d)); assignSeats_(d, usedSeats_(old.ref, recYear_(d)), old); }
   Object.assign(d, { paid: old.paid, paidAt: old.paidAt, paidBy: old.paidBy, payLog: old.payLog, cancelled: old.cancelled });
   writeData_(f, d);
   addLog_(f, { action: "edit", by: "信眾", at: d.updatedAt, amount: d.totals.all });
@@ -415,7 +429,7 @@ function setCancelled_(me, ref, cancelled) {
   if (!f) return { ok: false, error: "not-found" };
   if (cancelled && f.rec.paid) return { ok: false, error: "paid" };
   const d = f.rec;
-  if (!cancelled && d.form === "lamp") { assignSeats_(d, usedSeats_(d.ref), d); writeData_(f, d); }
+  if (!cancelled && d.form === "lamp") { assignSeats_(d, usedSeats_(d.ref, recYear_(d)), d); writeData_(f, d); }
   f.sh.getRange(f.row, C.cancelled).setValue(cancelled);
   d.cancelled = cancelled;
   addLog_(f, { action: cancelled ? "cancel" : "restore", by: me.name, byId: me.id, at: new Date().toISOString() });
@@ -427,7 +441,7 @@ function assignWaitlist_(me, ref) {
   if (!f) return { ok: false, error: "not-found" };
   const d = f.rec;
   if (d.cancelled) return { ok: false, error: "cancelled" };
-  assignSeats_(d, usedSeats_(d.ref), d);
+  assignSeats_(d, usedSeats_(d.ref, recYear_(d)), d);
   writeData_(f, d);
   addLog_(f, { action: "seat", by: me.name, byId: me.id, at: new Date().toISOString() });
   return { ok: true, record: d };
@@ -435,11 +449,14 @@ function assignWaitlist_(me, ref) {
 
 /* ================= 設定 ================= */
 function getSettings_() {
-  try { const v = sheet_(SHEET.settings).getRange("A1").getValue(); if (v) { const s = JSON.parse(v); if (s && s.events) return s; } } catch (e) {}
+  try { const v = sheet_(SHEET.settings).getRange("A1").getValue(); if (v) { const s = JSON.parse(v); if (s && s.events) { s.lamp = s.lamp || { status: "open" }; if (!s.lamp.year) s.lamp.year = DEFAULT_LAMP_YEAR; return s; } } } catch (e) {}
   return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
 }
 function saveSettings_(s) {
   if (!s || !s.lamp || !Array.isArray(s.events)) return { ok: false, error: "bad-data" };
+  const y = Number(s.lamp.year);
+  if (!(y >= 2020 && y <= 2100)) return { ok: false, error: "year" };
+  s.lamp.year = y;
   delete s.seatsLeft;
   s.updatedAt = new Date().toISOString();
   sheet_(SHEET.settings).getRange("A1").setValue(JSON.stringify(s));
