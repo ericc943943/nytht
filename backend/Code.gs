@@ -26,7 +26,7 @@ const PRICES = {
 const SEATS = {
   "個人光明燈": { letter: "G", label: "光", code: "01", perRow: 30, rows: 60 },
   "文昌燈":     { letter: "W", label: "文", code: "02", perRow: 20, rows: 60 },
-  "太歲燈":     { letter: "T", label: "太", code: "03", perRow: 30, rows: 39 },
+  "太歲燈":     { letter: "T", label: "歲", code: "03", perRow: 30, rows: 39 },
   "五路財神燈": { letter: "C", label: "財", code: "05", perRow: 30, rows: 70 },
 };
 const DEFAULT_LAMP_YEAR = 2027;   // 點燈年度：之後在後台「設定」修改

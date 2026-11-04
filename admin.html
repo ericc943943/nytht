@@ -428,7 +428,7 @@ const UNIT = item => LAMP_TYPES.includes(item)?"盞":item==="超渡牌位"?"個�
 
 /* ================= 燈號 ================= */
 // 系統裡存 G010512，畫面顯示 光010512
-const SEAT_LABEL = {G:"光", W:"文", T:"太", C:"財"};
+const SEAT_LABEL = {G:"光", W:"文", T:"歲", C:"財"};
 const seatLabel = s => s ? (SEAT_LABEL[s[0]]||s[0]) + s.slice(1) : "";
 const seatQuery = q => { let x=String(q||"").trim().replace(/[\s-]/g,""); Object.entries(SEAT_LABEL).forEach(([k,v])=>{ x=x.split(v).join(k); }); return x.toLowerCase(); };
 

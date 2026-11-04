@@ -759,7 +759,7 @@ const money = n => n==null ? t("請洽堂裡","Please ask the temple") : "$"+Num
 const LAMP_BY_NAME = Object.fromEntries(CONFIG.lampForm.types.map(x=>[x.name,x]));
 const lampShort = n => { const x=LAMP_BY_NAME[n]; return x ? (EN()?`${x.en}（${x.short}）`:x.short) : n; };
 // 燈號：系統裡是 G010512，畫面和單據顯示 光010512
-const SEAT_LABEL = {G:"光", W:"文", T:"太", C:"財"};
+const SEAT_LABEL = {G:"光", W:"文", T:"歲", C:"財"};
 const seatLabel = s => s ? (SEAT_LABEL[s[0]]||s[0]) + s.slice(1) : "";
 const seatHTML = s => s ? `<span class="seat">${esc(seatLabel(s))}</span>` : `<span class="wait">${t("候補","Waitlist")}</span>`;
 const recLunar = b => b&&b.lunar ? {y:b.lunar.year, m:b.lunar.month, leap:!!b.lunar.leap, d:b.lunar.day, h:b.lunar.hour||""} : null;
