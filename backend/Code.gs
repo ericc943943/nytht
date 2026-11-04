@@ -25,7 +25,7 @@ const SEATS = {
   "個人光明燈": { code: "A01", perRow: 30, rows: 20 },
   "文昌燈":     { code: "A02", perRow: 20, rows: 20 },
   "太歲燈":     { code: "A03", perRow: 30, rows: 19 },
-  "五路財神燈": { code: "A05", perRow: 30, rows: 23 },
+  "五路財神燈": { code: "A05", perRow: 30, rows: 70 },
 };
 const DEFAULT_LAMP_YEAR = 2027;   // 點燈年度：之後在後台「設定」修改
 const DEFAULT_SETTINGS = {
