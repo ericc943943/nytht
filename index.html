@@ -220,7 +220,7 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
 .lkerr{color:var(--err);font-weight:500;margin:0;min-height:1.4em}
 @media print{
   /* 頁邊距設成 0，瀏覽器就沒有地方印頁首頁尾（網址、日期）；留白改由 .wrap 的 padding 處理 */
-  @page{size:letter;margin:.45in .55in .4in}
+  @page{size:letter;margin:.45in 0 .4in}
   @page:first{margin:0}
   html,:root.big{font-size:12pt}
   body{background:#fff!important;padding:0!important}
@@ -266,8 +266,11 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   .f-note{font-size:9.5pt}
   /* 省空間：編號和日期並排、姓名和生日同一行、金額明細並排（字不縮小） */
   .regform .f-meta > div:first-child{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;grid-auto-flow:column;column-gap:22px;align-items:end}
-  .f-person > .f-pn, .f-person > .f-pn + .f-sub{display:inline}
-  .f-person > .f-pn + .f-sub{margin-left:10px}
+  /* 點燈名單兩欄：一列放兩個人；每人：姓名一行、生日一行、燈號每行兩盞 */
+  .f-people{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:.3in}
+  .f-people .f-person{border-top:1px dotted #D5CFC5}
+  .f-people .f-person:nth-child(-n+2){border-top:none}
+  .f-people .f-pl{display:flex;flex-wrap:wrap;column-gap:14px;row-gap:0}
   .f-items{display:flex;flex-wrap:wrap;gap:0 26px;border-top:1px dashed #BDB5A8;padding-top:2px}
   .f-items li{border:none;gap:8px}
   .f-person,.stub,.stubwrap{break-inside:avoid}
@@ -855,7 +858,7 @@ function formHTML(r){
       <div class="f-qr" aria-hidden="true">${qrSVG(`${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`)}</div>
     </div>
     ${sec(t("聯絡人","Contact"), `<div><b>${esc(r.contact.name)}</b>　<span style="white-space:nowrap">${esc(r.contact.phone)}</span></div><div class="f-sub">${esc(r.contact.address)}</div>`)}
-    ${sec(isLamp?t("點燈名單與燈號","Lamps and lamp numbers"):t("蓮花福慧燈","Lotus Lamp"), persons)}
+    ${sec(isLamp?t("點燈名單與燈號","Lamps and lamp numbers"):t("蓮花福慧燈","Lotus Lamp"), persons?`<div class="f-people">${persons}</div>`:"")}
     ${sec(t("超渡牌位","Memorial tablets"), souls)}
     ${sec(t("供齋","Food offering"), meals)}
     ${r.note?sec(t("備註","Notes"), `<div class="f-sub">${esc(r.note)}</div>`):""}
@@ -924,7 +927,7 @@ function layoutForPrint(){
   const need=reg.getBoundingClientRect().height/IN;     // 上半部需要的高度（吋）
   const stubH=sw.getBoundingClientRect().height/IN;     // 剪線＋收執聯的高度
   // 模擬換頁：每一塊（標題、每一位、每一行金額…）不會被切開，放不下就整塊移到下一頁
-  const atoms=[...reg.querySelectorAll(".f-head,.f-title,.f-meta,.f-sec > h4,.f-sec > div:not(.f-person),.f-person,.f-items li,.f-total,.f-temple")]
+  const atoms=[...reg.querySelectorAll(".f-head,.f-title,.f-meta,.f-sec > h4,.f-sec > div:not(.f-person):not(.f-people),.f-person,.f-items li,.f-total,.f-temple")]
     .map(el=>{ const b=el.getBoundingClientRect(); return [(b.top-base)/IN,(b.bottom-base)/IN]; })
     .sort((a,b)=>a[0]-b[0]);
   reg.style.minHeight="";
