@@ -27,6 +27,7 @@ window.DemoBackend = (function () {
       getName: () => name,
       getLastRow: () => data().length,
       appendRow: (row) => { data().push(row.slice()); },
+      deleteRow: (r) => { data().splice(r - 1, 1); },
       setFrozenRows: () => {},
       getRange: (a, b, c, d) => typeof a === "string" ? (a === "A1" ? range(1, 1, 1, 1) : { setNumberFormat() {} }) : range(a, b, c || 1, d || 1),
     };
@@ -529,12 +530,47 @@ function userOp_(me, b) {
     CacheService.getScriptCache().remove("fail-" + u.id);   // 重設 PIN 時順便解鎖
     return { ok: true };
   }
+  // 最後一位（還能登入的）管理員不能被停用、改成義工或刪除，免得沒有人能進設定
+  const lastAdmin = u.role === "admin" && u.active && list.filter(x => x.role === "admin" && x.active).length <= 1;
   if (b.op === "setActive") {
     if (u.id === me.id) return { ok: false, error: "self" };
+    if (!b.active && lastAdmin) return { ok: false, error: "last-admin" };
     u.active = !!b.active; writeUser_(u);
     return { ok: true };
   }
+  if (b.op === "edit") {     // 改名字、改身分
+    const name = String(b.name || "").trim();
+    const role = b.role === "admin" ? "admin" : "volunteer";
+    if (!name) return { ok: false, error: "bad-data" };
+    if (list.some(x => x.id !== u.id && x.name === name)) return { ok: false, error: "dup" };
+    if (role !== u.role) {
+      if (u.id === me.id) return { ok: false, error: "self-role" };
+      if (lastAdmin) return { ok: false, error: "last-admin" };
+    }
+    u.name = name; u.role = role; writeUser_(u);
+    return { ok: true, user: pub_(u) };
+  }
+  if (b.op === "delete") {   // 只能刪沒經手過任何報名的帳號（建錯的）；經手過的請用停用
+    if (u.id === me.id) return { ok: false, error: "self" };
+    if (lastAdmin) return { ok: false, error: "last-admin" };
+    if (userUsed_(u)) return { ok: false, error: "used" };
+    sheet_(SHEET.users).deleteRow(u.row);
+    CacheService.getScriptCache().remove("fail-" + u.id);
+    return { ok: true };
+  }
   return { ok: false, error: "unknown-op" };
+}
+// 這個帳號有沒有經手過報名（收款、取消、排燈位）
+function userUsed_(u) {
+  const sh = sheet_(SHEET.reg), n = sh.getLastRow() - 1;
+  if (n < 1) return false;
+  const paidBy = sh.getRange(2, C.paidBy, n, 1).getValues(), logs = sh.getRange(2, C.log, n, 1).getValues();
+  for (let i = 0; i < n; i++) {
+    if (String(paidBy[i][0]) === u.name) return true;
+    let log = []; try { log = JSON.parse(logs[i][0] || "[]"); } catch (e) {}
+    if (log.some(x => x.byId === u.id || (!x.byId && x.by === u.name))) return true;
+  }
+  return false;
 }
 
 /* ================= 工具 ================= */

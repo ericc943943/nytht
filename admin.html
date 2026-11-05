@@ -136,6 +136,11 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 2px}
 .rtag{font-size:.78rem;border-radius:999px;padding:2px 10px;background:var(--line)}
 .rtag.adm{background:#356D82;color:#fff}
 .urow .reset{display:flex;gap:6px;width:100%}
+.urow .uedit{width:100%;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:10px;margin-top:4px}
+.urow .uedit input{min-height:2.8rem;padding:6px 10px;border:1.5px solid var(--line);border-radius:8px;font-size:1rem}
+.urow .uedit .row2{display:flex;gap:8px;flex-wrap:wrap}
+.urow .uedit h4{margin:6px 0 0;font-size:.95rem}
+.btn.del{background:var(--surface);border-color:var(--red);color:var(--red)}
 .urow .reset input{flex:1;min-height:2.6rem;padding:6px 10px;border:1.5px solid var(--line);border-radius:8px}
 .paidby{font-size:.85rem;color:var(--muted)}
 details.log{font-size:.85rem;color:var(--muted)}
@@ -245,7 +250,7 @@ details.log li{margin:2px 0}
       <button class="linkbtn" id="whoBack" type="button">不是我，重新選擇</button>
     </div>
     <div id="forceStep" hidden>
-      <p><b id="forceName"></b>，您的 PIN 碼是負責人設定的。為了安全，請改成只有您自己知道的 PIN 碼。</p>
+      <p><b id="forceName"></b>，您的 PIN 碼是管理員設定的。為了安全，請改成只有您自己知道的 PIN 碼。</p>
       <label for="fpNew"><b>新的 PIN 碼（4～8 位數字）</b></label>
       <input type="password" id="fpNew" inputmode="numeric" autocomplete="new-password">
       <label for="fpNew2"><b>再輸入一次</b></label>
@@ -256,7 +261,7 @@ details.log li{margin:2px 0}
     <p id="demoLoginNote" hidden>示範版：管理員 PIN 8888；王師姐 PIN 1234；李師兄 PIN 5678。</p>
   </section>
 
-  <!-- 密碼設定（只有負責人／堂主看得到） -->
+  <!-- 密碼設定（只有管理員看得到） -->
   <section id="settingsView" hidden>
     <div class="settings" id="adminOnly">
       <h2>報名項目設定</h2>
@@ -280,17 +285,17 @@ details.log li{margin:2px 0}
       <p class="pwmsg" id="itemsMsg" role="status"></p>
       <hr style="border:none;border-top:1px solid var(--line);width:100%;margin:8px 0">
       <h2>義工帳號</h2>
-      <p class="hint">每位義工有自己的名字和 PIN 碼，收款紀錄會記下是誰經手。不再幫忙的義工請按「停用」，過去的紀錄會保留。</p>
+      <p class="hint">每位義工有自己的名字和 PIN 碼，收款紀錄會記下是誰經手。按「修改」可以改名字、身分、重設 PIN 碼。不再幫忙的義工請按「停用」，過去的紀錄會保留；建錯的帳號可以刪除。</p>
       <div id="userRows" class="evrows"></div>
+      <p class="pwmsg" id="usersMsg" role="status"></p>
       <div class="pwcard">
         <h3>新增義工</h3>
         <label for="nuName">姓名（例：王師姐）</label><input id="nuName" autocomplete="off">
         <label>身分</label>
-        <div class="seg" id="nuRole" role="group" aria-label="身分"><button type="button" data-role="volunteer" aria-pressed="true">義工</button><button type="button" data-role="admin" aria-pressed="false">負責人／堂主</button></div>
+        <div class="seg" id="nuRole" role="group" aria-label="身分"><button type="button" data-role="volunteer" aria-pressed="true">義工</button><button type="button" data-role="admin" aria-pressed="false">管理員</button></div>
         <label for="nuPin">PIN 碼（4～8 位數字）</label><input id="nuPin" type="password" inputmode="numeric" autocomplete="new-password">
         <button class="btn primary" id="nuAdd" type="button">新增</button>
       </div>
-      <p class="pwmsg" id="usersMsg" role="status"></p>
     </div>
     <div class="settings" style="margin-top:0">
       <h2>我的 PIN 碼</h2>
@@ -397,7 +402,7 @@ const API = {
   async assignSeats(ref){ return okOrThrow(await apiPost({action:"assignSeats", ...auth(), ref})).record; },
   async users(){ return (await apiGet({action:"users"})).users; },   // 登入名單：只有名字，不含 PIN
   async login(uid, pin){ const j=await apiGet({action:"login", uid, pin}); if(j.error==="locked") throw new Error("locked"); return j.ok?j.user:null; },
-  // 帳號管理（負責人／堂主）：add / resetPin / setActive；個人：changeMyPin。新的 PIN 用 newPin 傳，避免跟登入用的 pin 撞名
+  // 帳號管理（管理員）：add / edit / delete / resetPin / setActive；個人：changeMyPin。新的 PIN 用 newPin 傳，避免跟登入用的 pin 撞名
   async userOp(op, data){ const d={...data}; if("pin" in d){ d.newPin=d.pin; delete d.pin; } okOrThrow(await apiPost({action:"userOp", op, ...d, ...auth()})); },
 };
 
@@ -591,7 +596,7 @@ $("whoList").addEventListener("click", e=>{ const b=e.target.closest("[data-uid]
 $("whoBack").addEventListener("click", showLogin);
 $("loginBtn").addEventListener("click", async ()=>{
   const pin=$("pw").value.trim(); if(!pin){ $("loginErr").textContent="請輸入 PIN 碼。"; return; }
-  let u=null; try{ u=await API.login(PICK.uid, pin); }catch(e){ $("loginErr").textContent = e.message==="locked" ? "PIN 碼打錯太多次，請 15 分鐘後再試，或請負責人幫您重設 PIN 碼。" : "網路有問題，請稍後再試。"; return; }
+  let u=null; try{ u=await API.login(PICK.uid, pin); }catch(e){ $("loginErr").textContent = e.message==="locked" ? "PIN 碼打錯太多次，請 15 分鐘後再試，或請管理員幫您重設 PIN 碼。" : "網路有問題，請稍後再試。"; return; }
   if(!u){ $("loginErr").textContent="PIN 碼不正確，請再試一次。"; $("pw").value=""; return; }
   setSess({uid:u.id, pin, role:u.role, name:u.name});
   if(u.mustChange){ $("pinStep").hidden=true; $("forceStep").hidden=false; $("forceName").textContent=u.name; $("loginErr").textContent=""; $("fpNew").focus(); return; }
@@ -602,7 +607,7 @@ $("fpSave").addEventListener("click", async ()=>{
   if(!/^\d{4,8}$/.test(a)){ $("loginErr").textContent="PIN 碼要 4～8 位數字。"; return; }
   if(a!==b){ $("loginErr").textContent="兩次輸入的 PIN 碼不一樣，請再輸入一次。"; return; }
   try{ await API.userOp("changeMyPin",{cur:sess().pin, pin:a}); setSess({...sess(), pin:a}); $("forceStep").hidden=true; enter(); }
-  catch(err){ $("loginErr").textContent = err.message==="same" ? "請換一組和負責人設定的不一樣的 PIN 碼。" : "更改失敗，請稍後再試。"; }
+  catch(err){ $("loginErr").textContent = err.message==="same" ? "請換一組和管理員設定的不一樣的 PIN 碼。" : "更改失敗，請稍後再試。"; }
 });
 $("pw").addEventListener("keydown", e=>{ if(e.key==="Enter") $("loginBtn").click(); });
 $("logoutBtn").addEventListener("click", ()=>{ setSess(null); location.reload(); });
@@ -643,22 +648,50 @@ $("settingsBtn").addEventListener("click", openSettings);
 $("backBtn").addEventListener("click", ()=>{ $("settingsView").hidden=true; $("mainView").hidden=false; });
 const pinOK = p => /^\d{4,8}$/.test(p);
 const uMsg=(t,ok)=>{ $("usersMsg").textContent=t; $("usersMsg").className="pwmsg "+(ok?"ok":"bad"); };
+let U_OPEN=null, U_ROLE="volunteer", U_LIST=[];
+const ROLE_NAME = r => r==="admin" ? "管理員" : "義工";
+const U_ERR = { self:"不能停用或刪除自己。", "self-role":"不能改自己的身分，請另一位管理員幫您改。", "last-admin":"這是最後一位管理員，不能停用、刪除或改成義工。請先把另一個人設成管理員。",
+  dup:"已經有同名的帳號，請在名字後面加註區別。", used:"這位經手過報名，不能刪除（查帳時要找得到人）。不再幫忙請按「停用」。", pin:"PIN 碼要 4～8 位數字。" };
+const uErr = err => U_ERR[err.message] || "操作失敗，請重新登入後再試。";
 async function renderUsers(){
-  const list=await API.users(), me=sess();
-  $("userRows").innerHTML=list.map(u=>`<div class="urow ${u.active?"":"off"}">
-      <b>${esc(u.name)}</b><span class="rtag ${u.role==="admin"?"adm":""}">${u.role==="admin"?"負責人／堂主":"義工"}</span>${u.active?"":'<span class="rtag">已停用</span>'}${u.active&&u.mustChange?'<span class="rtag">待本人改 PIN</span>':""}
-      ${u.id===me.uid?'<span class="hint">（您自己）</span>':`<button class="linkbtn" data-act="${u.active?"off":"on"}" data-id="${esc(u.id)}" type="button">${u.active?"停用":"重新啟用"}</button>`}
-      <div class="reset"><input type="password" inputmode="numeric" placeholder="新的 PIN 碼" aria-label="${esc(u.name)} 的新 PIN 碼" data-pin="${esc(u.id)}"><button class="btn ghost small" data-act="reset" data-id="${esc(u.id)}" type="button">重設 PIN</button></div>
-    </div>`).join("");
+  U_LIST=await API.users(); const me=sess();
+  if(U_OPEN && !U_LIST.some(u=>u.id===U_OPEN)) U_OPEN=null;
+  $("userRows").innerHTML=U_LIST.map(u=>{ const mine=u.id===me.uid, open=u.id===U_OPEN;
+    return `<div class="urow ${u.active?"":"off"}">
+      <b>${esc(u.name)}</b><span class="rtag ${u.role==="admin"?"adm":""}">${ROLE_NAME(u.role)}</span>${u.active?"":'<span class="rtag">已停用</span>'}${u.active&&u.mustChange?'<span class="rtag">待本人改 PIN</span>':""}
+      ${mine?'<span class="hint">（您自己）</span>':""}
+      ${open?"":`<button class="btn ghost small" data-act="edit" data-id="${esc(u.id)}" type="button">修改</button>`}
+      ${mine||open?"":`<button class="linkbtn" data-act="${u.active?"off":"on"}" data-id="${esc(u.id)}" type="button">${u.active?"停用":"重新啟用"}</button>`}
+      ${open?`<div class="uedit">
+        <label for="ueName">姓名</label><input id="ueName" value="${esc(u.name)}" autocomplete="off">
+        ${mine?'<p class="hint">身分：'+ROLE_NAME(u.role)+'（自己的身分要請另一位管理員改）</p>'
+          :`<label>身分</label><div class="seg" id="ueRole" role="group" aria-label="身分"><button type="button" data-role="volunteer" aria-pressed="${U_ROLE==="volunteer"}">義工</button><button type="button" data-role="admin" aria-pressed="${U_ROLE==="admin"}">管理員</button></div>`}
+        <div class="row2"><button class="btn primary" data-act="save" data-id="${esc(u.id)}" type="button">儲存</button><button class="btn ghost" data-act="close" type="button">取消</button></div>
+        ${mine?"":`<h4>重設 PIN 碼</h4><div class="reset"><input type="password" inputmode="numeric" placeholder="新的 PIN 碼" aria-label="${esc(u.name)} 的新 PIN 碼" data-pin="${esc(u.id)}"><button class="btn ghost small" data-act="reset" data-id="${esc(u.id)}" type="button">重設 PIN</button></div>
+        <h4>刪除帳號</h4><p class="hint">只有建錯、還沒經手過任何報名的帳號可以刪除。</p>
+        <div><button class="btn del small" data-act="del" data-id="${esc(u.id)}" type="button">刪除這個帳號</button></div>`}
+      </div>`:""}
+    </div>`; }).join("");
+  if(U_OPEN) $("ueName").focus();
 }
 $("userRows").addEventListener("click", async e=>{
-  const b=e.target.closest("[data-act]"); if(!b) return; const id=b.dataset.id;
+  const rb=e.target.closest("[data-role]"); if(rb){ U_ROLE=rb.dataset.role; $("ueRole").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x===rb)); return; }
+  const b=e.target.closest("[data-act]"); if(!b) return; const id=b.dataset.id, act=b.dataset.act, u=U_LIST.find(x=>x.id===id);
+  if(act==="edit"){ U_OPEN=id; U_ROLE=u.role; uMsg("",true); return renderUsers(); }
+  if(act==="close"){ U_OPEN=null; uMsg("",true); return renderUsers(); }
   try{
-    if(b.dataset.act==="reset"){ const v=document.querySelector(`[data-pin="${id}"]`).value.trim(); if(!pinOK(v)) return uMsg("PIN 碼要 4～8 位數字。",false);
-      await API.userOp("resetPin",{id,pin:v}); uMsg("已重設 PIN 碼，請告訴這位義工。他下次登入時會被要求改成自己的 PIN 碼。",true); }
-    else { await API.userOp("setActive",{id,active:b.dataset.act==="on"}); uMsg(b.dataset.act==="on"?"已重新啟用。":"已停用，這位義工無法再登入。",true); }
+    if(act==="save"){ const name=$("ueName").value.trim(); if(!name) return uMsg("請填姓名。",false);
+      const me=sess(), role=id===me.uid?u.role:U_ROLE;
+      await API.userOp("edit",{id,name,role});
+      if(id===me.uid) setSess({...me, name});
+      U_OPEN=null; uMsg(`已儲存「${name}」。`,true); }
+    else if(act==="reset"){ const v=document.querySelector(`[data-pin="${id}"]`).value.trim(); if(!pinOK(v)) return uMsg("PIN 碼要 4～8 位數字。",false);
+      await API.userOp("resetPin",{id,pin:v}); U_OPEN=null; uMsg(`已重設「${u.name}」的 PIN 碼，請告訴對方。他下次登入時會被要求改成自己的 PIN 碼。`,true); }
+    else if(act==="del"){ if(!confirm(`確定要刪除「${u.name}」嗎？\n刪了就不能復原。`)) return;
+      await API.userOp("delete",{id}); U_OPEN=null; uMsg(`已刪除「${u.name}」。`,true); }
+    else { await API.userOp("setActive",{id,active:act==="on"}); uMsg(act==="on"?`已重新啟用「${u.name}」。`:`已停用「${u.name}」，他無法再登入。`,true); }
     renderUsers();
-  }catch(err){ uMsg(err.message==="self"?"不能停用自己。":"操作失敗，請重新登入後再試。",false); }
+  }catch(err){ uMsg(uErr(err),false); }
 });
 let NU_ROLE="volunteer";
 $("nuRole").addEventListener("click", e=>{ const b=e.target.closest("[data-role]"); if(!b) return; NU_ROLE=b.dataset.role; $("nuRole").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });

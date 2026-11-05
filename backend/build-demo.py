@@ -36,6 +36,7 @@ window.DemoBackend = (function () {
       getName: () => name,
       getLastRow: () => data().length,
       appendRow: (row) => { data().push(row.slice()); },
+      deleteRow: (r) => { data().splice(r - 1, 1); },
       setFrozenRows: () => {},
       getRange: (a, b, c, d) => typeof a === "string" ? (a === "A1" ? range(1, 1, 1, 1) : { setNumberFormat() {} }) : range(a, b, c || 1, d || 1),
     };
