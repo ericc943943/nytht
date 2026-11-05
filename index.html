@@ -293,6 +293,8 @@ html.pmeasure.pdfmode .pdfmodal:not([hidden]){display:grid!important}
   .f-people{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:.3in}
   .f-people .f-person{border-top:1px dotted #D5CFC5}
   .f-people .f-person:nth-child(-n+2){border-top:none}
+  /* 每人的格子固定 1.08 吋高：12 位（六列）加上小計、金額、簽名剛好排滿一張；6 位以內連收執聯一張 */
+  .f-people .f-person{height:1.08in;box-sizing:border-box;overflow:hidden}
   .f-people .f-pl{display:flex;flex-wrap:wrap;column-gap:14px;row-gap:0;line-height:17pt;min-height:34pt}   /* 每人固定留兩行燈號（四盞）的位置，格子一樣高 */
   .f-items{display:flex;flex-wrap:wrap;gap:0 22px;border-top:1px dashed #BDB5A8;padding-top:2px}
   .f-items li{border:none;gap:8px}
@@ -998,7 +1000,7 @@ async function ensurePdfLibs(){
   if(!window.html2canvas) await loadScript(PDF_LIBS[0]);
   if(!(window.jspdf && window.jspdf.jsPDF)) await loadScript(PDF_LIBS[1]);
 }
-const PDFM = {M:0.6, W:7.3, CAP:9.8, FORM1:6.4};   // 留白、內容寬、每張可用高度、第一張報名表最多高度（之後就是剪線）
+const PDFM = {M:0.6, W:7.3, CAP:9.8, FORM1:6.55};   // 留白、內容寬、每張可用高度、第一張報名表最多高度（之後就是剪線）
 async function buildPDF(){
   await ensurePdfLibs();
   try{ if(document.fonts && document.fonts.ready) await document.fonts.ready; }catch(e){}
