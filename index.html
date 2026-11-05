@@ -1328,7 +1328,7 @@ function renderTsBar(){
   $("tsBar").innerHTML = t(`<b>${Y} ${ganzhi(Y)}年犯太歲</b>：${L.map(([z,r])=>`屬<b>${z}</b>（${r.includes("值")?"本命年":r.join("、")+"太歲"}）`).join("、")}，建議點太歲燈。`,
     `<b>In ${Y}, these signs are in conflict with Tai Sui:</b> ${L.map(([z,r])=>`<b>${ZODIAC_EN[z]}</b> (${r.map(x=>REL_EN[x]).join(", ")})`).join(", ")}. The Lamp of Annual Taisui is recommended.`);
 }
-const HELP={cal:"solar", y:"", m:"", d:"", wish:{}};
+const HELP={cal:"solar", y:"", m:"", d:"", leap:false, wish:{}, rec:[]};
 // 小幫手：算出農曆出生年（國曆生日換成農曆；農曆只要年）
 function helpLunarYear(){
   if(HELP.cal==="lunar") return HELP.y ? +HELP.y : null;
@@ -1341,8 +1341,9 @@ function renderHelper(){
   const LY=helpLunarYear(), solar=HELP.cal==="solar";
   const W=[["guangming",t("平安健康、一年順利","Peace, health and a smooth year")],["wenchang",t("讀書考試、升學、工作升遷","Studies, exams, school or promotion")],["caishen",t("事業順利、做生意、財運","Work, business and prosperity")]];
   let rec="";
+  HELP.rec=[];
   if(LY){ const z=zodiacOf(LY), r=tsRel(Y, ZODIAC.indexOf(z)), items=[];
-    const nm = k => { const x=CONFIG.lampForm.types.find(a=>a.k===k); return EN()?x.en:x.name; };
+    const nm = k => { HELP.rec.push(k); const x=CONFIG.lampForm.types.find(a=>a.k===k); return EN()?x.en:x.name; };
     if(r.length) items.push([nm("taisui"), r.includes("值") ? t(`屬${z}，${Y} 年是本命年（值太歲）`,`${ZODIAC_EN[z]}: ${Y} is your own Tai Sui year`) : t(`屬${z}，${Y} 年${r.join("、")}太歲`,`${ZODIAC_EN[z]} is in conflict with Tai Sui in ${Y}`)]);
     if(HELP.wish.guangming || !(HELP.wish.wenchang||HELP.wish.caishen)) items.push([nm("guangming"), t("祈求平安健康、前途光明，每個人都適合點","For peace, health and a bright year — suitable for everyone")]);
     if(HELP.wish.wenchang) items.push([nm("wenchang"), t("祈求讀書考試、升學、工作升遷順利","For studies, exams and career advancement")]);
@@ -1351,27 +1352,38 @@ function renderHelper(){
     rec = `<div class="rec"><div class="hint" style="margin-bottom:4px">${t(`農曆 ${LY} 年生，屬${z}`,`Lunar year ${LY}: ${ZODIAC_EN[z]}`)}${born}</div><b>${t(`屬${z}的您，建議點：`,`For you (${ZODIAC_EN[z]}), we suggest:`)}</b><ul>${items.map(([n,why])=>`<li><b>${esc(n)}</b>${t("：",": ")}${why}</li>`).join("")}</ul>
       ${r.length?"":`<div class="hint">${t(`屬${z}今年沒有犯太歲，不一定要點太歲燈。`,`Your sign does not conflict with Tai Sui this year, so the Taisui lamp is optional.`)}</div>`}
       <div class="hint">${t("以上僅供參考，可以依自己的心意多點或少點。每位家人可以分別看。","This is only a suggestion — choose whatever feels right. You can check for each family member.")}</div></div>
-      ${SETTINGS.lamp.status==="open"?`<button class="btn primary block" data-start="lamp" type="button">${t("開始點燈報名","Start lamp registration")}</button>`:""}`;
+      ${SETTINGS.lamp.status==="open"?`<button class="btn primary block" id="hpStart" type="button">${t("開始點燈報名","Start lamp registration")}</button><div class="hint" style="text-align:center;margin-top:-4px">${t("會幫您把這個生日和建議的燈帶進報名表","This birthday and the suggested lamps will be filled in for you")}</div>`:""}`;
   }
   $("helper").innerHTML = `    <div><b>${t("1. 生日","1. Date of birth")}</b></div>
     <div class="seg" role="radiogroup" aria-label="${t("國曆或農曆","Calendar")}">
       <label><input type="radio" name="hpCal" value="solar"${solar?" checked":""}>${t("國曆","Western calendar")}</label>
       <label><input type="radio" name="hpCal" value="lunar"${solar?"":" checked"}>${t("農曆","Lunar calendar")}</label></div>
-    <div class="hprow${solar?"":" one"}">
-      <select id="hpYear" aria-label="${t("年","Year")}"><option value="">${t("年","Year")}</option>${yrs.map(y=>`<option value="${y}"${String(y)===HELP.y?" selected":""}>${y}${solar?"":t(`（${zodiacOf(y)}）`,` (${ZODIAC_EN[zodiacOf(y)]})`)}</option>`).join("")}</select>
-      ${solar?`<select id="hpMonth" aria-label="${t("月","Month")}"><option value="">${t("月","Month")}</option>${Array.from({length:12},(_,i)=>`<option value="${i+1}"${String(i+1)===HELP.m?" selected":""}>${EN()?MONTH_EN[i]:(i+1)+"月"}</option>`).join("")}</select>
-      <select id="hpDay" aria-label="${t("日","Day")}"><option value="">${t("日","Day")}</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}"${String(i+1)===HELP.d?" selected":""}>${EN()?i+1:(i+1)+"日"}</option>`).join("")}</select>`:""}
+    <div class="hprow">
+      <select id="hpYear" aria-label="${t("年","Year")}"><option value="">${t("年","Year")}</option>${yrs.map(y=>`<option value="${y}"${String(y)===HELP.y?" selected":""}>${y}</option>`).join("")}</select>
+      <select id="hpMonth" aria-label="${t("月","Month")}"><option value="">${t("月","Month")}</option>${(solar?Array.from({length:12},(_,i)=>EN()?MONTH_EN[i]:(i+1)+"月"):LMONTH.map((x,i)=>EN()?`${ord(i+1)} (${x})`:x)).map((lab,i)=>`<option value="${i+1}"${String(i+1)===HELP.m?" selected":""}>${lab}</option>`).join("")}</select>
+      <select id="hpDay" aria-label="${t("日","Day")}"><option value="">${t("日","Day")}</option>${(solar?Array.from({length:31},(_,i)=>EN()?String(i+1):(i+1)+"日"):LDAY.map((x,i)=>EN()?`${i+1} (${x})`:x)).map((lab,i)=>`<option value="${i+1}"${String(i+1)===HELP.d?" selected":""}>${lab}</option>`).join("")}</select>
     </div>
-    ${solar?"":`<div class="hint">${t("農曆只要選年就好。","For the lunar calendar, just choose the year.")}</div>`}
+    ${solar?"":`<label class="check"><input type="checkbox" id="hpLeap"${HELP.leap?" checked":""}>${t("是閏月","Leap month")}</label>`}
     <div><b>${t("2. 今年想祈求什麼？（可複選）","2. What would you like to pray for? (choose any)")}</b></div>
     <div class="wish">${W.map(([k,lab])=>`<label><input type="checkbox" data-wish="${k}"${HELP.wish[k]?" checked":""}>${lab}</label>`).join("")}</div>
     ${rec}`;
 }
 $("helper").addEventListener("change", e=>{ const id=e.target.id;
   if(id==="hpYear") HELP.y=e.target.value; else if(id==="hpMonth") HELP.m=e.target.value; else if(id==="hpDay") HELP.d=e.target.value;
-  else if(e.target.name==="hpCal") HELP.cal=e.target.value;
+  else if(e.target.name==="hpCal"){ HELP.cal=e.target.value; HELP.m=""; HELP.d=""; HELP.leap=false; }
+  else if(id==="hpLeap") HELP.leap=e.target.checked;
   else if(e.target.dataset.wish) HELP.wish[e.target.dataset.wish]=e.target.checked;
   renderHelper(); });
+// 從小幫手開始報名：把生日和建議的燈帶進點燈名單
+$("helper").addEventListener("click", e=>{ if(e.target.id!=="hpStart") return;
+  if(!isOpen("lamp")){ renderLampBtn(); return; }
+  S=load("lamp")||freshState("lamp",null);
+  let p=S.lamps[S.lamps.length-1];
+  if(p.name || p.birth.y){ p=newLamp(); S.lamps.push(p); }   // 已經填過人，就加一位
+  p.birth={cal:HELP.cal, y:HELP.y, m:HELP.m, d:HELP.d, leap:HELP.cal==="lunar"&&HELP.leap, h:""};
+  p.types={}; HELP.rec.forEach(k=>{ p.types[k]=true; });
+  S.step = S.contact.name ? 1 : 0;   // 聯絡人還沒填就從第一步開始
+  save(); show("form"); render(); });
 function renderStatic(){
   $("lampTitle").innerHTML = `<span class="yr">${esc(yearText(lampYear()))}</span>` + (EN() ? `${esc(CONFIG.lampForm.titleEn)}<span class="en-sub">${esc(CONFIG.lampForm.title)}</span>` : esc(CONFIG.lampForm.title));
   const TT=CONFIG.lampForm.types, same=TT.every(x=>x.price&&x.price===TT[0].price);
