@@ -1013,11 +1013,25 @@ async function buildPDF(){
   reg.style.minHeight="0";
   try{
     const IN=96, rb=reg.getBoundingClientRect(), need=rb.height/IN;
-    const atoms=[...reg.querySelectorAll(".f-head,.f-sec > h4,.f-sec > div:not(.f-person):not(.f-people),.f-person,.f-items li,.f-total,.f-temple")]
-      .map(el=>{ const b=el.getBoundingClientRect(); return [(b.top-rb.top)/IN,(b.bottom-rb.top)/IN]; }).sort((a,b)=>a[0]-b[0]);
-    // 換頁：每一塊放不下就整塊換到下一張
-    const starts=[0]; let start=0;
-    for(const [top,bottom] of atoms){ if(bottom-start > PDFM.CAP && top>start){ start=top; starts.push(top); } }
+    const box = el => { const b=el.getBoundingClientRect(); return [(b.top-rb.top)/IN,(b.bottom-rb.top)/IN]; };
+    // 分塊：標題、聯絡人等各一塊；點燈名單一列（兩個人）一塊；
+    // 小計＋應繳金額＋經手人簽名是一整塊，而且跟最後一列名單綁在一起，不會被拆到不同張
+    const blocks=[...reg.querySelectorAll(".f-head,.f-sec > h4,.f-sec > div:not(.f-person):not(.f-people),.f-sec > .f-person")].map(box);
+    const rowMap=new Map();
+    reg.querySelectorAll(".f-people > .f-person").forEach(el=>{ const [t,b]=box(el), k=Math.round(t*50);
+      const r=rowMap.get(k); rowMap.set(k, r?[r[0],Math.max(r[1],b)]:[t,b]); });
+    const rows=[...rowMap.values()].sort((a,b)=>a[0]-b[0]).map(r=>[r[0],r[1],"row"]);
+    const tailEls=[...reg.querySelectorAll(".f-items,.f-total,.f-temple")].map(box);
+    let tail = tailEls.length ? [Math.min(...tailEls.map(x=>x[0])), Math.max(...tailEls.map(x=>x[1]))] : null;
+    if(tail && rows.length){ const last=rows.pop(); tail=[last[0], tail[1], "row"]; }
+    const atoms=[...blocks, ...rows, ...(tail?[tail]:[])].sort((a,b)=>a[0]-b[0]);
+    // 換頁：放不下的那一塊整塊換到下一張；名單一張最多五列（10 位）
+    const MAXROWS=5;
+    const starts=[0]; let start=0, nrows=0;
+    for(const [top,bottom,kind] of atoms){
+      const isRow = kind==="row";
+      if(top>start && (bottom-start > PDFM.CAP || (isRow && nrows>=MAXROWS))){ start=top; starts.push(top); nrows=0; }
+      if(isRow) nrows++; }
     const lastUsed = need - starts[starts.length-1];
     // 畫成圖片：解析度約 240 dpi，太長的時候降一點（手機的畫布有大小限制）
     const SC = Math.max(1.2, Math.min(2.5, Math.sqrt(14e6/((PDFM.W*IN)*(need*IN)))));
@@ -1035,7 +1049,7 @@ async function buildPDF(){
       if(i>0) pdf.addPage("letter","portrait");
       pdf.addImage(c.toDataURL("image/jpeg",0.92),"JPEG",PDFM.M,PDFM.M,PDFM.W,sh/pxPerIn);
     });
-    if(lastUsed > PDFM.FORM1) pdf.addPage("letter","portrait");
+    if(lastUsed > PDFM.FORM1 - 0.2) pdf.addPage("letter","portrait");   // 和剪線之間至少留 0.2 吋
     const stubH = stubC.height/(stubC.width/PDFM.W);
     pdf.addImage(stubC.toDataURL("image/jpeg",0.92),"JPEG",PDFM.M,PDFM.M+PDFM.FORM1,PDFM.W,stubH);
     return pdf.output("blob");
