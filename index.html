@@ -201,8 +201,15 @@ textarea{min-height:5rem;resize:vertical}
 .cut::before,.cut::after{content:"";flex:1;border-top:2px dashed #9E978C}
 .stub .f-head .doc{font-size:1.05rem}
 html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1.02rem}
-.stub-list{list-style:none;margin:4px 0 0;padding:0;font-size:.88rem}
-.stub-list li{padding:2px 0}
+.stub-body{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-top:6px}
+.stub-main{min-width:0;flex:1}
+.stub-ref{font-size:clamp(1.2rem,6vw,1.7rem)}
+.stub-who{margin:2px 0 4px}
+.stub-who .lbl{display:inline;margin-right:6px}
+.stub-list{display:flex;flex-wrap:wrap;gap:2px 16px;font-size:.95rem}
+.stub-list .sp{white-space:nowrap}
+.stub-list .sptotal{font-weight:700}
+.stub-qr{width:84px}
 .lookupcard .desc{margin:0}
 .myslips{display:grid;gap:10px;margin-top:24px}
 .myslips h2{font-size:1.05rem}
@@ -222,7 +229,7 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   /* 字放大：給長輩看得清楚。內文約小四號字（12pt），姓名、燈號、金額更大 */
   .paper{border:none;padding:0;font-size:12pt;line-height:1.4}
   /* 上半部固定高度，收執聯就會落在同一頁的下方，方便撕下；人多的時候自動延伸到下一頁 */
-  .regform{min-height:5.25in}
+  .regform{min-height:6.55in}
   .f-qr{width:66px}
   .f-head{padding-bottom:4px}
   .f-head img{height:30px}
@@ -246,10 +253,12 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   .cut{margin:6px 0;font-size:9pt}
   .stub .f-head img{height:24px}
   .stub .f-head .doc{font-size:14pt}
-  .stub .f-meta{margin-top:2px!important}
+  .stub{height:3.2in;overflow:hidden}
   .stub .f-temple{margin-top:2px}
-  .stub-list{font-size:12pt}
-  .stub-list li{padding:0}
+  .stub-ref{font-size:20pt}
+  .stub-list{font-size:12.5pt}
+  .stub-qr{width:72px}
+  /* 收執聯大小固定、在紙張下方：上半部撐到固定高度（人多時自動延伸，收執聯移到下一頁） */
   .f-note{font-size:9.5pt}
   /* 省空間：編號和日期並排、姓名和生日同一行、金額明細並排（字不縮小） */
   .regform .f-meta > div:first-child{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;grid-auto-flow:column;column-gap:22px;align-items:end}
@@ -398,6 +407,7 @@ const CONFIG = {
     "2027-autumn-lidou": "Autumn Blessing Ceremony (Li Dou)",
   },
   prices: { chaodu: 160, lamp: 60 },
+  siteUrl: "https://nytht.vercel.app",   // 收據上的 QR code 會連到這個網站的後台
   submitUrl: "https://script.google.com/macros/s/AKfycbyP3IO6tRvLWP8jGegpVef47EHHSx5TBbNuW1Z_18VirJZc9lMVHbHMGWt5PiAyhVQ/exec",   // Google Apps Script 網址（正式版）；改成 "" 會變回示範模式
 };
 
@@ -831,7 +841,7 @@ function formHTML(r){
     <div class="f-meta">
       <div><span class="lbl">${t("報名編號","Registration No.")}</span><div class="f-ref">${esc(r.ref)}</div>
         <span class="lbl">${t("報名日期","Date")}</span><div>${dateText(r.submittedAt)}${r.updatedAt?`<span class="f-sub">　${t("最後修改","Last changed")} ${dateText(r.updatedAt)}</span>`:""}</div></div>
-      <div class="f-qr" aria-hidden="true">${qrSVG(r.ref)}</div>
+      <div class="f-qr" aria-hidden="true">${qrSVG(`${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`)}</div>
     </div>
     ${sec(t("聯絡人","Contact"), `<div><b>${esc(r.contact.name)}</b>　<span style="white-space:nowrap">${esc(r.contact.phone)}</span></div><div class="f-sub">${esc(r.contact.address)}</div>`)}
     ${sec(isLamp?t("點燈名單與燈號","Lamps and lamp numbers"):t("蓮花福慧燈","Lotus Lamp"), persons)}
@@ -843,18 +853,29 @@ function formHTML(r){
     <div class="f-temple">${stampHTML(r)}<div class="sign">堂裡收款${t("","（For temple use）")}：□ 已收現金 $＿＿＿＿<br>經手人簽名＿＿＿＿＿＿　日期＿＿＿＿＿</div></div>
   </section>`;
   // 收執聯：繳費後義工簽名、撕下給信眾
+  // 收執聯：只寫重點，大小固定。廟裡依報名編號綁好每一捆點燈卡，信眾憑收據上的編號領取
+  const nLamps = p => (p.lampTypes||[]).length;
+  const totalLamps = (r.lamps||[]).reduce((a,p)=>a+nLamps(p),0);
   const stubList = isLamp
-    ? (r.lamps||[]).map(p=>`<li><b>${esc(p.name)}</b>　${sortLamps(p.lampTypes).map(tn=>`${esc(lampShort(tn))} ${seatHTML(p.seats&&p.seats[tn])}`).join("　")}</li>`).join("")
-    : chargeLinesOf(r).map(([a,b])=>`<li>${a}　${money(b)}</li>`).join("");
+    ? (r.lamps||[]).map(p=>`<span class="sp"><b>${esc(p.name)}</b> ${t(`${nLamps(p)}盞`,`× ${nLamps(p)}`)}</span>`).join("")
+      + `<span class="sp sptotal">${t(`共 ${totalLamps} 盞`,`${totalLamps} lamps in total`)}</span>`
+    : chargeLinesOf(r).map(([a,b])=>`<span class="sp">${a}　${money(b)}</span>`).join("");
+  const adminLink = `${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`;
   const stub = `<div class="cut">✂ ${t("沿虛線剪下，下半部為收執聯","Cut here — the bottom part is your receipt")}</div>
   <section class="stub">
     ${head(isLamp?t(`${recYear(r)} 點燈收執聯`,`${recYear(r)} Lamp Receipt`):t("收執聯","Receipt"), t("Receipt","收執聯"))}
-    <div class="f-meta" style="margin-top:8px"><div><span class="lbl">${t("報名編號","Registration No.")}</span><div class="f-ref">${esc(r.ref)}</div></div>
-      <div style="text-align:right"><span class="lbl">${t("聯絡人","Contact")}</span><b>${esc(r.contact.name)}</b></div></div>
-    <div class="f-sec"><h4>${esc(recTitle(r))}</h4><ul class="stub-list">${stubList}</ul></div>
+    <div class="stub-body">
+      <div class="stub-main">
+        <span class="lbl">${t("報名編號（憑此領取點燈卡）","Registration No. (show this to collect your lamp cards)")}</span>
+        <div class="f-ref stub-ref">${esc(r.ref)}</div>
+        <div class="stub-who"><span class="lbl">${t("聯絡人","Contact")}</span> <b>${esc(r.contact.name)}</b></div>
+        <div class="stub-list">${stubList}</div>
+      </div>
+      <div class="f-qr stub-qr" aria-hidden="true">${qrSVG(adminLink)}</div>
+    </div>
     <div class="f-total"><span>${t("應繳金額","Amount due")}</span><span>${money(r.totals&&r.totals.all)}</span></div>
     <div class="f-temple"><div class="sign">實收現金 $＿＿＿＿＿　經手人簽名＿＿＿＿＿＿　日期＿＿＿＿＿</div></div>
-    <p class="f-note">${t("請妥善保存本聯，憑報名編號可查詢燈位與報名資料。","Please keep this receipt. Use your registration number to look up your lamp numbers.")} ${t("紐約花蓮慈惠堂","New York Hua Lian Tsu Hui Temple")}　${CONFIG.phone}</p>
+    <p class="f-note">${t("請妥善保存本聯。燈號可用報名編號上網查詢。","Please keep this receipt. You can look up your lamp numbers online with your registration number.")} ${t("紐約花蓮慈惠堂","New York Hua Lian Tsu Hui Temple")}　${CONFIG.phone}</p>
   </section>`;
   return `<article class="paper">${top}${stub}</article>`;
 }

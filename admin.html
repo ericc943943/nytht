@@ -573,6 +573,9 @@ async function enter(){
   $("settingsBtn").hidden = false; $("reportBtn").hidden = false; $("whoAmI").textContent = sess()?.name||"";
   await API.getSettings(); buildFormFilter();
   $("list").innerHTML=`<div class="empty">載入中…</div>`;
+  // 掃收執聯上的 QR code 進來（/admin?q=報名編號）：登入後直接搜尋這一筆
+  const q0=new URLSearchParams(location.search).get("q");
+  if(q0 && !F.q){ F.q=q0; $("q").value=q0; $("clearQ").hidden=false; }
   try{ ROWS = await API.list(); render(); }
   catch(e){ $("list").innerHTML=`<div class="empty"><b>讀不到資料</b>請確認網路，或重新登入。</div>`; }
   $("q").focus();
