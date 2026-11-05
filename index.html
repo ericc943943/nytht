@@ -77,6 +77,12 @@ html[lang="en"] .slip-head .doc{letter-spacing:.03em;font-size:1.1rem}
 .chips li{background:var(--gold-soft);color:var(--ink);border-radius:999px;padding:4px 14px;font-size:.95rem}
 .tsbar{background:var(--red-soft);border-radius:12px;padding:10px 14px;font-size:.98rem;line-height:1.6}
 .tsbar b{color:var(--red)}
+.tsgrid{display:grid;grid-template-columns:repeat(2,max-content);gap:4px 6px;margin-top:6px}
+.tsgrid span{white-space:nowrap;font-size:.9rem}
+.tsgrid.one{grid-template-columns:1fr}
+.tsgrid.one span{white-space:normal}
+@media (max-width:385px){ .tsgrid{grid-template-columns:1fr} }
+html.big .tsgrid{grid-template-columns:1fr}
 .helper{display:flex;flex-direction:column;gap:12px}
 .tsinfo{border:1.5px solid var(--line);border-radius:12px;padding:0 14px;background:var(--surface)}
 .tsinfo summary{cursor:pointer;padding:12px 0;font-weight:700;color:var(--red)}
@@ -1347,8 +1353,8 @@ function renderTsBar(){
   const zh = L.map(([z,r])=>`<b>${z}</b>${r.length?`（${r.includes("值")?"本命年":r.join("、")+"太歲"}）`:""}`);
   const en = L.map(([z,r])=>`<b>${ZODIAC_EN[z]}</b>${r.length?` (${r.map(x=>REL_EN[x]).join(", ")})`:""}`);
   $("tsBar").hidden = !L.length;
-  $("tsBar").innerHTML = t(`<b>${Y} ${ganzhi(Y)}年建議點燈的生肖：</b><br>${zh.join("<br>")}`,
-    `<b>Signs advised to light the Taisui lamp in ${Y}:</b><br>${en.join("<br>")}`);
+  $("tsBar").innerHTML = t(`<b>${Y} ${ganzhi(Y)}年建議點燈的生肖：</b>`,`<b>Signs advised to light the Taisui lamp in ${Y}:</b>`)
+    + `<div class="tsgrid${EN()?" one":""}">${(EN()?en:zh).map(x=>`<span>${x}</span>`).join("")}</div>`;
 }
 // 小知識：為什麼要點太歲燈、本命沖刑害破的意思（民間說法，用白話寫）
 function renderTsInfo(){
