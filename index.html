@@ -78,6 +78,13 @@ html[lang="en"] .slip-head .doc{letter-spacing:.03em;font-size:1.1rem}
 .tsbar{background:var(--red-soft);border-radius:12px;padding:10px 14px;font-size:.98rem;line-height:1.6}
 .tsbar b{color:var(--red)}
 .helper{display:flex;flex-direction:column;gap:12px}
+.tsinfo{border:1.5px solid var(--line);border-radius:12px;padding:0 14px;background:var(--surface)}
+.tsinfo summary{cursor:pointer;padding:12px 0;font-weight:700;color:var(--red)}
+.tsinfo p{margin:0 0 10px;line-height:1.7}
+.tsinfo dl{margin:0 0 12px}
+.tsinfo dt{font-weight:700;margin-top:8px}
+.tsinfo dd{margin:2px 0 0 0;color:var(--ink);line-height:1.7}
+.tsinfo .hint{color:var(--muted);font-size:.88rem;margin-bottom:12px}
 .helpcard{display:flex;flex-direction:column;gap:12px}
 .helpcard h2{margin:0}
 .helper h3{margin:0;font-size:1.1rem}
@@ -392,6 +399,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
     <section class="formcard helpcard" id="helpCard" style="margin-bottom:14px">
       <h2 data-en="Which lamps should I light?">我需要點什麼燈？</h2>
       <div class="tsbar" id="tsBar"></div>
+      <details class="tsinfo" id="tsInfo"></details>
       <div class="helper" id="helper"></div>
     </section>
 
@@ -1342,6 +1350,28 @@ function renderTsBar(){
   $("tsBar").innerHTML = t(`<b>${Y} ${ganzhi(Y)}年建議點燈的生肖：</b><br>${zh.join("<br>")}`,
     `<b>Signs advised to light the Taisui lamp in ${Y}:</b><br>${en.join("<br>")}`);
 }
+// 小知識：為什麼要點太歲燈、本命沖刑害破的意思（民間說法，用白話寫）
+function renderTsInfo(){
+  const items = EN() ? [
+    ["Own year (本命年)","Your sign is the same as the year's. Traditionally a year of ups and downs, so people take extra care of health and mood."],
+    ["Clash (沖)","Your sign sits directly opposite the year. Often linked with big changes — moving, changing jobs — so it is wise to plan carefully."],
+    ["Punishment (刑)","Associated with friction with people or rules, and gossip. A reminder to be patient and careful in what you say."],
+    ["Harm (害)","Associated with misunderstandings and people working against you behind the scenes. A reminder to communicate clearly."],
+    ["Break (破)","Associated with small losses — money, things, or relationships. A reminder to be careful with spending and to look after friendships."]]
+  : [
+    ["本命年（值太歲）","自己的生肖和今年一樣。傳統認為這一年起伏比較大，要多照顧身體和心情。"],
+    ["沖太歲","生肖正好和今年相對。常說這一年變動多，例如搬家、換工作，做決定前多想一想。"],
+    ["刑太歲","容易和人或規矩有摩擦、有口舌是非。提醒自己說話做事多一分耐心。"],
+    ["害太歲","容易有誤會，或有人在背後扯後腿。提醒多溝通、把話說清楚。"],
+    ["破太歲","容易有小破財、東西損壞，或人際感情出現裂痕。提醒花錢謹慎、多照顧人際關係。"]];
+  $("tsInfo").innerHTML = `<summary>${t("小知識：為什麼要點太歲燈？","Why light a Taisui lamp?")}</summary>
+    <p>${t("太歲是每一年輪值的神明，掌管這一年的平安吉凶。生肖和當年的太歲有沖犯時，民間習慣到廟裡點太歲燈、安太歲，向太歲星君祈求這一年平安順利，也讓自己心安。",
+      "Tai Sui is the deity who presides over each year. When your zodiac sign is in conflict with the year's Tai Sui, it is customary to light a Taisui lamp at the temple, asking Tai Sui for a safe and smooth year — and for peace of mind.")}</p>
+    <p>${t("和太歲的關係分成幾種，一般認為本命年和沖太歲比較重，刑、害、破比較輕：","There are several kinds of conflict. The own year and the clash are usually considered stronger; punishment, harm and break are milder:")}</p>
+    <dl>${items.map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join("")}</dl>
+    <div class="hint">${t("以上是民間傳統說法，僅供參考。犯太歲不代表一定不好，點燈是祈福、求平安，也提醒自己這一年多留心。",
+      "These are traditional folk beliefs, offered for reference. A conflict with Tai Sui does not mean a bad year — lighting a lamp is a prayer for blessings and a reminder to take care.")}</div>`;
+}
 const HELP={cal:"solar", y:"", m:"", d:"", leap:false, wish:{}, rec:[]};
 // 小幫手：算出農曆出生年（國曆生日換成農曆；農曆只要年）
 function helpLunarYear(){
@@ -1404,7 +1434,7 @@ function renderStatic(){
   $("lampPrice").textContent = same ? t(`每盞 $${TT[0].price}`,`$${TT[0].price} per lamp`) : "";
   $("lampChips").innerHTML=TT.map(x=>`<li>${EN()?esc(x.en):x.short||x.name}${!same&&x.price?` $${x.price}`:""}</li>`).join("");
   $("lampChips").classList.toggle("row", !EN());   // 英文名稱較長，改成自動換行
-  renderTsBar(); renderHelper();
+  renderTsBar(); renderTsInfo(); renderHelper();
   $("pChaodu").textContent=t(`每牌位 $${CONFIG.prices.chaodu}`,`$${CONFIG.prices.chaodu} each`); $("pLotus").textContent=t(`每位 $${CONFIG.prices.lamp}`,`$${CONFIG.prices.lamp} per person`);
 }
 // 切換語言：靜態文字用 data-en，其餘重畫目前的畫面
