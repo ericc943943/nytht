@@ -269,7 +269,7 @@ details.log li{margin:2px 0}
         </div>
         <label for="lampYear" style="margin-top:8px">點燈年度</label>
         <input id="lampYear" type="number" inputmode="numeric" min="2020" max="2100">
-        <p class="hint" id="lampYearHint">報名頁和報名表上會顯示這個年度，歲數也照這一年算。換年度後，燈號會從 光010101 重新排，舊年度的資料都會保留。</p>
+        <p class="hint" id="lampYearHint">報名頁和報名表上會顯示這個年度，歲數也照這一年算。換年度後，燈號會從 G010101 重新排，舊年度的資料都會保留。</p>
       </div>
       <div class="pwcard">
         <h3>法會場次</h3>
@@ -427,10 +427,10 @@ function itemUnits(rows,item){
 const UNIT = item => LAMP_TYPES.includes(item)?"盞":item==="超渡牌位"?"個牌位":"位";
 
 /* ================= 燈號 ================= */
-// 系統裡存 G010512，畫面顯示 光010512
-const SEAT_LABEL = {G:"光", W:"文", T:"歲", C:"財"};
-const seatLabel = s => s ? (SEAT_LABEL[s[0]]||s[0]) + s.slice(1) : "";
-const seatQuery = q => { let x=String(q||"").trim().replace(/[\s-]/g,""); Object.entries(SEAT_LABEL).forEach(([k,v])=>{ x=x.split(v).join(k); }); return x.toLowerCase(); };
+// 燈號直接顯示英文字母，例 G010512。搜尋時打國字（光文歲太財）也會自動換成字母
+const seatLabel = s => s || "";
+const SEAT_ZH = {"光":"G","文":"W","歲":"T","太":"T","財":"C"};
+const seatQuery = q => { let x=String(q||"").trim().replace(/[\s-]/g,""); Object.entries(SEAT_ZH).forEach(([k,v])=>{ x=x.split(k).join(v); }); return x.toLowerCase(); };
 
 /* ================= 搜尋 ================= */
 // 回傳 null（不符合）或 {hits:Set(人名)}：電話比數字、編號忽略大小寫與「-」、姓名比所有出現的名字
@@ -439,7 +439,7 @@ function match(r, q){
   const ql=q.toLowerCase().replace(/[\s-]/g,""), qd=digits(q);
   const hits=new Set(); let ok=false;
   if(r.ref.toLowerCase().replace(/-/g,"").includes(ql)) ok=true;
-  // 燈號：打「光010512」「G010512」「g010512」或只打數字（至少 3 碼）都找得到
+  // 燈號：打「G010512」「g010512」或只打數字（至少 3 碼）都找得到
   const qs = seatQuery(q);
   if(qs.length>=3 && (r.lamps||[]).some(p=>Object.values(p.seats||{}).some(s=>s && s.toLowerCase().includes(qs)))) ok=true;
   if(qd.length>=3 && digits(r.contact.phone).includes(qd)) ok=true;

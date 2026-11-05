@@ -21,13 +21,13 @@ const PRICES = {
   chaodu: 160,   // 法會：超渡牌位，每牌位
 };
 // 燈位：每種燈牆上的排列。
-// 燈號 = 字＋燈種代碼（給燈號查詢機用）＋排＋第幾個，例：光010512 ＝ 光明燈第 5 排第 12 個。
-// 系統裡存成英文字母（letter，例 G010512），單據和後台一律顯示國字（label）。
+// 燈號 = 英文字母＋燈種代碼（給燈號查詢機用）＋排＋第幾個，例：G010512 ＝ 光明燈第 5 排第 12 個。
+// 字母：G 光明、W 文昌、T 太歲、C 財神。單據上燈號前面都會寫燈的名稱。
 const SEATS = {
-  "個人光明燈": { letter: "G", label: "光", code: "01", perRow: 30, rows: 60 },
-  "文昌燈":     { letter: "W", label: "文", code: "02", perRow: 20, rows: 60 },
-  "太歲燈":     { letter: "T", label: "歲", code: "03", perRow: 30, rows: 39 },
-  "五路財神燈": { letter: "C", label: "財", code: "05", perRow: 30, rows: 70 },
+  "個人光明燈": { letter: "G", label: "G", code: "01", perRow: 30, rows: 60 },
+  "文昌燈":     { letter: "W", label: "W", code: "02", perRow: 20, rows: 60 },
+  "太歲燈":     { letter: "T", label: "T", code: "03", perRow: 30, rows: 39 },
+  "五路財神燈": { letter: "C", label: "C", code: "05", perRow: 30, rows: 70 },
 };
 const DEFAULT_LAMP_YEAR = 2027;   // 點燈年度：之後在後台「設定」修改
 const DEFAULT_SETTINGS = {
@@ -189,7 +189,7 @@ function applyAges_(d, year) {
 
 /* ================= 燈位 ================= */
 const seatId_ = (cfg, r, c) => cfg.letter + cfg.code + ("0" + r).slice(-2) + ("0" + c).slice(-2);
-// 顯示用：G010512 → 光010512
+// 顯示用（目前直接顯示字母，例 G010512）
 const seatLabel_ = id => { if (!id) return ""; const t = Object.keys(SEATS).find(k => SEATS[k].letter === id[0]); return t ? SEATS[t].label + id.slice(1) : id; };
 
 // 目前被佔用的燈位（只算同一個點燈年度；已取消的不算；exceptRef 是正在修改的那一筆）
