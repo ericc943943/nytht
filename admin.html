@@ -451,6 +451,7 @@ function match(r, q){
   const ql=q.toLowerCase().replace(/[\s-]/g,""), qd=digits(q);
   const hits=new Set(); let ok=false;
   if(r.ref.toLowerCase().replace(/-/g,"").includes(ql)) ok=true;
+  if(ql.length>=7 && r.addTo && r.addTo.toLowerCase().replace(/-/g,"").includes(ql)) ok=true;   // 搜原編號時，追加的那筆也一起列出
   // 燈號：打「G010512」「g010512」或只打數字（至少 3 碼）都找得到
   const qs = seatQuery(q);
   if(qs.length>=3 && (r.lamps||[]).some(p=>Object.values(p.seats||{}).some(s=>s && s.toLowerCase().includes(qs)))) ok=true;
@@ -546,7 +547,7 @@ function cardHTML(r, m){
   const status = void_ ? `<span class="status void">已取消</span>` : `<span class="status ${paid?"paid":"unpaid"}">${paid?`已繳清 ${r.paidAt?fmtDate(r.paidAt):""}`:"待繳費"}</span>`;
   return `<article class="card ${void_?"void":paid?"paid":"unpaid"}">
     <div class="card-head">
-      <div><div class="ref">${hl(r.ref,q.replace(/-/g,""))}</div><div class="meta">${esc(formName(r))}・報名 ${fmtDate(r.submittedAt)}${r.sample?'<span class="tag">範例</span>':""}${r.lang==="en"?'<span class="tag">英文報名</span>':""}${r.updatedAt?'<span class="tag">信眾修改過</span>':""}${!void_&&hasWait(r)?'<span class="tag">有候補</span>':""}</div></div>
+      <div><div class="ref">${hl(r.ref,q.replace(/-/g,""))}</div><div class="meta">${esc(formName(r))}・報名 ${fmtDate(r.submittedAt)}${r.sample?'<span class="tag">範例</span>':""}${r.lang==="en"?'<span class="tag">英文報名</span>':""}${r.updatedAt?'<span class="tag">信眾修改過</span>':""}${r.addTo?`<span class="tag">追加・原 ${hl(r.addTo,q.replace(/-/g,""))}</span>`:""}${(ADDONS[r.ref]||[]).length?`<span class="tag">有追加 ${ADDONS[r.ref].map(esc).join("、")}</span>`:""}${!void_&&hasWait(r)?'<span class="tag">有候補</span>':""}</div></div>
       ${status}${paid&&r.paidBy?`<span class="paidby">經手：${esc(r.paidBy)}</span>`:""}
     </div>
     <div class="contact"><span>聯絡人 <b>${hl(r.contact.name,q)}</b></span><span class="phone">${esc(r.contact.phone)}</span></div>
@@ -555,7 +556,9 @@ function cardHTML(r, m){
     ${(r.payLog||[]).length?`<details class="log"><summary>處理紀錄（${r.payLog.length}）</summary><ul>${r.payLog.map(l=>`<li>${fmtDate(l.at)}　${esc(l.by)}　${LOG_TEXT(l)}</li>`).join("")}</ul></details>`:""}
   </article>`;
 }
+let ADDONS={};   // 原報名編號 → 追加的報名編號
 function render(){
+  ADDONS={}; ROWS.forEach(r=>{ if(r.addTo && !r.cancelled) (ADDONS[r.addTo]=ADDONS[r.addTo]||[]).push(r.ref); });
   const res = ROWS.map(r=>[r,match(r,F.q)]).filter(([r,m])=>m
       && (F.paid==="void" ? r.cancelled : F.paid==="nocard" ? !r.cancelled && r.paid && r.form==="lamp" && !r.cardAt
           : !r.cancelled && (F.paid==="all" || (F.paid==="paid")===!!r.paid))

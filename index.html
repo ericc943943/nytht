@@ -163,6 +163,7 @@ textarea{min-height:5rem;resize:vertical}
 .total .amt{font-size:1.5rem;color:var(--red)}
 .amt-line{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
 .note{font-size:.88rem;color:var(--muted);margin-top:12px}
+.addnote{background:var(--red-soft);border-radius:10px;padding:10px 14px;margin:0 0 14px;font-weight:500}
 .testbar{background:var(--gold-soft);border:1px dashed var(--gold);color:var(--ink);border-radius:10px;padding:10px 14px;font-size:.85rem;margin-top:14px}
 
 /* 完成頁：報名表（上半）＋收執聯（下半），用 Letter 紙列印 */
@@ -442,6 +443,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
     <div class="nav">
       <button class="btn primary" id="printBtn" type="button" data-en="Print form">列印報名表</button>
       <button class="btn ghost" id="editBtn" type="button" data-en="Make changes" hidden>修改報名</button>
+      <button class="btn ghost" id="addBtn" type="button" hidden></button>
     </div>
     <div class="pdfmodal" id="pdfModal" hidden role="dialog" aria-modal="true" aria-labelledby="pdfMsg">
       <div class="pdfbox">
@@ -626,7 +628,8 @@ function render(){
   $("prevBtn").textContent = S.step===0 ? t("回首頁","Home") : t("上一步","Back");
   $("nextBtn").disabled = false;
   $("nextBtn").textContent = cur.k==="review" ? (S.editRef ? t("儲存修改","Save changes") : t("確認送出","Submit")) : t("下一步","Next");
-  $("panel").innerHTML = `<section class="panel">${VIEWS[cur.k]()}</section>`;
+  const addNote = S.addTo && !S.editRef ? `<div class="addnote">${t(`追加報名（原報名編號 ${S.addTo}）。聯絡人已經幫您填好了，只要填要追加的人和燈，會另外產生一個新的報名編號。`,`Adding to registration ${S.addTo}. Your contact details are already filled in — just add the new people and lamps. This will get its own registration number.`)}</div>` : "";
+  $("panel").innerHTML = `<section class="panel">${addNote}${VIEWS[cur.k]()}</section>`;
   if(cur.k==="lamp") S.lamps.forEach(p=>updDerived("lamp",p.id));
   if(cur.k==="chaodu") S.souls.forEach(p=>updDerived("soul",p.id));
 }
@@ -858,6 +861,7 @@ function payload(){
   return {
     form:S.form, eventId:S.eventId, formTitle:formTitleZh(), lang:LANG,
     contact:{name:S.contact.name.trim(), phone:S.contact.phone.trim(), address:S.contact.address.trim()}, note:S.note,
+    ...(S.addTo ? {addTo:S.addTo} : {}),   // 追加報名：原本的報名編號
     // pid：每個人固定的代號，修改時靠它保留原本的燈位
     lamps: (isLampForm()||S.want.lamp) ? S.lamps.map(p=>{const L=toLunar(p.birth); return {pid:p.id, name:p.name.trim(), gender:p.gender, birth:dateOut(p.birth), zodiac:L?zodiacOf(L.y):"", age_xu:L?ageFor(L):null, lampTypes: isLampForm()?lampTypeNames(p):["蓮花福慧燈"]};}) : [],
     chaodu: isLampForm() ? [] : S.want.chaodu ? S.souls.map(p=>({type:p.type, name:p.name.trim(), title:p.title.trim(), birth:dateOut(p.birth), death:dateOut(p.death), age:p.age?+p.age:null, sponsor:p.sponsor.trim()})) : [],
@@ -940,7 +944,7 @@ function formHTML(r){
   const top = `<section class="regform">
     <div class="f-head f-band"><img class="f-logo" src="${logo}" alt="紐約花蓮慈惠堂">
       <div class="f-mid"><div class="f-title">${esc(recTitle(r))}${EN()?`<br><span style="font-size:.9em">${esc(recTitleZh(r))}</span>`:""}</div>
-        <div class="f-date"><span class="lbl">${t("報名日期","Date")}</span>${dateText(r.submittedAt)}${r.updatedAt?`<span class="f-sub" style="display:block">${t("最後修改","Last changed")} ${dateText(r.updatedAt)}</span>`:""}</div></div>
+        <div class="f-date"><span class="lbl">${t("報名日期","Date")}</span>${dateText(r.submittedAt)}${r.updatedAt?`<span class="f-sub" style="display:block">${t("最後修改","Last changed")} ${dateText(r.updatedAt)}</span>`:""}${r.addTo?`<span class="f-sub" style="display:block">${t("追加報名・原編號","Add-on to")} ${esc(r.addTo)}</span>`:""}</div></div>
       <div class="f-right"><div class="f-hr"><div class="f-ref">${esc(r.ref)}</div><span class="lbl">${docName}・${t("報名編號","No.")}</span></div></div>
     </div>
     ${sec(t("報名聯絡人","Contact"), `<div class="f-contact"><div><b>${esc(r.contact.name)}</b>　<span style="white-space:nowrap">${esc(r.contact.phone)}</span></div><div class="f-sub">${esc(r.contact.address)}</div></div>`, "f-sec-contact")}
@@ -1166,6 +1170,10 @@ function showRecord(r, mode){
   if(wl && !r.cancelled) m += t("　標示「候補」的燈目前已額滿，堂裡會另外安排，再與您聯絡。"," Lamps marked \"Waitlist\" are currently full; the temple will arrange a spot and contact you.");
   msg.textContent = m; msg.classList.toggle("warn", !!r.cancelled);
   $("editBtn").hidden = !!(r.paid || r.cancelled);
+  // 已繳費後還想加點：另填一份，聯絡人帶好、記下原編號
+  const addKey = r.form==="lamp" ? "lamp" : "fahui-"+r.eventId;
+  $("addBtn").hidden = !(r.paid && !r.cancelled && isOpen(addKey));
+  $("addBtn").textContent = r.form==="lamp" ? t("要加點燈？另填一份","Add more lamps (new form)") : t("要追加？另填一份","Add more (new form)");
   $("printBtn").textContent = t("列印報名表","Print form");
   show("done");
   document.title = fileTitle(r);
@@ -1173,7 +1181,7 @@ function showRecord(r, mode){
 }
 function recordToState(r){
   const st=freshState(r.form==="lamp"?"lamp":"fahui", r.eventId);
-  st.contact={name:r.contact.name||"", phone:r.contact.phone||"", address:r.contact.address||""}; st.note=r.note||"";
+  st.contact={name:r.contact.name||"", phone:r.contact.phone||"", address:r.contact.address||""}; st.note=r.note||""; if(r.addTo) st.addTo=r.addTo;
   const dIn = b => { if(!b||!b.lunar) return blankDate();
     if(b.entered==="solar"&&b.solar) return {cal:"solar", y:String(b.solar.year), m:String(b.solar.month), leap:false, d:String(b.solar.day), h:b.lunar.hour||""};
     return {cal:"lunar", y:String(b.lunar.year), m:String(b.lunar.month), leap:!!b.lunar.leap, d:String(b.lunar.day), h:b.lunar.hour||""}; };
@@ -1236,6 +1244,11 @@ $("homeLink").addEventListener("click", e=>{ e.preventDefault(); refreshResume()
 $("printBtn").addEventListener("click", ()=>printPDF());
 $("againBtn").addEventListener("click", ()=>{ const f=CUR?CUR.form:"lamp", ev=CUR?CUR.eventId:null; const k=f==="lamp"?"lamp":"fahui-"+ev;
   if(!isOpen(k)){ refreshResume(); renderMySlips(); show("home"); return; } S=load(k)||freshState(f==="lamp"?"lamp":"fahui",ev); show("form"); render(); });
+$("addBtn").addEventListener("click", ()=>{ if(!CUR) return;
+  const lamp=CUR.form==="lamp", key=lamp?"lamp":"fahui-"+CUR.eventId; if(!isOpen(key)) return;
+  S=freshState(lamp?"lamp":"fahui", CUR.eventId);
+  S.contact={name:CUR.contact.name||"", phone:CUR.contact.phone||"", address:CUR.contact.address||""};
+  S.addTo=CUR.ref; S.step=1; save(); show("form"); render(); });
 $("editBtn").addEventListener("click", ()=>{ if(!CUR) return; S=recordToState(CUR); S.editRef=CUR.ref; S.editPhone=LOOKUP_PHONE||CUR.contact.phone; S.step=0; show("form"); render(); });
 $("lookupBtn").addEventListener("click", ()=>{ $("lkErr").textContent=""; show("lookup"); $("lkRef").focus(); });
 // 忘記報名編號：電話＋聯絡人姓名找回

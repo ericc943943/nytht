@@ -244,6 +244,8 @@ function submit_(d) {
 
 // 只留下報名需要的欄位（金額、燈位、繳費狀態一律由後端決定）
 function cleanData_(d) {
+  // 追加報名：記下原本的報名編號（格式不對就不記）
+  if (d.addTo != null) { d.addTo = String(d.addTo).trim().toUpperCase(); if (!/^[LF]\d{6}-\d{3,}$/.test(d.addTo)) delete d.addTo; }
   delete d.totals; delete d.paid; delete d.paidAt; delete d.paidBy; delete d.payLog; delete d.cancelled; delete d.sample;
   (d.lamps || []).forEach(p => { delete p.seats; if (!p.pid) p.pid = Utilities.getUuid().slice(0, 8); });
 }
@@ -429,7 +431,7 @@ function update_(b) {
   if (!d.contact) return { ok: false, error: "bad-data" };
   cleanData_(d);
   // 不能改的欄位沿用原本的
-  ["ref", "form", "eventId", "formTitle", "submittedAt", "clientId", "lang", "lampYear"].forEach(k => { d[k] = old[k]; });
+  ["ref", "form", "eventId", "formTitle", "submittedAt", "clientId", "lang", "lampYear", "addTo"].forEach(k => { d[k] = old[k]; });
   if (b.data.lang) d.lang = b.data.lang;
   d.updatedAt = new Date().toISOString();
   d.totals = calcTotals_(d);
