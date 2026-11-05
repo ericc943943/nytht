@@ -1326,13 +1326,16 @@ loadSettings().then(async ()=>{ renderStatic(); renderEvents(); renderLampBtn();
 });
 /* ---------- 首頁：今年犯太歲的生肖、「我需要點什麼燈？」小幫手 ---------- */
 const REL_EN={值:"own year",沖:"clash",刑:"punishment",害:"harm",破:"break"};
-function tsList(Y){ return ZODIAC.map((z,i)=>[z,tsRel(Y,i)]).filter(x=>x[1].length); }
+// 依輕重排：值（本命年）→ 沖 → 刑 → 害 → 破；同一個生肖有兩種時看比較重的那個
+const TS_RANK = ["值","沖","刑","害","破"];
+function tsList(Y){ const w=r=>Math.min(...r.map(x=>TS_RANK.indexOf(x)));
+  return ZODIAC.map((z,i)=>[z,tsRel(Y,i)]).filter(x=>x[1].length).sort((a,b)=>w(a[1])-w(b[1])); }
 function renderTsBar(){
   const Y=lampYear(), L=tsList(Y);
   const zh = L.map(([z,r])=>`<b>${z}</b>（${r.includes("值")?"本命年":r.join("、")+"太歲"}）`);
   const en = L.map(([z,r])=>`<b>${ZODIAC_EN[z]}</b> (${r.map(x=>REL_EN[x]).join(", ")})`);
-  $("tsBar").innerHTML = t(`<b>${Y} ${ganzhi(Y)}年建議點燈的生肖：</b><br>${zh.join("、<br>")}`,
-    `<b>Signs advised to light the Taisui lamp in ${Y}:</b><br>${en.join(",<br>")}`);
+  $("tsBar").innerHTML = t(`<b>${Y} ${ganzhi(Y)}年建議點燈的生肖：</b><br>${zh.join("<br>")}`,
+    `<b>Signs advised to light the Taisui lamp in ${Y}:</b><br>${en.join("<br>")}`);
 }
 const HELP={cal:"solar", y:"", m:"", d:"", leap:false, wish:{}, rec:[]};
 // 小幫手：算出農曆出生年（國曆生日換成農曆；農曆只要年）
