@@ -236,10 +236,10 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   /* 字放大：給長輩看得清楚。內文約小四號字（12pt），姓名、燈號、金額更大 */
   .paper{border:none;padding:0;font-size:12pt;line-height:1.4}
   /* 上半部固定高度，收執聯就會落在同一頁的下方，方便撕下；人多的時候自動延伸到下一頁 */
-  .regform{min-height:6.4in}
+  .regform{min-height:6.1in}
   .f-qr{width:66px}
   .f-head{padding-bottom:4px}
-  .f-head img{height:46px}
+  .f-head img{height:40px}
   .f-head .doc{font-size:15.5pt}
   .f-title{margin:4px 0 0;font-size:13pt}
   .f-ref{font-size:15pt;margin:0 0 1px;padding:0 10px}
@@ -258,9 +258,9 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   .stamp{font-size:12pt}
   .sign{line-height:1.9;font-size:11pt}
   .cut{margin:6px 0;font-size:9pt}
-  .stub .f-head img{height:42px}
+  .stub .f-head img{height:40px}
   .stub .f-head .doc{font-size:14pt}
-  .stub{height:3in;overflow:hidden}
+  .stub{height:2.85in;overflow:hidden}
   .stub .f-head{padding-bottom:2px}
   .stub .stub-list{margin-top:3px}
   .stub .f-total{margin-top:3px;padding-top:3px}
@@ -271,9 +271,10 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   /* 收執聯大小固定、在紙張下方：上半部撐到固定高度（人多時自動延伸，收執聯移到下一頁） */
   .f-note{font-size:9.5pt}
   /* 省空間：報名編號放右上角、金額明細並排（字不縮小） */
-  .f-hr .lbl{font-size:9.5pt}
+  .f-hr .lbl{font-size:9.5pt;white-space:normal}
+  .f-hr{max-width:1.9in}
   /* 頁首一行排完：logo｜活動名稱和日期｜報名編號｜QR Code */
-  .f-band{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;grid-template-areas:"logo mid hr qr";column-gap:14px;row-gap:0;padding-bottom:4px}
+  .f-band{display:grid;grid-template-columns:auto minmax(2.2in,1fr) auto auto;grid-template-areas:"logo mid hr qr";column-gap:12px;row-gap:0;padding-bottom:4px}
   .f-band .f-logo{max-width:none}
   .f-band .f-title{margin:0;font-size:12.5pt;line-height:1.3;word-break:keep-all}
   .stub .f-band{padding-bottom:3px}
@@ -286,7 +287,7 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   .f-items li{border:none;gap:8px}
   .f-person,.stub,.stubwrap{break-inside:avoid}
   /* 人多、上半部超過一頁時（.longform）：收執聯換到下一張，一樣排在紙張最下面，剪下來大小、位置都相同 */
-  .longform .stubwrap{break-before:page;height:9.7in;display:flex;flex-direction:column;justify-content:flex-end}
+  .longform .stubwrap{break-before:page;height:9.27in;display:flex;flex-direction:column;justify-content:flex-end}
   .longform .regform{min-height:0}
   .wrap:has(.longform),.wrap:has(.tailfit){padding-bottom:0}
   /* 上半部延伸到下一張、但那一張還放得下收據（.tailfit）：不換頁，用 margin-top 把收據推到那一張最下面 */
@@ -863,7 +864,7 @@ function formHTML(r){
   const top = `<section class="regform">
     <div class="f-head f-band"><img class="f-logo" src="${logo}" alt="紐約花蓮慈惠堂">
       <div class="f-mid"><div class="f-title">${esc(recTitle(r))}${EN()?`<br><span style="font-size:.9em">${esc(recTitleZh(r))}</span>`:""}</div>
-        <div class="f-date"><span class="lbl">${t("報名日期","Date")}</span>${dateText(r.submittedAt)}${r.updatedAt?`<span class="f-sub">　${t("最後修改","Last changed")} ${dateText(r.updatedAt)}</span>`:""}</div></div>
+        <div class="f-date"><span class="lbl">${t("報名日期","Date")}</span>${dateText(r.submittedAt)}${r.updatedAt?`<span class="f-sub" style="display:block">${t("最後修改","Last changed")} ${dateText(r.updatedAt)}</span>`:""}</div></div>
       <div class="f-hr"><div class="f-ref">${esc(r.ref)}</div><span class="lbl">${docName}・${t("報名編號","No.")}</span></div>
       <div class="f-qr" aria-hidden="true">${qrSVG(`${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`)}</div>
     </div>
@@ -893,7 +894,7 @@ function formHTML(r){
   <section class="stub">
     <div class="f-head f-band"><img class="f-logo" src="${logo}" alt="紐約花蓮慈惠堂">
       <div class="f-mid stub-who"><span class="lbl">${t("聯絡人","Contact")}</span> <b>${esc(r.contact.name)}</b></div>
-      <div class="f-hr"><div class="f-ref stub-ref">${esc(r.ref)}</div><span class="lbl">${isLamp?t(`${recYear(r)} 點燈收執聯`,`${recYear(r)} Lamp Receipt`):t("收執聯","Receipt")}・${t("憑此編號領取點燈卡","Show this No. to collect your lamp cards")}</span></div>
+      <div class="f-hr"><div class="f-ref stub-ref">${esc(r.ref)}</div><span class="lbl">${isLamp?t(`${recYear(r)} 點燈收執聯`,`${recYear(r)} Lamp Receipt`):t("收執聯","Receipt")}<br>${t("憑此編號領取點燈卡","Show this No. to collect your lamp cards")}</span></div>
       <div class="f-qr stub-qr" aria-hidden="true">${qrSVG(adminLink)}</div>
     </div>
     <div class="stub-list">${stubList}</div>
@@ -910,8 +911,9 @@ let CUR=null, CUR_MODE="new", LOOKUP_PHONE="";
 const fileTitle = r => `${r.form==="lamp" ? recYear(r)+"點燈報名表" : "法會報名表"}_${r.ref}_${String(r.contact&&r.contact.name||"").trim()}`.replace(/[\\/:*?"<>|\s]+/g,"");
 // 列印前先用「列印時的樣式」量一次上半部高度，決定收執聯放同一張還是下一張的底部。
 // 做法：把 @media print 裡的規則複製一份，前面加上 html.pmeasure，量完就拿掉。
-// 紙張可用範圍：Letter 11 吋高，上下各留 0.6 吋 → 9.8 吋。上半部最少 6.4 吋，收執聯就落在下方。
-const PG = {first:9.8, page:9.8, min:6.4, stub:9.7};
+// 紙張可用範圍：Letter 11 吋高，上下各留 0.6 吋 → 9.8 吋；iPhone 實際可用的比這少一點，所以抓 9.4 吋、多留一點空間。
+// 上半部最少 6.1 吋，收執聯（約 3.1 吋）就落在下方。
+const PG = {page:9.4, min:6.1};
 let PM_READY=false;
 function preparePrintMeasure(){
   if(PM_READY) return; PM_READY=true;
@@ -942,13 +944,14 @@ function layoutForPrint(){
   reg.style.minHeight="";
   html.classList.remove("pmeasure"); $("done").hidden=wasHidden;
   // 第一張可用約 10.55 吋（上方留白 0.45），之後每張約 10.15 吋
-  const FIRST=PG.first, PAGE=PG.page, SAFE=0.15;
+  const PAGE=PG.page, SAFE=0.15;
   if(need <= PG.min){ paper.classList.remove("longform"); return; }   // 一張紙放得下：收據在第一張最下面
-  let pageStart=0, cap=FIRST, pages=1;
-  for(const [top,bottom] of atoms){
-    if(bottom - pageStart > cap){ pageStart = top; cap = PAGE; pages++; } }
-  if(pages > 1){
-    const used = need - pageStart, free = PAGE - used;   // 上半部最後一張用掉／剩下的空間
+  // 模擬換頁：每張可用 cap 吋，放不下的那一塊整塊換到下一張；回傳最後一張從哪裡開始
+  const sim = cap => { let start=0, pages=1; for(const [top,bottom] of atoms){ if(bottom-start > cap){ start=top; pages++; } } return {start,pages}; };
+  // 電腦（9.8 吋）和 iPhone（約 9.4 吋）換頁的位置一樣，才把收據排在最後一張下面；不一樣就保險起見換到下一張
+  const a=sim(9.8), b=sim(PAGE);
+  if(a.pages > 1 && a.pages===b.pages && Math.abs(a.start-b.start)<0.01){
+    const used = need - a.start, free = PAGE - used;    // 上半部最後一張用掉／剩下的空間
     if(free >= stubH + SAFE){                            // 放得下：收據排在這一張最下面
       paper.classList.remove("longform"); paper.classList.add("tailfit");
       paper.style.setProperty("--tail", (free - stubH - SAFE).toFixed(2) + "in"); return; } }
