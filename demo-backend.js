@@ -509,6 +509,12 @@ function saveSettings_(s) {
   const y = Number(s.lamp.year);
   if (!(y >= 2020 && y <= 2100)) return { ok: false, error: "year" };
   s.lamp.year = y;
+  // 每年建議點太歲燈的生肖（後台勾選；沒設定就用預設規則）：只留合法的生肖
+  if (s.lamp.taisui && typeof s.lamp.taisui === "object") {
+    const Z = "鼠牛虎兔龍蛇馬羊猴雞狗豬", t = {};
+    Object.keys(s.lamp.taisui).forEach(k => { const v = s.lamp.taisui[k]; if (/^\d{4}$/.test(k) && Array.isArray(v)) t[k] = v.filter(z => Z.indexOf(z) >= 0 && String(z).length === 1); });
+    s.lamp.taisui = t;
+  } else delete s.lamp.taisui;
   delete s.seatsLeft;
   s.updatedAt = new Date().toISOString();
   sheet_(SHEET.settings).getRange("A1").setValue(JSON.stringify(s));

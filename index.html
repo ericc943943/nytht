@@ -559,12 +559,16 @@ function tsRel(year, zi){
   if(pair(["子酉","丑辰","寅亥","卯午","巳申","未戌"])) r.push("破");
   return r;
 }
+// 今年建議點太歲燈的生肖：後台有設定就照設定（例如照松山慈惠堂公布的），沒設定就照規則算（本命、沖、刑、害、破）
+function tsChosen(Y){ const c=SETTINGS.lamp && SETTINGS.lamp.taisui && SETTINGS.lamp.taisui[Y];
+  return Array.isArray(c) ? c.filter(z=>ZODIAC.includes(z)) : ZODIAC.filter((z,i)=>tsRel(Y,i).length); }
+const tsNeed = (Y,z) => tsChosen(Y).includes(z);
 // 點燈表單：犯太歲就提示，還沒勾太歲燈的給一顆「幫我勾選」
 function taisuiHint(p, L){
   if(!isLampForm()) return "";
-  const Y=lampYear(), z=zodiacOf(L.y), r=tsRel(Y, ZODIAC.indexOf(z)); if(!r.length) return "";
+  const Y=lampYear(), z=zodiacOf(L.y), r=tsRel(Y, ZODIAC.indexOf(z)); if(!tsNeed(Y,z)) return "";
   const has = p.types && p.types.taisui;
-  const what = r.includes("值") ? t("值太歲（本命年）","is in its own Tai Sui year") : t(r.join("、")+"太歲","clashes with Tai Sui");
+  const what = r.includes("值") ? t("值太歲（本命年）","is in its own Tai Sui year") : r.length ? t(r.join("、")+"太歲","clashes with Tai Sui") : t("今年建議點太歲燈","is advised to light the Taisui lamp");
   return `<span class="ts">${t(`${Y} 年屬${z}${what}，建議點太歲燈。`,`In ${Y}, the ${ZODIAC_EN[z]} ${what}. The Lamp of Annual Taisui is recommended.`)}${
     has ? `<b class="tsok">${t("✓ 已勾選","✓ Selected")}</b>` : `<button class="fillme" type="button" data-taisui="${p.id}">${t("幫我勾選太歲燈","Add Lamp of Annual Taisui")}</button>`}</span>`;
 }
@@ -1328,12 +1332,13 @@ loadSettings().then(async ()=>{ renderStatic(); renderEvents(); renderLampBtn();
 const REL_EN={值:"own year",沖:"clash",刑:"punishment",害:"harm",破:"break"};
 // 依輕重排：值（本命年）→ 沖 → 刑 → 害 → 破；同一個生肖有兩種時看比較重的那個
 const TS_RANK = ["值","沖","刑","害","破"];
-function tsList(Y){ const w=r=>Math.min(...r.map(x=>TS_RANK.indexOf(x)));
-  return ZODIAC.map((z,i)=>[z,tsRel(Y,i)]).filter(x=>x[1].length).sort((a,b)=>w(a[1])-w(b[1])); }
+function tsList(Y){ const w=r=>r.length?Math.min(...r.map(x=>TS_RANK.indexOf(x))):99, C=tsChosen(Y);
+  return ZODIAC.map((z,i)=>[z,tsRel(Y,i)]).filter(x=>C.includes(x[0])).sort((a,b)=>w(a[1])-w(b[1])); }
 function renderTsBar(){
   const Y=lampYear(), L=tsList(Y);
-  const zh = L.map(([z,r])=>`<b>${z}</b>（${r.includes("值")?"本命年":r.join("、")+"太歲"}）`);
-  const en = L.map(([z,r])=>`<b>${ZODIAC_EN[z]}</b> (${r.map(x=>REL_EN[x]).join(", ")})`);
+  const zh = L.map(([z,r])=>`<b>${z}</b>${r.length?`（${r.includes("值")?"本命年":r.join("、")+"太歲"}）`:""}`);
+  const en = L.map(([z,r])=>`<b>${ZODIAC_EN[z]}</b>${r.length?` (${r.map(x=>REL_EN[x]).join(", ")})`:""}`);
+  $("tsBar").hidden = !L.length;
   $("tsBar").innerHTML = t(`<b>${Y} ${ganzhi(Y)}年建議點燈的生肖：</b><br>${zh.join("<br>")}`,
     `<b>Signs advised to light the Taisui lamp in ${Y}:</b><br>${en.join("<br>")}`);
 }
@@ -1353,13 +1358,13 @@ function renderHelper(){
   HELP.rec=[];
   if(LY){ const z=zodiacOf(LY), r=tsRel(Y, ZODIAC.indexOf(z)), items=[];
     const nm = k => { HELP.rec.push(k); const x=CONFIG.lampForm.types.find(a=>a.k===k); return EN()?x.en:x.short; };
-    if(r.length) items.push([nm("taisui"), r.includes("值") ? t(`屬${z}，${Y} 年是本命年（值太歲）`,`${ZODIAC_EN[z]}: ${Y} is your own Tai Sui year`) : t(`屬${z}，${Y} 年${r.join("、")}太歲`,`${ZODIAC_EN[z]} is in conflict with Tai Sui in ${Y}`)]);
+    if(tsNeed(Y,z)) items.push([nm("taisui"), !r.length ? t(`屬${z}，${Y} 年建議點太歲燈`,`${ZODIAC_EN[z]}: advised to light the Taisui lamp in ${Y}`) : r.includes("值") ? t(`屬${z}，${Y} 年是本命年（值太歲）`,`${ZODIAC_EN[z]}: ${Y} is your own Tai Sui year`) : t(`屬${z}，${Y} 年${r.join("、")}太歲`,`${ZODIAC_EN[z]} is in conflict with Tai Sui in ${Y}`)]);
     if(HELP.wish.guangming || !(HELP.wish.wenchang||HELP.wish.caishen)) items.push([nm("guangming"), t("祈求平安健康、前途光明，每個人都適合點","For peace, health and a bright year — suitable for everyone")]);
     if(HELP.wish.wenchang) items.push([nm("wenchang"), t("祈求讀書考試、升學、工作升遷順利","For studies, exams and career advancement")]);
     if(HELP.wish.caishen) items.push([nm("caishen"), t("祈求事業順利、財源廣進","For success at work and prosperity")]);
     const born = solar && LY!==+HELP.y ? t(`（國曆 ${HELP.m} 月 ${HELP.d} 日還沒過農曆年）`,` (born before Lunar New Year, so lunar year ${LY})`) : "";
     rec = `<div class="rec"><div class="hint" style="margin-bottom:4px">${t(`農曆 ${LY} 年生，屬${z}`,`Lunar year ${LY}: ${ZODIAC_EN[z]}`)}${born}</div><b>${t(`屬${z}的您，建議點：`,`For you (${ZODIAC_EN[z]}), we suggest:`)}</b><ul>${items.map(([n,why])=>`<li><b>${esc(n)}</b>${t("：",": ")}${why}</li>`).join("")}</ul>
-      ${r.length?"":`<div class="hint">${t(`屬${z}今年沒有犯太歲，不一定要點太歲燈。`,`Your sign does not conflict with Tai Sui this year, so the Taisui lamp is optional.`)}</div>`}
+      ${tsNeed(Y,z)?"":`<div class="hint">${t(`屬${z}今年不在建議點太歲燈的生肖裡，不一定要點。`,`Your sign is not on this year's Taisui list, so the Taisui lamp is optional.`)}</div>`}
       <div class="hint">${t("以上僅供參考，可以依自己的心意多點或少點。每位家人可以分別看。","This is only a suggestion — choose whatever feels right. You can check for each family member.")}</div></div>
       ${SETTINGS.lamp.status==="open"?`<button class="btn primary block" id="hpStart" type="button">${t("開始點燈報名","Start lamp registration")}</button><div class="hint" style="text-align:center;margin-top:-4px">${t("會幫您把這個生日和建議的燈帶進報名表","This birthday and the suggested lamps will be filled in for you")}</div>`:""}`;
   }
