@@ -171,6 +171,7 @@ function doGet(e) {
         return out_({ ok: true, rows: listRows_() });
       }
       case "lookup": return out_(lookup_(p.ref, p.phone));    // 信眾用編號＋電話查自己的報名
+      case "findRefs": return out_(findRefs_(p.phone, p.name)); // 忘記報名編號：電話＋聯絡人姓名找回編號
       default: return out_({ ok: true, service: "tsuhui-signup" });
     }
   } catch (err) { return out_({ ok: false, error: String(err && err.message || err) }); }
@@ -394,6 +395,22 @@ function lookup_(ref, phone) {
   }
   keys.forEach((k, i) => { if (fails[i]) cache.remove(k); });
   return { ok: true, record: publicRecord_(f.rec) };
+}
+// 忘記報名編號：電話＋聯絡人姓名都對，才列出編號（只給編號和表單名稱，不給其他資料）。
+// 同一支電話連續找不到會暫時鎖住
+function findRefs_(phone, name) {
+  const norm = x => String(x || "").replace(/\s+/g, "").toLowerCase();
+  const key = "frp-" + digits_(phone).slice(-10), cache = CacheService.getScriptCache();
+  const fails = Number(cache.get(key) || 0);
+  if (fails >= MAX_FAILS) return { ok: false, error: "locked" };
+  if (digits_(phone).length < 7 || !norm(name)) return { ok: false, error: "not-found" };
+  const hits = listRows_().filter(d => phoneMatch_(d.contact && d.contact.phone, phone) && norm(d.contact && d.contact.name) === norm(name))
+    .map(d => ({ ref: d.ref, form: d.form, eventId: d.eventId || null, formTitle: d.formTitle || "", lampYear: d.lampYear || null,
+                 submittedAt: d.submittedAt, paid: !!d.paid, cancelled: !!d.cancelled }))
+    .sort((a, b) => String(b.submittedAt).localeCompare(String(a.submittedAt)));
+  if (!hits.length) { cache.put(key, String(fails + 1), LOCK_MINUTES * 60); return { ok: false, error: "not-found" }; }
+  if (fails) cache.remove(key);
+  return { ok: true, refs: hits };
 }
 // 繳費前可以修改；修改後重新計算金額，原本的燈位盡量保留
 function update_(b) {

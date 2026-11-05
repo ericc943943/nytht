@@ -235,7 +235,11 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
 .myslips h2{font-size:1.05rem}
 .myslip{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
 .myslip small{display:block;color:var(--muted);font-size:.85rem}
-.myslip .btn{min-height:2.6rem;padding:0 16px;font-size:.95rem}
+.myslip .btn{min-height:2.6rem;padding:0 16px;font-size:.95rem;flex:none;white-space:nowrap}
+#lkForgot{margin-top:6px}
+.frlist{display:flex;flex-direction:column;gap:10px}
+.frlist:empty{display:none}
+.frlist .myslip b{font-size:1.15rem;letter-spacing:.5px}
 .left{font-weight:700;color:var(--err)}
 .lkerr{color:var(--err);font-weight:500;margin:0;min-height:1.4em}
 .pdfmodal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px;z-index:50}
@@ -406,10 +410,28 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
       <div class="field"><label for="lkPhone" data-en="Phone number">電話</label>
         <input id="lkPhone" type="tel" inputmode="tel" autocomplete="tel"></div>
       <p class="lkerr" id="lkErr" role="alert"></p>
+      <button class="btn ghost block" id="lkForgot" type="button" data-en="Forgot my registration number">忘記報名編號？</button>
     </section>
-    <div class="nav">
+    <div class="nav" id="lkNav">
       <button class="btn ghost" id="lkBack" type="button" data-en="Home">回首頁</button>
       <button class="btn primary" id="lkGo" type="button" data-en="Look up">查詢</button>
+    </div>
+  </main>
+  <!-- ===== 忘記報名編號 ===== -->
+  <main id="findref" hidden>
+    <section class="panel" style="margin-top:22px">
+      <h2 data-en="Find my registration number">找回報名編號</h2>
+      <p class="lead" data-en="Enter the phone number and the contact person's name you used when you registered.">請輸入報名時填的電話，和聯絡人姓名（要和報名時寫的一樣）。</p>
+      <div class="field"><label for="frPhone" data-en="Phone number">電話</label>
+        <input id="frPhone" type="tel" inputmode="tel" autocomplete="tel"></div>
+      <div class="field"><label for="frName" data-en="Contact person's name">聯絡人姓名</label>
+        <input id="frName" type="text" autocomplete="name"></div>
+      <p class="lkerr" id="frErr" role="alert"></p>
+      <div id="frList" class="frlist"></div>
+    </section>
+    <div class="nav">
+      <button class="btn ghost" id="frBack" type="button" data-en="Back">上一步</button>
+      <button class="btn primary" id="frGo" type="button" data-en="Find">找回編號</button>
     </div>
   </main>
 
@@ -594,7 +616,7 @@ function steps(){
 
 const $ = id => document.getElementById(id);
 const defaultTitle = () => t("慈惠堂線上點燈和法會報名","Tsu Hui Temple – Online Registration");
-function show(view){ ["home","form","done","lookup"].forEach(v=>$(v).hidden = v!==view); if(view!=="done") document.title = defaultTitle(); window.scrollTo({top:0}); }
+function show(view){ ["home","form","done","lookup","findref"].forEach(v=>$(v).hidden = v!==view); if(view!=="done") document.title = defaultTitle(); window.scrollTo({top:0}); }
 
 function render(){
   const st=steps(); if(S.step>=st.length) S.step=st.length-1;
@@ -1216,6 +1238,27 @@ $("againBtn").addEventListener("click", ()=>{ const f=CUR?CUR.form:"lamp", ev=CU
   if(!isOpen(k)){ refreshResume(); renderMySlips(); show("home"); return; } S=load(k)||freshState(f==="lamp"?"lamp":"fahui",ev); show("form"); render(); });
 $("editBtn").addEventListener("click", ()=>{ if(!CUR) return; S=recordToState(CUR); S.editRef=CUR.ref; S.editPhone=LOOKUP_PHONE||CUR.contact.phone; S.step=0; show("form"); render(); });
 $("lookupBtn").addEventListener("click", ()=>{ $("lkErr").textContent=""; show("lookup"); $("lkRef").focus(); });
+// 忘記報名編號：電話＋聯絡人姓名找回
+$("lkForgot").addEventListener("click", ()=>{ $("frErr").textContent=""; $("frList").innerHTML=""; if(!$("frPhone").value) $("frPhone").value=$("lkPhone").value; show("findref"); $("frPhone").focus(); });
+$("frBack").addEventListener("click", ()=>{ show("lookup"); });
+$("frGo").addEventListener("click", async ()=>{
+  const phone=$("frPhone").value.trim(), name=$("frName").value.trim();
+  $("frList").innerHTML="";
+  if(phone.replace(/\D/g,"").length<7 || !name){ $("frErr").textContent=t("請輸入電話和聯絡人姓名。","Please enter the phone number and the contact person's name."); return; }
+  const b=$("frGo"); b.disabled=true; $("frErr").textContent="";
+  let j; try{ j=await apiGet({action:"findRefs", phone, name}); }catch(e){ j={ok:false,error:"network"}; }
+  b.disabled=false;
+  if(!j.ok){ $("frErr").textContent = j.error==="not-found"
+      ? t(`找不到。請確認電話和聯絡人姓名跟報名時寫的一樣，或打電話到堂裡：${CONFIG.phone}`,`Nothing found. Please check that the phone number and name match what you entered when registering, or call the temple: ${CONFIG.phone}`)
+      : ERR_MSG(j.error); return; }
+  FR_PHONE=phone;
+  $("frList").innerHTML = `<p class="lead" style="margin:0">${t(`找到 ${j.refs.length} 筆報名，請記下報名編號：`,`Found ${j.refs.length}. Please write down your registration number:`)}</p>` + j.refs.map(r=>
+    `<div class="myslip"><div><b>${esc(r.ref)}</b><small>${esc(recTitle(r))}・${new Date(r.submittedAt).toLocaleDateString(t("zh-TW","en-US"))}${r.cancelled?t("・已取消"," · cancelled"):r.paid?t("・已繳費"," · paid"):""}</small></div><button class="btn ghost" type="button" data-frref="${esc(r.ref)}">${t("打開","Open")}</button></div>`).join("");
+});
+let FR_PHONE="";
+$("frList").addEventListener("click", async e=>{ const b=e.target.closest("[data-frref]"); if(!b) return; b.disabled=true;
+  const j=await openRecord(b.dataset.frref, FR_PHONE, "view"); b.disabled=false; if(!j.ok) $("frErr").textContent=ERR_MSG(j.error); });
+["frPhone","frName"].forEach(id=>$(id).addEventListener("keydown", e=>{ if(e.key==="Enter") $("frGo").click(); }));
 $("lkBack").addEventListener("click", ()=>{ refreshResume(); renderMySlips(); show("home"); });
 $("lkGo").addEventListener("click", async ()=>{
   const ref=$("lkRef").value.trim().toUpperCase(), phone=$("lkPhone").value.trim();
