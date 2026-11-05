@@ -274,7 +274,10 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   /* 人多、上半部超過一頁時（.longform）：收執聯換到下一張，一樣排在紙張最下面，剪下來大小、位置都相同 */
   .longform .stubwrap{break-before:page;height:10.1in;display:flex;flex-direction:column;justify-content:flex-end}
   .longform .regform{min-height:0}
-  .wrap:has(.longform){padding-bottom:0}
+  .wrap:has(.longform),.wrap:has(.tailfit){padding-bottom:0}
+  /* 上半部延伸到下一張、但那一張還放得下收據（.tailfit）：不換頁，用 margin-top 把收據推到那一張最下面 */
+  .tailfit .regform{min-height:0}
+  .tailfit .stubwrap{break-before:auto;margin-top:var(--tail,0)}
 }
 footer span{white-space:nowrap}
 footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem;text-align:center}
@@ -914,12 +917,30 @@ function layoutForPrint(){
   preparePrintMeasure();
   const html=document.documentElement, wasHidden=$("done").hidden;
   paper.classList.remove("longform"); $("done").hidden=false; html.classList.add("pmeasure");
-  const reg=paper.querySelector(".regform");
+  const reg=paper.querySelector(".regform"), sw=paper.querySelector(".stubwrap");
+  paper.classList.remove("tailfit"); paper.style.removeProperty("--tail");
   reg.style.minHeight="0";
-  const need=reg.getBoundingClientRect().height/96;   // 吋
+  const IN=96, base=reg.getBoundingClientRect().top;
+  const need=reg.getBoundingClientRect().height/IN;     // 上半部需要的高度（吋）
+  const stubH=sw.getBoundingClientRect().height/IN;     // 剪線＋收執聯的高度
+  // 模擬換頁：每一塊（標題、每一位、每一行金額…）不會被切開，放不下就整塊移到下一頁
+  const atoms=[...reg.querySelectorAll(".f-head,.f-title,.f-meta,.f-sec > h4,.f-sec > div:not(.f-person),.f-person,.f-items li,.f-total,.f-temple")]
+    .map(el=>{ const b=el.getBoundingClientRect(); return [(b.top-base)/IN,(b.bottom-base)/IN]; })
+    .sort((a,b)=>a[0]-b[0]);
   reg.style.minHeight="";
   html.classList.remove("pmeasure"); $("done").hidden=wasHidden;
-  paper.classList.toggle("longform", need > 6.75);   // 6.75 吋＝一張紙扣掉收執聯（3 吋）和剪線
+  // 第一張可用約 10.55 吋（上方留白 0.45），之後每張約 10.15 吋
+  const FIRST=10.55, PAGE=10.15, SAFE=0.15;
+  if(need <= 6.75){ paper.classList.remove("longform"); return; }   // 一張紙放得下：收據在第一張最下面
+  let pageStart=0, cap=FIRST, pages=1;
+  for(const [top,bottom] of atoms){
+    if(bottom - pageStart > cap){ pageStart = top; cap = PAGE; pages++; } }
+  if(pages > 1){
+    const used = need - pageStart, free = PAGE - used;   // 上半部最後一張用掉／剩下的空間
+    if(free >= stubH + SAFE){                            // 放得下：收據排在這一張最下面
+      paper.classList.remove("longform"); paper.classList.add("tailfit");
+      paper.style.setProperty("--tail", (free - stubH - SAFE).toFixed(2) + "in"); return; } }
+  paper.classList.add("longform");                 // 放不下：收據換到下一張最下面
 }
 window.addEventListener("beforeprint", layoutForPrint);
 function showRecord(r, mode){
