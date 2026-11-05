@@ -102,11 +102,11 @@ window.DemoBackend = (function () {
     const B = (y, m, d, h) => ({ lunar: { year: y, month: m, leap: false, day: d, hour: h || "" }, solar: null, entered: "lunar" });
     const samples = [
       { contact: { name: "王秀英", phone: "(718) 555-0142", address: "範例地址" }, lamps: [
-        { pid: "s1", name: "王秀英", gender: "女", birth: B(1958, 8, 12, "辰"), zodiac: "狗", age_xu: 70, lampTypes: ["個人光明燈", "太歲燈"] },
-        { pid: "s2", name: "李建國", gender: "男", birth: B(1955, 3, 3), zodiac: "羊", age_xu: 73, lampTypes: ["個人光明燈"] }] },
+        { pid: "s1", name: "王秀英", gender: "女", birth: B(1958, 8, 12, "辰"), zodiac: "狗", age_xu: 70, lampTypes: ["光明燈", "太歲燈"] },
+        { pid: "s2", name: "李建國", gender: "男", birth: B(1955, 3, 3), zodiac: "羊", age_xu: 73, lampTypes: ["光明燈"] }] },
       { contact: { name: "張雅婷", phone: "(347) 555-0198", address: "範例地址" }, lamps: [
-        { pid: "s3", name: "張雅婷", gender: "女", birth: B(1986, 11, 2, "午"), zodiac: "虎", age_xu: 42, lampTypes: ["五路財神燈"] },
-        { pid: "s4", name: "陳柏宇", gender: "男", birth: B(2012, 6, 18), zodiac: "龍", age_xu: 16, lampTypes: ["文昌燈", "個人光明燈"] },
+        { pid: "s3", name: "張雅婷", gender: "女", birth: B(1986, 11, 2, "午"), zodiac: "虎", age_xu: 42, lampTypes: ["財神燈"] },
+        { pid: "s4", name: "陳柏宇", gender: "男", birth: B(2012, 6, 18), zodiac: "龍", age_xu: 16, lampTypes: ["文昌燈", "光明燈"] },
         { pid: "s5", name: "陳品妍", gender: "女", birth: B(2015, 1, 9), zodiac: "羊", age_xu: 13, lampTypes: ["文昌燈"] }] },
     ];
     const refs = samples.map(s => submit_(Object.assign({ form: "lamp", eventId: null, formTitle: "啟點光明燈暨安奉太歲", note: "", lang: "zh", chaodu: [], meals: [] }, s)).ref);

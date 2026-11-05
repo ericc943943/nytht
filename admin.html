@@ -414,8 +414,8 @@ const API = {
 
 /* ================= 狀態 ================= */
 let ROWS = [], F = {q:"", paid:"all", form:"all", item:"all"}, confirming = null;
-const LAMP_TYPES = ["個人光明燈","文昌燈","太歲燈","五路財神燈"];   // 照燈種代碼 01、02、03、05
-// 畫面上一律用三個字的燈名（資料裡還是存「個人光明燈」「五路財神燈」）
+const LAMP_TYPES = ["光明燈","文昌燈","太歲燈","財神燈"];   // 照燈種代碼 01、02、03、05
+// 燈名一律三個字；舊資料的全名也換成三個字顯示
 const lampShort = t => String(t).replace("個人光明燈","光明燈").replace("五路財神燈","財神燈");
 const sortLamps = a => (a||[]).slice().sort((x,y)=>(LAMP_TYPES.indexOf(x)+99)%99-(LAMP_TYPES.indexOf(y)+99)%99);
 const FAHUI_ITEMS = ["超渡牌位","蓮花福慧燈","供齋"];

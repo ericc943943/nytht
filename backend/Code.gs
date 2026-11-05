@@ -16,7 +16,7 @@
 
 /* ================= 設定 ================= */
 const PRICES = {
-  lamp: { "個人光明燈": 120, "太歲燈": 120, "五路財神燈": 120, "文昌燈": 120 },  // 點燈：每盞
+  lamp: { "光明燈": 120, "太歲燈": 120, "財神燈": 120, "文昌燈": 120 },  // 點燈：每盞
   lotus: 60,     // 法會：蓮花福慧燈，每位
   chaodu: 160,   // 法會：超渡牌位，每牌位
 };
@@ -24,10 +24,10 @@ const PRICES = {
 // 燈號 = 英文字母＋燈種代碼（給燈號查詢機用）＋排＋第幾個，例：G010512 ＝ 光明燈第 5 排第 12 個。
 // 字母：G 光明、W 文昌、T 太歲、C 財神。單據上燈號前面都會寫燈的名稱。
 const SEATS = {
-  "個人光明燈": { letter: "G", label: "G", code: "01", perRow: 30, rows: 60 },
+  "光明燈": { letter: "G", label: "G", code: "01", perRow: 30, rows: 60 },
   "文昌燈":     { letter: "W", label: "W", code: "02", perRow: 20, rows: 60 },
   "太歲燈":     { letter: "T", label: "T", code: "03", perRow: 30, rows: 39 },
-  "五路財神燈": { letter: "C", label: "C", code: "05", perRow: 30, rows: 70 },
+  "財神燈": { letter: "C", label: "C", code: "05", perRow: 30, rows: 70 },
 };
 const DEFAULT_LAMP_YEAR = 2027;   // 點燈年度：之後在後台「設定」修改
 const DEFAULT_SETTINGS = {
@@ -163,6 +163,7 @@ function submit_(d) {
 function cleanData_(d) {
   // 追加報名：記下原本的報名編號（格式不對就不記）
   if (d.addTo != null) { d.addTo = String(d.addTo).trim().toUpperCase(); if (!/^[LF]\d{6}-\d{3,}$/.test(d.addTo)) delete d.addTo; }
+  normLamps_(d);
   delete d.totals; delete d.paid; delete d.paidAt; delete d.paidBy; delete d.payLog; delete d.cancelled; delete d.sample;
   (d.lamps || []).forEach(p => { delete p.seats; if (!p.pid) p.pid = Utilities.getUuid().slice(0, 8); });
 }
@@ -202,7 +203,7 @@ function usedSeats_(exceptRef, year) {
   if (n < 1) return used;
   sh.getRange(2, 1, n, REG_HEAD.length).getValues().forEach(r => {
     if (r[C.cancelled - 1] === true || String(r[0]) === String(exceptRef)) return;
-    let d = {}; try { d = JSON.parse(r[C.json - 1]); } catch (e) { return; }
+    let d = {}; try { d = normLamps_(JSON.parse(r[C.json - 1])); } catch (e) { return; }
     if (d.form !== "lamp" || recYear_(d) !== Number(year)) return;
     (d.lamps || []).forEach(p => Object.keys(p.seats || {}).forEach(t => { if (p.seats[t]) used.add(p.seats[t]); }));
   });
@@ -239,7 +240,18 @@ function seatsLeft_(year) {
   });
   return left;
 }
-const SHORT_ = { "個人光明燈": "光明燈", "五路財神燈": "財神燈" };
+const SHORT_ = {};   // 燈名已經都是三個字
+// 舊資料的燈名（2026-11 以前存的是全名）讀進來時換成三個字
+const LAMP_RENAME_ = { "個人光明燈": "光明燈", "五路財神燈": "財神燈" };
+function normLamps_(d) {
+  const ren = t => LAMP_RENAME_[t] || t;
+  (d.lamps || []).forEach(p => {
+    if (p.lampTypes) p.lampTypes = p.lampTypes.map(ren);
+    if (p.seats) { const o = {}; Object.keys(p.seats).forEach(k => { o[ren(k)] = p.seats[k]; }); p.seats = o; }
+  });
+  if (d.totals && d.totals.byType) { const o = {}; Object.keys(d.totals.byType).forEach(k => { const x = d.totals.byType[k]; o[ren(k)] = Object.assign({}, x, { name: ren(x.name || k) }); }); d.totals.byType = o; }
+  return d;
+}
 function seatText_(d) {
   return (d.lamps || []).filter(p => p.seats && Object.keys(p.seats).length)
     .map(p => p.name + "：" + Object.keys(SEATS).filter(t => t in p.seats).map(t => (SHORT_[t] || t) + " " + (seatLabel_(p.seats[t]) || "候補")).join("、")).join("\n");
@@ -248,6 +260,7 @@ function seatText_(d) {
 /* ================= 讀寫一筆報名 ================= */
 function readRecord_(r) {
   let d = {}; try { d = JSON.parse(r[C.json - 1]); } catch (e) {}
+  normLamps_(d);
   let log = []; try { log = JSON.parse(r[C.log - 1] || "[]"); } catch (e) {}
   d.ref = String(r[C.ref - 1]);
   d.paid = r[C.paid - 1] === true;

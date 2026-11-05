@@ -494,10 +494,10 @@ const CONFIG = {
     // 順序照燈種代碼：光明燈 01、文昌燈 02、太歲燈 03、財神燈 05（報名表、收執聯都照這個順序）
     // price：每盞金額（美元）；留 null 則不顯示金額。en／enDesc：英文介面用的名稱和說明
     types: [
-      {k:"guangming", name:"個人光明燈", short:"光明燈", price:120, en:"Lamp of Blessing", enDesc:"For peace, good health and a bright year ahead"},
+      {k:"guangming", name:"光明燈",     short:"光明燈", price:120, en:"Lamp of Blessing", enDesc:"For peace, good health and a bright year ahead"},
       {k:"wenchang",  name:"文昌燈",     short:"文昌燈", price:120, en:"Lamp of Wenchang", enDesc:"Prays to Wenchang, the deity of learning, for studies, exams and career"},
       {k:"taisui",    name:"太歲燈",     short:"太歲燈", price:120, en:"Lamp of Annual Taisui", enDesc:"Tai Sui is the guardian deity of the year. Light this lamp for protection, especially if your zodiac sign clashes with Tai Sui this year"},
-      {k:"caishen",   name:"五路財神燈", short:"財神燈", price:120, en:"Lamp of Wealth and Fortune", enDesc:"Prays to the Gods of Wealth for prosperity in work and business"},
+      {k:"caishen",   name:"財神燈",     short:"財神燈", price:120, en:"Lamp of Wealth and Fortune", enDesc:"Prays to the Gods of Wealth for prosperity in work and business"},
     ],
   },
   // 法會場次的預設值。正式使用時，開放哪些項目由後台「報名項目設定」決定，會蓋過這裡的設定。
@@ -920,6 +920,10 @@ async function submit(){
 /* ---------- 報名表（上半）＋收執聯（下半） ---------- */
 const money = n => n==null ? t("請洽堂裡","Please ask the temple") : "$"+Number(n).toLocaleString();
 const LAMP_BY_NAME = Object.fromEntries(CONFIG.lampForm.types.map(x=>[x.name,x]));
+// 舊資料（手機裡存的報名表）燈名是全名，打開時換成三個字
+const LAMP_RENAME = {"個人光明燈":"光明燈","五路財神燈":"財神燈"};
+function normRec(r){ (r&&r.lamps||[]).forEach(p=>{ if(p.lampTypes) p.lampTypes=p.lampTypes.map(x=>LAMP_RENAME[x]||x);
+  if(p.seats){ const o={}; Object.keys(p.seats).forEach(k=>{ o[LAMP_RENAME[k]||k]=p.seats[k]; }); p.seats=o; } }); return r; }
 const LAMP_ORDER = CONFIG.lampForm.types.map(x=>x.name);
 const sortLamps = a => (a||[]).slice().sort((x,y)=>(LAMP_ORDER.indexOf(x)+99)%99-(LAMP_ORDER.indexOf(y)+99)%99);
 const lampShort = n => { const x=LAMP_BY_NAME[n]; return x ? (EN()?`${x.en}（${x.short}）`:x.short) : n; };
@@ -1180,7 +1184,7 @@ $("pdfPrint").addEventListener("click", async ()=>{
   f.src=PDF_URL;
 });
 function showRecord(r, mode){
-  CUR=r; CUR_MODE=mode||CUR_MODE;
+  normRec(r); CUR=r; CUR_MODE=mode||CUR_MODE;
   $("slip").innerHTML = formHTML(r);
   const msg = $("doneMsg");
   const wl = (r.lamps||[]).some(p=>Object.values(p.seats||{}).some(v=>!v));
@@ -1201,7 +1205,7 @@ function showRecord(r, mode){
   document.title = fileTitle(r);
   layoutForPrint();
 }
-function recordToState(r){
+function recordToState(r){ normRec(r);
   const st=freshState(r.form==="lamp"?"lamp":"fahui", r.eventId);
   st.contact={name:r.contact.name||"", phone:r.contact.phone||"", address:r.contact.address||""}; st.note=r.note||""; if(r.addTo) st.addTo=r.addTo;
   const dIn = b => { if(!b||!b.lunar) return blankDate();
