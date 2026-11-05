@@ -108,6 +108,7 @@ function doPost(e) {
       case "setPaid":      return out_(setPaid_(me, body.ref, !!body.paid));
       case "setCancelled": return out_(setCancelled_(me, body.ref, !!body.cancelled));
       case "assignSeats":  return out_(assignWaitlist_(me, body.ref));
+      case "setCard":      return out_(setCard_(me, body.ref, !!body.given));
       case "saveSettings": if (me.role !== "admin") return out_({ ok: false, error: "auth" });
                            return out_(saveSettings_(body.settings));
       case "userOp":       return out_(userOp_(me, body));
@@ -252,6 +253,9 @@ function readRecord_(r) {
   d.paidBy = r[C.paidBy - 1] || null;
   d.cancelled = r[C.cancelled - 1] === true;
   d.payLog = log;
+  // 點燈卡：看處理紀錄裡最後一次「發點燈卡／改回未領」
+  let card = null; log.forEach(l => { if (l.action === "card") card = l; else if (l.action === "uncard") card = null; });
+  d.cardAt = card ? card.at : null; d.cardBy = card ? card.by : null;
   return d;
 }
 function findRow_(ref) {
@@ -282,7 +286,7 @@ function addLog_(f, entry) {
 // 給信眾看的資料：不含收款紀錄和內部欄位
 function publicRecord_(d) {
   const o = JSON.parse(JSON.stringify(d));
-  delete o.payLog; delete o.clientId; delete o.paidBy;
+  delete o.payLog; delete o.clientId; delete o.paidBy; delete o.cardBy;
   return o;
 }
 
@@ -321,7 +325,9 @@ function findRefs_(phone, name) {
   const fails = Number(cache.get(key) || 0);
   if (fails >= MAX_FAILS) return { ok: false, error: "locked" };
   if (digits_(phone).length < 7 || !norm(name)) return { ok: false, error: "not-found" };
-  const hits = listRows_().filter(d => phoneMatch_(d.contact && d.contact.phone, phone) && norm(d.contact && d.contact.name) === norm(name))
+  // 姓名：聯絡人、點燈的人、供齋的人、超渡的陽世報恩人，任何一個對上都算（不分大小寫、空格）
+  const names = d => [d.contact && d.contact.name, ...(d.lamps || []).map(p => p.name), ...(d.meals || []).map(m => m.name), ...(d.chaodu || []).map(c => c.sponsor)];
+  const hits = listRows_().filter(d => phoneMatch_(d.contact && d.contact.phone, phone) && names(d).some(n => n && norm(n) === norm(name)))
     .map(d => ({ ref: d.ref, form: d.form, eventId: d.eventId || null, formTitle: d.formTitle || "", lampYear: d.lampYear || null,
                  submittedAt: d.submittedAt, paid: !!d.paid, cancelled: !!d.cancelled }))
     .sort((a, b) => String(b.submittedAt).localeCompare(String(a.submittedAt)));
@@ -361,6 +367,15 @@ function setPaid_(me, ref, paid) {
   f.sh.getRange(f.row, C.paid, 1, 3).setValues([[paid, paid ? now : "", paid ? me.name : ""]]);
   addLog_(f, { action: paid ? "paid" : "unpaid", by: me.name, byId: me.id, at: now.toISOString(), amount: amount });
   return { ok: true, record: { paid: paid, paidAt: paid ? now.toISOString() : null, paidBy: paid ? me.name : null, paidById: paid ? me.id : null, payLog: f.rec.payLog } };
+}
+// 發點燈卡：只有已繳清的點燈報名可以標記；紀錄在處理紀錄裡
+function setCard_(me, ref, given) {
+  const f = findRow_(ref);
+  if (!f) return { ok: false, error: "not-found" };
+  if (given && (f.rec.cancelled || !f.rec.paid || f.rec.form !== "lamp")) return { ok: false, error: "unpaid" };
+  const at = new Date().toISOString();
+  addLog_(f, { action: given ? "card" : "uncard", by: me.name, byId: me.id, at: at });
+  return { ok: true, record: { cardAt: given ? at : null, cardBy: given ? me.name : null, payLog: f.rec.payLog } };
 }
 // 取消報名會把燈位放出來；恢復時重新分配（原位還空著就用原位）
 function setCancelled_(me, ref, cancelled) {

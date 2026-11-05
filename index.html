@@ -421,10 +421,10 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
   <main id="findref" hidden>
     <section class="panel" style="margin-top:22px">
       <h2 data-en="Find my registration number">找回報名編號</h2>
-      <p class="lead" data-en="Enter the phone number and the contact person's name you used when you registered.">請輸入報名時填的電話，和聯絡人姓名（要和報名時寫的一樣）。</p>
+      <p class="lead" data-en="Enter the phone number you registered with and the name of anyone on the form, written the same way as when you registered.">請輸入報名時填的電話，和報名表上任何一位的姓名（要和報名時寫的一樣）。</p>
       <div class="field"><label for="frPhone" data-en="Phone number">電話</label>
         <input id="frPhone" type="tel" inputmode="tel" autocomplete="tel"></div>
-      <div class="field"><label for="frName" data-en="Contact person's name">聯絡人姓名</label>
+      <div class="field"><label for="frName" data-en="Name">姓名</label>
         <input id="frName" type="text" autocomplete="name"></div>
       <p class="lkerr" id="frErr" role="alert"></p>
       <div id="frList" class="frlist"></div>
@@ -1244,12 +1244,12 @@ $("frBack").addEventListener("click", ()=>{ show("lookup"); });
 $("frGo").addEventListener("click", async ()=>{
   const phone=$("frPhone").value.trim(), name=$("frName").value.trim();
   $("frList").innerHTML="";
-  if(phone.replace(/\D/g,"").length<7 || !name){ $("frErr").textContent=t("請輸入電話和聯絡人姓名。","Please enter the phone number and the contact person's name."); return; }
+  if(phone.replace(/\D/g,"").length<7 || !name){ $("frErr").textContent=t("請輸入電話和姓名。","Please enter the phone number and a name."); return; }
   const b=$("frGo"); b.disabled=true; $("frErr").textContent="";
   let j; try{ j=await apiGet({action:"findRefs", phone, name}); }catch(e){ j={ok:false,error:"network"}; }
   b.disabled=false;
   if(!j.ok){ $("frErr").textContent = j.error==="not-found"
-      ? t(`找不到。請確認電話和聯絡人姓名跟報名時寫的一樣，或打電話到堂裡：${CONFIG.phone}`,`Nothing found. Please check that the phone number and name match what you entered when registering, or call the temple: ${CONFIG.phone}`)
+      ? t(`找不到。請確認電話和姓名跟報名時寫的一樣，或打電話到堂裡：${CONFIG.phone}`,`Nothing found. Please check that the phone number and name match what you entered when registering, or call the temple: ${CONFIG.phone}`)
       : ERR_MSG(j.error); return; }
   FR_PHONE=phone;
   $("frList").innerHTML = `<p class="lead" style="margin:0">${t(`找到 ${j.refs.length} 筆報名，請記下報名編號：`,`Found ${j.refs.length}. Please write down your registration number:`)}</p>` + j.refs.map(r=>

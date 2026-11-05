@@ -143,6 +143,8 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 2px}
 .btn.del{background:var(--surface);border-color:var(--red);color:var(--red)}
 .urow .reset input{flex:1;min-height:2.6rem;padding:6px 10px;border:1.5px solid var(--line);border-radius:8px}
 .paidby{font-size:.85rem;color:var(--muted)}
+.btn.cardb{background:#7A5C1E;color:#fff}
+.cardok{font-weight:700;color:var(--ok)}
 details.log{font-size:.85rem;color:var(--muted)}
 details.log summary{cursor:pointer}
 details.log li{margin:2px 0}
@@ -348,6 +350,7 @@ details.log li{margin:2px 0}
           <button type="button" data-paid="unpaid" aria-pressed="false">未繳費</button>
           <button type="button" data-paid="paid" aria-pressed="false">已繳清</button>
           <button type="button" data-paid="void" aria-pressed="false">已取消</button>
+          <button type="button" data-paid="nocard" aria-pressed="false">未領卡</button>
         </div>
       </div>
       <div class="subtabs" id="subtabs" role="group" aria-label="項目篩選" hidden></div>
@@ -400,6 +403,7 @@ const API = {
   async list(){ return okOrThrow(await apiGet({action:"list", ...auth()})).rows; },
   // 收款、取消、分配燈位：後端會記錄經手人和時間
   async setPaid(ref, paid){ return okOrThrow(await apiPost({action:"setPaid", ...auth(), ref, paid})).record; },
+  async setCard(ref, given){ return okOrThrow(await apiPost({action:"setCard", ...auth(), ref, given})).record; },
   async setCancelled(ref, cancelled){ return okOrThrow(await apiPost({action:"setCancelled", ...auth(), ref, cancelled})).record; },
   async assignSeats(ref){ return okOrThrow(await apiPost({action:"assignSeats", ...auth(), ref})).record; },
   async users(){ return (await apiGet({action:"users"})).users; },   // 登入名單：只有名字，不含 PIN
@@ -499,7 +503,7 @@ function printURL(r){
   const base = /\.html$/.test(location.pathname) ? "index.html" : "./";
   return `${base}?print=${encodeURIComponent(r.ref)}&tel=${encodeURIComponent(digits(r.contact.phone))}&auto=1`;
 }
-const LOG_TEXT = l => ({paid:`標記已繳清（${money(l.amount)}）`, unpaid:"改回未繳費", cancel:"取消報名", restore:"恢復報名", seat:"分配候補燈位", edit:`信眾自己修改（應繳 ${money(l.amount)}）`}[l.action]||l.action);
+const LOG_TEXT = l => ({paid:`標記已繳清（${money(l.amount)}）`, unpaid:"改回未繳費", cancel:"取消報名", restore:"恢復報名", seat:"分配候補燈位", card:"發點燈卡", uncard:"改回未領點燈卡", edit:`信眾自己修改（應繳 ${money(l.amount)}）`}[l.action]||l.action);
 const hasWait = r => (r.lamps||[]).some(p=>Object.values(p.seats||{}).some(v=>!v));
 function cardHTML(r, m){
   const q=F.q, paid=!!r.paid, void_=!!r.cancelled;
@@ -519,19 +523,25 @@ function cardHTML(r, m){
     const k=confirming.kind;
     const msg = k==="pay" ? `確定已收到現金 ${money(total)}？會記錄為「${esc(sess()?.name||"")}」經手。`
       : k==="unpay" ? `確定要把 ${esc(r.ref)} 改回「未繳費」？`
+      : k==="card" ? `確定已把點燈卡交給信眾？會記錄為「${esc(sess()?.name||"")}」經手。`
+      : k==="uncard" ? `確定要把 ${esc(r.ref)} 改回「未領點燈卡」？`
       : k==="void" ? `確定要取消 ${esc(r.ref)}？燈位會放出來給別人用。`
       : `確定要恢復 ${esc(r.ref)}？會重新分配燈位（原位還空著就用原位）。`;
     action = `<div class="confirm"><span>${msg}</span>
-      <button class="btn ${k==="pay"?"okb":"primary"} small" data-do="${k}" data-ref="${esc(r.ref)}" type="button">確定</button>
+      <button class="btn ${k==="pay"||k==="card"?"okb":"primary"} small" data-do="${k}" data-ref="${esc(r.ref)}" type="button">確定</button>
       <button class="btn ghost small" data-do="back" type="button">返回</button></div>`;
   }
   else if(void_) action = `<button class="btn ghost small" data-ask="restore" data-ref="${esc(r.ref)}" type="button">恢復報名</button>`;
+  else if(paid && r.form==="lamp") action = r.cardAt
+      ? `<span class="cardok">✓ 點燈卡已領 ${fmtDate(r.cardAt)}・${esc(r.cardBy||"")}</span>`
+      : `<button class="btn cardb" data-ask="card" data-ref="${esc(r.ref)}" type="button">發點燈卡：標記已領</button>`;
   else action = paid ? `<button class="linkbtn" data-ask="unpay" data-ref="${esc(r.ref)}" type="button">改回未繳費</button>`
                      : `<button class="btn okb" data-ask="pay" data-ref="${esc(r.ref)}" type="button">收款：標記已繳清</button>`;
   const tools = `<div class="tools">
       <a class="linkbtn" href="${printURL(r)}" target="_blank" rel="noopener">列印報名表</a>
       ${!void_&&r.form==="lamp"&&hasWait(r)?`<button class="linkbtn" data-seat="${esc(r.ref)}" type="button">分配候補燈位</button>`:""}
       ${!void_&&!paid&&!(confirming&&confirming.ref===r.ref)?`<button class="linkbtn" data-ask="void" data-ref="${esc(r.ref)}" type="button">取消報名</button>`:""}
+      ${paid&&!void_&&r.form==="lamp"&&!(confirming&&confirming.ref===r.ref)?(r.cardAt?`<button class="linkbtn" data-ask="uncard" data-ref="${esc(r.ref)}" type="button">改回未領點燈卡</button>`:`<button class="linkbtn" data-ask="unpay" data-ref="${esc(r.ref)}" type="button">改回未繳費</button>`):""}
     </div>`;
   const status = void_ ? `<span class="status void">已取消</span>` : `<span class="status ${paid?"paid":"unpaid"}">${paid?`已繳清 ${r.paidAt?fmtDate(r.paidAt):""}`:"待繳費"}</span>`;
   return `<article class="card ${void_?"void":paid?"paid":"unpaid"}">
@@ -547,7 +557,8 @@ function cardHTML(r, m){
 }
 function render(){
   const res = ROWS.map(r=>[r,match(r,F.q)]).filter(([r,m])=>m
-      && (F.paid==="void" ? r.cancelled : !r.cancelled && (F.paid==="all" || (F.paid==="paid")===!!r.paid))
+      && (F.paid==="void" ? r.cancelled : F.paid==="nocard" ? !r.cancelled && r.paid && r.form==="lamp" && !r.cardAt
+          : !r.cancelled && (F.paid==="all" || (F.paid==="paid")===!!r.paid))
       && inTab(r,F.form) && hasItem(r,F.item))
     .sort((a,b)=>b[0].submittedAt.localeCompare(a[0].submittedAt));
   const unpaid = res.filter(([r])=>!r.paid);
@@ -585,12 +596,13 @@ $("list").addEventListener("click", async e=>{
   try{
     const rec = kind==="pay"||kind==="unpay" ? await API.setPaid(ref, kind==="pay")
       : kind==="void"||kind==="restore" ? await API.setCancelled(ref, kind==="void")
+      : kind==="card"||kind==="uncard" ? await API.setCard(ref, kind==="card")
       : await API.assignSeats(ref);
     const r=ROWS.find(x=>x.ref===ref); Object.assign(r, rec); confirming=null; render();
     if(kind==="seat" && hasWait(r)) alert("目前還是沒有空的燈位，這幾盞仍是候補。");
   }catch(err){
     btn.disabled=false; btn.textContent="確定";
-    const box=btn.closest(".confirm"); const msg = err.message==="paid" ? "已繳費的報名不能取消，請先改回未繳費。" : "網路有問題，還沒存好。請再按一次。";
+    const box=btn.closest(".confirm"); const msg = err.message==="paid" ? "已繳費的報名不能取消，請先改回未繳費。" : err.message==="unpaid" ? "還沒繳費，不能發點燈卡。請先收款。" : "網路有問題，還沒存好。請再按一次。";
     if(box) box.querySelector("span").textContent=msg; else alert(msg);
   }
 });
