@@ -188,6 +188,8 @@ details.log li{margin:2px 0}
 .rt{width:100%;border-collapse:collapse;font-size:.95rem}
 .rt th,.rt td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
 .rt th{background:var(--gold-soft);font-size:.85rem;white-space:nowrap}
+.rt td.hot{color:var(--red)} .rt td.yrs{font-size:.85rem;font-variant-numeric:tabular-nums}
+.sh-note{font-size:.82rem;color:var(--muted);margin:8px 0 0}
 .rt td.num,.rt th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .rt td.c{text-align:center;white-space:nowrap}
 .rt td.nm{font-weight:700;font-size:1.05rem;white-space:nowrap}
@@ -471,6 +473,26 @@ const ganzhi = y => "甲乙丙丁戊己庚辛壬癸"[((y-4)%10+10)%10] + "子丑
 const curYear = () => Number((SETTINGS.lamp&&SETTINGS.lamp.year)||2027);
 const recYear = r => Number(r.lampYear||curYear());
 const yearTitle = y => `${y} ${ganzhi(y)}年 ${CONFIG.lampTitle}`;
+/* ===== 流年太歲：依年份自動算（規則見專案文件「流年太歲與神煞查法」） ===== */
+const BRANCH="子丑寅卯辰巳午未申酉戌亥", ZODIACS="鼠牛虎兔龍蛇馬羊猴雞狗豬";
+// 十二神煞：從當年生肖（太歲）往後順數；第二個值是常見的制改項目
+const TS_STARS=[["太歲","安太歲"],["太陽",""],["喪門","制喪門"],["太陰",""],["五鬼、官符","制五鬼"],["死符","制死符"],
+  ["歲破","安太歲"],["龍德",""],["白虎","制白虎"],["福德",""],["天狗、吊客","制天狗"],["病符","制病符"]];
+// 六十甲子值年太歲星君，從甲子年（1984）起
+const TS_GENERALS="金辨陳材耿章沈興趙達郭燦王濟李素劉旺康志施廣任保郭嘉汪文魯先龍仲董德鄭但陸明魏仁方傑蔣崇白敏封濟鄒鐺傅佑鄔桓范寧彭泰徐單章詞楊仙管仲唐傑姜武謝太盧秘楊信賀諤皮時李誠吳遂文哲繆丙徐浩程寶倪秘葉堅丘德朱得張朝萬清辛亞楊彥黎卿傅黨毛梓石政洪充虞程";
+const tsGeneral = y => TS_GENERALS.substr((((y-1984)%60+60)%60)*2, 2) + "大將軍";
+// 生肖（0＝鼠）和當年太歲的關係：值、沖、刑、害、破
+function tsRel(year, zi){
+  const y=((year-4)%12+12)%12, a=BRANCH[y], b=BRANCH[zi], d=((zi-y)%12+12)%12, r=[];
+  const pair = list => y!==zi && list.some(s=>s.includes(a)&&s.includes(b));
+  if(d===0) r.push("值"); if(d===6) r.push("沖");
+  if(pair(["寅巳申","丑戌未","子卯"]) || (y===zi && "辰午酉亥".includes(a))) r.push("刑");
+  if(pair(["子未","丑午","寅巳","卯辰","申亥","酉戌"])) r.push("害");
+  if(pair(["子酉","丑辰","寅亥","卯午","巳申","未戌"])) r.push("破");
+  return r;
+}
+const tsStar = (year, zi) => TS_STARS[((zi-(((year-4)%12+12)%12))%12+12)%12];
+const tsRelText = r => r.includes("值") ? "值太歲（本命年）" + (r.includes("刑")?"、自刑":"") : r.length ? r.join("、")+"太歲" : "";
 function formName(r){ return r.form==="lamp" ? yearTitle(recYear(r)) : (SETTINGS.events.find(e=>e.id===r.eventId)||{name:r.formTitle||"法會"}).name; }
 // 列印報名表：打開報名頁的列印畫面（跟信眾看到的一樣）
 function printURL(r){
@@ -717,6 +739,7 @@ const RKINDS = [
   ["chaodu","超渡牌位清單","依超渡對象分類"],
   ["meal","供齋名單","供齋的人和功德金"],
   ["money","收款總表","應收、已收、誰經手"],
+  ["taisui","流年太歲表","各生肖犯太歲、制改"],
 ];
 const R = {kind:"lamp", scope:"", type:"all", paidOnly:false, date:"", sort:"seat", year:0};
 const lampYears = () => [...new Set([curYear(), ...ROWS.filter(r=>r.form==="lamp").map(recYear)])].sort((a,b)=>b-a);
@@ -861,12 +884,31 @@ function sheetMoney(rs){
   const sum = `<span>報名 <b>${rs.length}</b> 筆</span><span>應收 <b>${money(sumAmt(rs))}</b></span><span>已收 <b>${money(sumAmt(paid))}</b>（${paid.length} 筆）</span><span>未收 <b class="unp">${money(sumAmt(unpaid))}</b>（${unpaid.length} 筆）</span>`;
   return {title:"收款總表", sum, body: iSec + bySec + dSec};
 }
+// 流年太歲表：十二生肖一覽＋已報名但犯太歲、還沒點太歲燈的人
+function sheetTaisui(){
+  const Y=R.year, bornYears = zi => { const a=[]; for(let y=Y; y>Y-96; y--) if(((y-4)%12+12)%12===zi) a.unshift(y); return a; };
+  const rows=[...ZODIACS].map((z,zi)=>{ const rel=tsRel(Y,zi), [star,fix]=tsStar(Y,zi), need=rel.length>0;
+    const advice = need ? "安太歲（點太歲燈）" + (fix && fix!=="安太歲" ? "、"+fix : "") : fix || "—";
+    return [[`<b>${z}</b>`,"c"+(need?" hot":"")], [bornYears(zi).join("、"),"yrs"], [star,"c nw"], [need?`<b>${tsRelText(rel)}</b>`:"—", need?"hot":""], [need?`<b>${advice}</b>`:advice, need?"hot":""]]; });
+  const need=[...ZODIACS].map((z,zi)=>[z,tsRel(Y,zi)]).filter(x=>x[1].length);
+  const sum = `<span>要安太歲：${need.map(([z,r])=>`<b>${z}</b>（${r.includes("值")?"值":r.join("、")}）`).join("　")}</span>`;
+  // 已報名的人：今年度點燈、犯太歲、但沒有點太歲燈
+  let miss=[];
+  if(Y===curYear()) ROWS.filter(r=>!r.cancelled && r.form==="lamp" && recYear(r)===Y).forEach(r=>(r.lamps||[]).forEach(p=>{
+    const zi=ZODIACS.indexOf(p.zodiac); if(zi<0 || !tsRel(Y,zi).length || (p.lampTypes||[]).includes("太歲燈")) return;
+    miss.push([esc(p.name), [esc(p.zodiac),"c"], tsRelText(tsRel(Y,zi)), [esc(r.ref),"mono"], esc(r.contact.name)+" "+esc(r.contact.phone)]); }));
+  const missSec = Y===curYear() ? `<div class="rsec"><h3>已報名、犯太歲但沒點太歲燈<small>共 ${miss.length} 位，可以打電話提醒</small></h3>${table(["姓名",["生肖","c"],"與太歲","報名編號","聯絡人"], miss)}</div>` : "";
+  return {title:`流年太歲表・${Y} ${ganzhi(Y)}年`, sum,
+    body:`<div class="rsec">${table([["生肖","c"],"出生年（農曆）",["流年神煞","c"],"與太歲","建議"], rows)}
+      <p class="sh-note">依傳統「流年十二神煞」順排：一太歲、二太陽、三喪門、四太陰、五官符、六死符、七歲破、八龍德、九白虎、十福德、十一吊客、十二病符。各宮廟做法略有不同，以堂裡師父的指示為準。出生年以農曆新年為界，國曆 1、2 月出生的要先換成農曆年。</p></div>${missSec}`};
+}
 function renderReport(){
   // 控制項
   if(!kindsShown().some(([k])=>k===R.kind)) R.kind="lamp";
-  const yrs = lampYears(); if(!yrs.includes(R.year)) R.year = curYear();
+  const TS = R.kind==="taisui";
+  const yrs = TS ? [curYear(), curYear()+1, curYear()+2] : lampYears(); if(!yrs.includes(R.year)) R.year = curYear();
   const lampInScope = R.kind==="lamp" || (R.kind==="money" && (R.scope==="lamp"||R.scope==="all"));
-  $("rYearWrap").hidden = !(lampInScope && yrs.length>1);
+  $("rYearWrap").hidden = !(TS || (lampInScope && yrs.length>1));
   $("rYear").innerHTML = yrs.map(y=>`<button type="button" data-ry="${y}" aria-pressed="${R.year===y}">${y} ${ganzhi(y)}年</button>`).join("");
   $("rKinds").innerHTML = kindsShown().map(([k,t,d])=>`<button type="button" data-rk="${k}" aria-pressed="${R.kind===k}"><b>${t}</b><small>${d}</small></button>`).join("");
   const scopes = rScopes();
@@ -878,14 +920,14 @@ function renderReport(){
   $("rSortWrap").hidden = R.kind!=="lamp";
   $("rSort").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.rsort===R.sort));
   $("rType").innerHTML = [["all","依燈種分開"],["sum","總表（一人一列）"],...LAMP_TYPES.map(x=>[x,x])].map(([v,t])=>`<button type="button" data-rt="${esc(v)}" aria-pressed="${R.type===v}">${esc(t)}</button>`).join("");
-  $("rPaidWrap").hidden = R.kind==="money";
+  $("rPaidWrap").hidden = R.kind==="money" || TS;
   $("rPaid").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", (b.dataset.rp==="paid")===R.paidOnly));
   $("rDateWrap").hidden = R.kind!=="money"; $("rDate").value = R.date;
   // 清單
   const rs = rRows();
-  const s = ({lamp:sheetLamp, lotus:sheetLotus, chaodu:sheetChaodu, meal:sheetMeal, money:sheetMoney})[R.kind](rs);
+  const s = ({lamp:sheetLamp, lotus:sheetLotus, chaodu:sheetChaodu, meal:sheetMeal, money:sheetMoney, taisui:sheetTaisui})[R.kind](rs);
   const now = new Date();
-  const sub = [R.kind==="lamp"?yearTitle(R.year):scopeName(R.scope), R.kind==="money"?"":(R.paidOnly?"只列已繳清":"含未繳費"), DEMO?"示範資料":""].filter(Boolean).map(esc).join("｜");
+  const sub = (TS ? [`值年太歲 ${tsGeneral(R.year)}`, DEMO?"示範資料":""] : [R.kind==="lamp"?yearTitle(R.year):scopeName(R.scope), R.kind==="money"?"":(R.paidOnly?"只列已繳清":"含未繳費"), DEMO?"示範資料":""]).filter(Boolean).map(esc).join("｜");
   $("sheet").innerHTML = `<div class="sh-head"><div class="sh-org">紐約花蓮慈惠堂</div><h2>${esc(s.title)}</h2><div class="sh-sub">${sub}</div></div>
     ${s.sum?`<div class="sh-sum">${s.sum}</div>`:""}${s.body}
     <div class="sh-foot">列印時間 ${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}・${esc(sess()?.name||"")}</div>`;

@@ -143,6 +143,9 @@ textarea{min-height:5rem;resize:vertical}
 .derived{display:flex;flex-wrap:wrap;gap:8px 18px;background:var(--gold-soft);border-radius:10px;padding:10px 14px;font-size:.95rem}
 .derived b{color:var(--gold)}
 .derived:empty{display:none}
+.derived .ts{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;color:var(--red);font-weight:700;border-top:1px dashed var(--line);padding-top:8px}
+.derived .ts .fillme{font-weight:700;color:var(--ink,inherit)}
+.derived .ts .tsok{color:var(--gold)}
 .fillme{font-size:.88rem;border:1.5px solid var(--line);background:var(--paper);border-radius:999px;padding:4px 12px;cursor:pointer}
 
 /* 底部按鈕 */
@@ -500,6 +503,25 @@ const ganzhi = y => "甲乙丙丁戊己庚辛壬癸"[((y-4)%10+10)%10] + "子丑
 const yearText = y => EN() ? `${y} (Year of the ${ZODIAC_EN[zodiacOf(y)]})` : `${y} ${ganzhi(y)}年`;
 const ageFor = L => L ? (isLampForm() ? lampYear() : curLunarYear) - L.y + 1 : "";
 const zodiacOf = y => ZODIAC[((y-4)%12+12)%12];
+// 生肖和當年太歲的關係：值、沖、刑、害、破（規則同後台「流年太歲表」）
+function tsRel(year, zi){
+  const BR="子丑寅卯辰巳午未申酉戌亥", y=((year-4)%12+12)%12, a=BR[y], b=BR[zi], d=((zi-y)%12+12)%12, r=[];
+  const pair = list => y!==zi && list.some(s=>s.includes(a)&&s.includes(b));
+  if(d===0) r.push("值"); if(d===6) r.push("沖");
+  if(pair(["寅巳申","丑戌未","子卯"]) || (y===zi && "辰午酉亥".includes(a))) r.push("刑");
+  if(pair(["子未","丑午","寅巳","卯辰","申亥","酉戌"])) r.push("害");
+  if(pair(["子酉","丑辰","寅亥","卯午","巳申","未戌"])) r.push("破");
+  return r;
+}
+// 點燈表單：犯太歲就提示，還沒勾太歲燈的給一顆「幫我勾選」
+function taisuiHint(p, L){
+  if(!isLampForm()) return "";
+  const Y=lampYear(), z=zodiacOf(L.y), r=tsRel(Y, ZODIAC.indexOf(z)); if(!r.length) return "";
+  const has = p.types && p.types.taisui;
+  const what = r.includes("值") ? t("值太歲（本命年）","is in its own Tai Sui year") : t(r.join("、")+"太歲","clashes with Tai Sui");
+  return `<span class="ts">${t(`${Y} 年屬${z}${what}，建議點太歲燈。`,`In ${Y}, the ${ZODIAC_EN[z]} ${what}. The Lamp of Annual Taisui is recommended.`)}${
+    has ? `<b class="tsok">${t("✓ 已勾選","✓ Selected")}</b>` : `<button class="fillme" type="button" data-taisui="${p.id}">${t("幫我勾選太歲燈","Add Lamp of Annual Taisui")}</button>`}</span>`;
+}
 const roc = y => y>1911 ? "民國"+(y-1911)+"年" : "民國前"+(1912-y)+"年";
 const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const uid = () => Math.random().toString(36).slice(2,9);
@@ -736,8 +758,8 @@ function updDerived(kind,id){
   const el=$("dv-"+id); if(!el) return;
   if(kind==="lamp"){ const p=find("lamps",id); const L=toLunar(p.birth);
     el.innerHTML = L ? (EN()
-      ? `<span>Zodiac <b>${zText(zodiacOf(L.y))}</b></span><span>Age in ${isLampForm()?lampYear():curLunarYear} <b>${ageFor(L)}</b></span>${p.birth.cal==="solar"?`<span>Lunar: ${lunarText(L)}</span>`:""}`
-      : `<span>生肖 <b>${zodiacOf(L.y)}</b></span><span>${isLampForm()?`${lampYear()} 年`:""} <b>${ageFor(L)}</b> 歲</span>${p.birth.cal==="solar"?`<span>農曆 ${lunarText(L)}</span>`:""}`) : "";
+      ? `<span>Zodiac <b>${zText(zodiacOf(L.y))}</b></span><span>Age in ${isLampForm()?lampYear():curLunarYear} <b>${ageFor(L)}</b></span>${p.birth.cal==="solar"?`<span>Lunar: ${lunarText(L)}</span>`:""}${taisuiHint(p,L)}`
+      : `<span>生肖 <b>${zodiacOf(L.y)}</b></span><span>${isLampForm()?`${lampYear()} 年`:""} <b>${ageFor(L)}</b> 歲</span>${p.birth.cal==="solar"?`<span>農曆 ${lunarText(L)}</span>`:""}${taisuiHint(p,L)}`) : "";
   } else { const p=find("souls",id); if(p.type!=="往生者"){el.innerHTML="";return}
     const b=toLunar(p.birth), d=toLunar(p.death);
     if(b&&d){ const a=d.y-b.y+1; const inp=document.querySelector(`[data-path="souls.${id}.age"]`);
@@ -771,6 +793,7 @@ document.addEventListener("click", e=>{
     const entries=document.querySelectorAll(".entry"); entries[entries.length-1]?.scrollIntoView({behavior:"smooth",block:"start"}); }
   if(t.dataset.del){ const [k,id]=t.dataset.del.split(":"); S[k]=S[k].filter(x=>x.id!==id); save(); render(); }
   if(t.dataset.fill){ find("lamps",t.dataset.fill).name=S.contact.name; save(); render(); }
+  if(t.dataset.taisui){ const p=find("lamps",t.dataset.taisui); p.types=p.types||{}; p.types.taisui=true; save(); render(); }
   if(t.dataset.fillsp){ find("souls",t.dataset.fillsp).sponsor=S.contact.name; save(); render(); }
   if(t.dataset.fillmeal){ find("meals",t.dataset.fillmeal).name=S.contact.name; save(); render(); }
   if(t.dataset.goto){ S.step=+t.dataset.goto; save(); render(); window.scrollTo({top:0}); }
