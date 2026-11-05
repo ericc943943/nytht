@@ -904,6 +904,20 @@ let CUR=null, CUR_MODE="new", LOOKUP_PHONE="";
 const fileTitle = r => `${r.form==="lamp" ? recYear(r)+"點燈報名表" : "法會報名表"}_${r.ref}_${String(r.contact&&r.contact.name||"").trim()}`.replace(/[\\/:*?"<>|\s]+/g,"");
 // 列印前先用「列印時的樣式」量一次上半部高度，決定收執聯放同一張還是下一張的底部。
 // 做法：把 @media print 裡的規則複製一份，前面加上 html.pmeasure，量完就拿掉。
+// iPhone／iPad（所有瀏覽器）和 Safari：列印時四邊都會自己留白、加上網址日期，
+// 不管網頁的 @page 設定。這些瀏覽器改成四邊固定留 0.6 吋，用剩下的空間排版。
+const WK = (()=>{ const u=navigator.userAgent||"", p=new URLSearchParams(location.search);
+  if(p.get("wk")==="1") return true; if(p.get("wk")==="0") return false;
+  return /iPad|iPhone|iPod/.test(u) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1)
+    || (/Safari\//.test(u) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/.test(u)); })();
+const PG = WK ? {first:9.8, page:9.8, min:6.4, stub:9.7} : {first:10.55, page:10.15, min:6.75, stub:10.1};
+if(WK){ document.documentElement.classList.add("wk");
+  const st=document.createElement("style");
+  st.textContent=`@page{margin:.6in} @page:first{margin:.6in}
+  @media print{ html.wk .wrap{padding:0!important} html.wk .regform{min-height:${PG.min}in}
+    html.wk .longform .regform,html.wk .tailfit .regform{min-height:0}
+    html.wk .longform .stubwrap{height:${PG.stub}in} }`;
+  document.head.appendChild(st); }
 let PM_READY=false;
 function preparePrintMeasure(){
   if(PM_READY) return; PM_READY=true;
@@ -911,8 +925,10 @@ function preparePrintMeasure(){
   for(const sh of document.styleSheets){ let rules; try{ rules=sh.cssRules; }catch(e){ continue; }
     for(const r of rules){ if(r.media && /print/.test(r.media.mediaText)){
       for(const x of r.cssRules){ if(!x.selectorText) continue;
-        out.push(x.selectorText.split(",").map(sel=>"html.pmeasure "+sel.trim().replace(/^(html|:root)(\.big)?/,"")).join(",")+"{"+x.style.cssText+"}"); } } } }
-  out.push("html.pmeasure .wrap{width:8.5in!important;max-width:none!important}");
+        out.push(x.selectorText.split(",").map(sel=>{ const m=sel.trim().match(/^(?:html|:root)((?:\.[\w-]+)*)\s*(.*)$/);
+          return m ? "html.pmeasure"+m[1]+" "+m[2] : "html.pmeasure "+sel.trim(); }).join(",")+"{"+x.style.cssText+"}"); } } } }
+  out.push(WK ? "html.pmeasure .wrap{width:7.3in!important;max-width:none!important;padding:0!important}"
+              : "html.pmeasure .wrap{width:8.5in!important;max-width:none!important}");
   const st=document.createElement("style"); st.textContent=out.join("\n"); document.head.appendChild(st);
 }
 function layoutForPrint(){
@@ -933,8 +949,8 @@ function layoutForPrint(){
   reg.style.minHeight="";
   html.classList.remove("pmeasure"); $("done").hidden=wasHidden;
   // 第一張可用約 10.55 吋（上方留白 0.45），之後每張約 10.15 吋
-  const FIRST=10.55, PAGE=10.15, SAFE=0.15;
-  if(need <= 6.75){ paper.classList.remove("longform"); return; }   // 一張紙放得下：收據在第一張最下面
+  const FIRST=PG.first, PAGE=PG.page, SAFE=0.15;
+  if(need <= PG.min){ paper.classList.remove("longform"); return; }   // 一張紙放得下：收據在第一張最下面
   let pageStart=0, cap=FIRST, pages=1;
   for(const [top,bottom] of atoms){
     if(bottom - pageStart > cap){ pageStart = top; cap = PAGE; pages++; } }
