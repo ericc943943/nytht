@@ -77,11 +77,12 @@ html[lang="en"] .slip-head .doc{letter-spacing:.03em;font-size:1.1rem}
 .chips li{background:var(--gold-soft);color:var(--ink);border-radius:999px;padding:4px 14px;font-size:.95rem}
 .tsbar{background:var(--red-soft);border-radius:12px;padding:10px 14px;font-size:.98rem;line-height:1.6}
 .tsbar b{color:var(--red)}
-.helper{border:1.5px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px;background:var(--surface)}
+.helper{display:flex;flex-direction:column;gap:12px}
+.helpcard{display:flex;flex-direction:column;gap:12px}
+.helpcard h2{margin:0}
 .helper h3{margin:0;font-size:1.1rem}
 .helper select{width:100%;min-height:3rem;font-size:1rem;border:1.5px solid var(--line);border-radius:10px;padding:0 10px;background:var(--surface);color:var(--ink)}
 .helper .hprow{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px}
-.helper .hprow.one{grid-template-columns:1fr}
 .helper .wish{display:flex;flex-direction:column;gap:8px}
 .helper .wish label{display:flex;gap:10px;align-items:center;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-size:1rem;cursor:pointer}
 .helper .wish input{width:1.3rem;height:1.3rem;flex:none}
@@ -369,9 +370,6 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
         <div class="lampprice" id="lampPrice"></div>
         <ul class="chips row" id="lampChips"></ul>
         <p class="desc" data-en="Light lamps to pray for your family's blessings and Tai Sui protection. Each person can have one or more lamps. Please have each person's birthday ready — either the lunar or the Western calendar is fine.">為家人點燈祈福、安奉太歲。每一位可以點一盞或多盞燈。請準備每位的生日，農曆或國曆都可以。</p>
-        <div class="tsbar" id="tsBar"></div>
-        <button class="btn ghost block" id="helpBtn" type="button" data-en="Which lamps should I light?">我需要點什麼燈？</button>
-        <div class="helper" id="helper" hidden></div>
         <button class="btn primary block" data-start="lamp" id="lampBtn" type="button">點燈報名</button>
         <p class="note" data-resume="lamp" hidden><span data-en="Your unfinished form has been saved. Press the button above to continue. ">您上次填到一半的資料還在，按上面的按鈕會接著填。</span><button class="linkbtn" data-clear="lamp" type="button" data-en="Start over">清除重填</button></p>
       </article>
@@ -388,6 +386,12 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
         <div class="legend" style="margin-top:6px" data-en="Ceremonies">法會場次</div>
         <div class="events" id="eventList"></div>
       </article>
+    </section>
+
+    <section class="formcard helpcard" id="helpCard" style="margin-bottom:14px">
+      <h2 data-en="Which lamps should I light?">我需要點什麼燈？</h2>
+      <div class="tsbar" id="tsBar"></div>
+      <div class="helper" id="helper"></div>
     </section>
 
     <section class="formcard lookupcard" style="margin-bottom:24px">
@@ -1323,17 +1327,16 @@ function renderTsBar(){
   $("tsBar").innerHTML = t(`<b>${Y} ${ganzhi(Y)}年犯太歲</b>：${L.map(([z,r])=>`屬<b>${z}</b>（${r.includes("值")?"本命年":r.join("、")+"太歲"}）`).join("、")}，建議點太歲燈。`,
     `<b>In ${Y}, these signs are in conflict with Tai Sui:</b> ${L.map(([z,r])=>`<b>${ZODIAC_EN[z]}</b> (${r.map(x=>REL_EN[x]).join(", ")})`).join(", ")}. The Lamp of Annual Taisui is recommended.`);
 }
-const HELP={cal:"solar", y:"", m:"", d:"", wish:{}};
+const HELP={y:"", m:"", d:"", wish:{}};
 // 小幫手：算出農曆出生年（國曆生日換成農曆；農曆只要年）
 function helpLunarYear(){
-  if(HELP.cal==="lunar") return HELP.y ? +HELP.y : null;
   if(!(HELP.y&&HELP.m&&HELP.d)) return null;
   const L=toLunar({cal:"solar", y:HELP.y, m:HELP.m, d:HELP.d});
   return L ? L.y : (+HELP.m>=3 ? +HELP.y : null);   // 農曆程式沒載入時：3 月以後出生的直接用國曆年
 }
 function renderHelper(){
   const Y=lampYear(), yrs=[]; for(let y=NOW_Y; y>=1920; y--) yrs.push(y);
-  const LY=helpLunarYear(), solar=HELP.cal==="solar";
+  const LY=helpLunarYear();
   const W=[["guangming",t("平安健康、一年順利","Peace, health and a smooth year")],["wenchang",t("讀書考試、升學、工作升遷","Studies, exams, school or promotion")],["caishen",t("事業順利、做生意、財運","Work, business and prosperity")]];
   let rec="";
   if(LY){ const z=zodiacOf(LY), r=tsRel(Y, ZODIAC.indexOf(z)), items=[];
@@ -1342,31 +1345,24 @@ function renderHelper(){
     if(HELP.wish.guangming || !(HELP.wish.wenchang||HELP.wish.caishen)) items.push([nm("guangming"), t("祈求平安健康、前途光明，每個人都適合點","For peace, health and a bright year — suitable for everyone")]);
     if(HELP.wish.wenchang) items.push([nm("wenchang"), t("祈求讀書考試、升學、工作升遷順利","For studies, exams and career advancement")]);
     if(HELP.wish.caishen) items.push([nm("caishen"), t("祈求事業順利、財源廣進","For success at work and prosperity")]);
-    const born = solar && LY!==+HELP.y ? t(`（國曆 ${HELP.m} 月 ${HELP.d} 日還沒過農曆年）`,` (born before Lunar New Year, so lunar year ${LY})`) : "";
+    const born = LY!==+HELP.y ? t(`（國曆 ${HELP.m} 月 ${HELP.d} 日還沒過農曆年）`,` (born before Lunar New Year, so lunar year ${LY})`) : "";
     rec = `<div class="rec"><div class="hint" style="margin-bottom:4px">${t(`農曆 ${LY} 年生，屬${z}`,`Lunar year ${LY}: ${ZODIAC_EN[z]}`)}${born}</div><b>${t(`屬${z}的您，建議點：`,`For you (${ZODIAC_EN[z]}), we suggest:`)}</b><ul>${items.map(([n,why])=>`<li><b>${esc(n)}</b>${t("：",": ")}${why}</li>`).join("")}</ul>
       ${r.length?"":`<div class="hint">${t(`屬${z}今年沒有犯太歲，不一定要點太歲燈。`,`Your sign does not conflict with Tai Sui this year, so the Taisui lamp is optional.`)}</div>`}
       <div class="hint">${t("以上僅供參考，可以依自己的心意多點或少點。每位家人可以分別看。","This is only a suggestion — choose whatever feels right. You can check for each family member.")}</div></div>
       ${SETTINGS.lamp.status==="open"?`<button class="btn primary block" data-start="lamp" type="button">${t("開始點燈報名","Start lamp registration")}</button>`:""}`;
   }
-  $("helper").innerHTML = `<h3>${t("我需要點什麼燈？","Which lamps should I light?")}</h3>
-    <div><b>${t("1. 生日","1. Date of birth")}</b></div>
-    <div class="seg" role="radiogroup" aria-label="${t("國曆或農曆","Calendar")}">
-      <label><input type="radio" name="hpCal" value="solar"${solar?" checked":""}>${t("國曆","Western calendar")}</label>
-      <label><input type="radio" name="hpCal" value="lunar"${solar?"":" checked"}>${t("農曆","Lunar calendar")}</label></div>
-    <div class="hprow${solar?"":" one"}">
-      <select id="hpYear" aria-label="${t("年","Year")}"><option value="">${t("年","Year")}</option>${yrs.map(y=>`<option value="${y}"${String(y)===HELP.y?" selected":""}>${y}${solar?"":t(`（${zodiacOf(y)}）`,` (${ZODIAC_EN[zodiacOf(y)]})`)}</option>`).join("")}</select>
-      ${solar?`<select id="hpMonth" aria-label="${t("月","Month")}"><option value="">${t("月","Month")}</option>${Array.from({length:12},(_,i)=>`<option value="${i+1}"${String(i+1)===HELP.m?" selected":""}>${EN()?MONTH_EN[i]:(i+1)+"月"}</option>`).join("")}</select>
-      <select id="hpDay" aria-label="${t("日","Day")}"><option value="">${t("日","Day")}</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}"${String(i+1)===HELP.d?" selected":""}>${EN()?i+1:(i+1)+"日"}</option>`).join("")}</select>`:""}
+  $("helper").innerHTML = `    <div><b>${t("1. 生日（國曆）","1. Date of birth")}</b></div>
+    <div class="hprow">
+      <select id="hpYear" aria-label="${t("年","Year")}"><option value="">${t("年","Year")}</option>${yrs.map(y=>`<option value="${y}"${String(y)===HELP.y?" selected":""}>${y}</option>`).join("")}</select>
+      <select id="hpMonth" aria-label="${t("月","Month")}"><option value="">${t("月","Month")}</option>${Array.from({length:12},(_,i)=>`<option value="${i+1}"${String(i+1)===HELP.m?" selected":""}>${EN()?MONTH_EN[i]:(i+1)+"月"}</option>`).join("")}</select>
+      <select id="hpDay" aria-label="${t("日","Day")}"><option value="">${t("日","Day")}</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}"${String(i+1)===HELP.d?" selected":""}>${EN()?i+1:(i+1)+"日"}</option>`).join("")}</select>
     </div>
-    ${solar?"":`<div class="hint">${t("農曆只要選年就好。","For the lunar calendar, just choose the year.")}</div>`}
     <div><b>${t("2. 今年想祈求什麼？（可複選）","2. What would you like to pray for? (choose any)")}</b></div>
     <div class="wish">${W.map(([k,lab])=>`<label><input type="checkbox" data-wish="${k}"${HELP.wish[k]?" checked":""}>${lab}</label>`).join("")}</div>
     ${rec}`;
 }
-$("helpBtn").addEventListener("click", ()=>{ const h=$("helper"); h.hidden=!h.hidden; if(!h.hidden){ renderHelper(); h.scrollIntoView({behavior:"smooth",block:"start"}); } });
 $("helper").addEventListener("change", e=>{ const id=e.target.id;
   if(id==="hpYear") HELP.y=e.target.value; else if(id==="hpMonth") HELP.m=e.target.value; else if(id==="hpDay") HELP.d=e.target.value;
-  else if(e.target.name==="hpCal") HELP.cal=e.target.value;
   else if(e.target.dataset.wish) HELP.wish[e.target.dataset.wish]=e.target.checked;
   renderHelper(); });
 function renderStatic(){
@@ -1375,7 +1371,7 @@ function renderStatic(){
   $("lampPrice").textContent = same ? t(`每盞 $${TT[0].price}`,`$${TT[0].price} per lamp`) : "";
   $("lampChips").innerHTML=TT.map(x=>`<li>${EN()?esc(x.en):x.short||x.name}${!same&&x.price?` $${x.price}`:""}</li>`).join("");
   $("lampChips").classList.toggle("row", !EN());   // 英文名稱較長，改成自動換行
-  renderTsBar(); if(!$("helper").hidden) renderHelper();
+  renderTsBar(); renderHelper();
   $("pChaodu").textContent=t(`每牌位 $${CONFIG.prices.chaodu}`,`$${CONFIG.prices.chaodu} each`); $("pLotus").textContent=t(`每位 $${CONFIG.prices.lamp}`,`$${CONFIG.prices.lamp} per person`);
 }
 // 切換語言：靜態文字用 data-en，其餘重畫目前的畫面
