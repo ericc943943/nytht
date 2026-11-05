@@ -226,7 +226,18 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
 .myslip .btn{min-height:2.6rem;padding:0 16px;font-size:.95rem}
 .left{font-weight:700;color:var(--err)}
 .lkerr{color:var(--err);font-weight:500;margin:0;min-height:1.4em}
+.pdfmodal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:16px;z-index:50}
+.pdfmodal[hidden]{display:none}
+html.pmeasure.pdfmode .pdfmodal:not([hidden]){display:grid!important}
+.pdfbox{background:var(--surface);color:var(--ink);border-radius:16px;padding:22px 20px;width:min(440px,100%);box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.pdfbox p{margin:0 0 16px;font-size:1.1rem;font-weight:500;line-height:1.5}
+.pdfbox .btn{width:100%;margin-top:10px;text-decoration:none;color:inherit}
+.pdfbox .btn.primary{color:var(--red-ink)}
+.pdfbox .btn[hidden]{display:none}
+.pdfbusy{display:inline-block;width:1.1em;height:1.1em;border:3px solid var(--line);border-top-color:var(--red);border-radius:50%;animation:spin 1s linear infinite;vertical-align:-3px;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
 @media print{
+  .pdfmodal{display:none!important}
   /* 每一張四邊都留 0.6 吋：iPhone／iPad／Safari 列印時本來就固定留這麼多，統一之後在哪裡印都一樣 */
   @page{size:letter;margin:.6in}
   html,:root.big{font-size:12pt}
@@ -394,6 +405,14 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
     <div class="nav">
       <button class="btn primary" id="printBtn" type="button" data-en="Print form">列印報名表</button>
       <button class="btn ghost" id="editBtn" type="button" data-en="Make changes" hidden>修改報名</button>
+    </div>
+    <div class="pdfmodal" id="pdfModal" hidden role="dialog" aria-modal="true" aria-labelledby="pdfMsg">
+      <div class="pdfbox">
+        <p id="pdfMsg"></p>
+        <button class="btn primary" id="pdfPrint" type="button" hidden></button>
+        <a class="btn ghost" id="pdfSave" hidden></a>
+        <button class="btn ghost" id="pdfClose" type="button"></button>
+      </div>
     </div>
     <div class="nav" style="margin-top:12px">
       <button class="btn ghost" id="againBtn" type="button" data-en="Fill in another form">再填一份</button>
@@ -965,6 +984,104 @@ function layoutForPrint(){
   paper.classList.add("longform");                 // 放不下：收據換到下一張最下面
 }
 window.addEventListener("beforeprint", layoutForPrint);
+/* ---------- 列印：做成 PDF ----------
+   不同手機、平板、電腦的瀏覽器列印時，留白和放大比例都不一樣（iPhone 會整份放大約兩成）。
+   所以按「列印報名表」時，網頁先照 Letter 紙排好、做成 PDF，印出來在哪裡都一模一樣。
+   版面：四邊留 0.6 吋；收執聯的剪線固定在離上緣約 7 吋。報名表太長就分頁（同一個人不會被切開），
+   最後一張放不下收執聯時，收執聯放到下一張，位置一樣。 */
+const PDF_LIBS = ["https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",
+                  "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"];
+const ANDROID = /Android/i.test(navigator.userAgent||"");
+const DESK_SAFARI = !IOS && /Safari\//.test(navigator.userAgent||"") && !/Chrome|Chromium|Edg|OPR|Firefox/.test(navigator.userAgent||"");
+function loadScript(src){ return new Promise((ok,bad)=>{ const s=document.createElement("script"); s.src=src; s.onload=ok; s.onerror=()=>bad(new Error("load "+src)); document.head.appendChild(s); }); }
+async function ensurePdfLibs(){
+  if(!window.html2canvas) await loadScript(PDF_LIBS[0]);
+  if(!(window.jspdf && window.jspdf.jsPDF)) await loadScript(PDF_LIBS[1]);
+}
+const PDFM = {M:0.6, W:7.3, CAP:9.8, FORM1:6.4};   // 留白、內容寬、每張可用高度、第一張報名表最多高度（之後就是剪線）
+async function buildPDF(){
+  await ensurePdfLibs();
+  try{ if(document.fonts && document.fonts.ready) await document.fonts.ready; }catch(e){}
+  const paper=document.querySelector("#slip .paper"); if(!paper) throw new Error("no paper");
+  preparePrintMeasure();
+  const html=document.documentElement, wrap=document.querySelector(".wrap"), wasIos=html.classList.contains("ios"), wasHidden=$("done").hidden;
+  const reg=paper.querySelector(".regform"), sw=paper.querySelector(".stubwrap");
+  const cls=paper.className, tail=paper.style.getPropertyValue("--tail"), scrollY=window.scrollY;
+  html.classList.remove("ios"); paper.classList.remove("longform","tailfit"); paper.style.removeProperty("--tail");
+  $("done").hidden=false; html.classList.add("pmeasure"); html.classList.add("pdfmode");
+  wrap.style.setProperty("width",PDFM.W+"in","important"); wrap.style.setProperty("padding","0","important");
+  reg.style.minHeight="0";
+  try{
+    const IN=96, rb=reg.getBoundingClientRect(), need=rb.height/IN;
+    const atoms=[...reg.querySelectorAll(".f-head,.f-sec > h4,.f-sec > div:not(.f-person):not(.f-people),.f-person,.f-items li,.f-total,.f-temple")]
+      .map(el=>{ const b=el.getBoundingClientRect(); return [(b.top-rb.top)/IN,(b.bottom-rb.top)/IN]; }).sort((a,b)=>a[0]-b[0]);
+    // 換頁：每一塊放不下就整塊換到下一張
+    const starts=[0]; let start=0;
+    for(const [top,bottom] of atoms){ if(bottom-start > PDFM.CAP && top>start){ start=top; starts.push(top); } }
+    const lastUsed = need - starts[starts.length-1];
+    // 畫成圖片：解析度約 240 dpi，太長的時候降一點（手機的畫布有大小限制）
+    const SC = Math.max(1.2, Math.min(2.5, Math.sqrt(14e6/((PDFM.W*IN)*(need*IN)))));
+    const opt = {scale:SC, backgroundColor:"#ffffff", logging:false, useCORS:true, windowWidth:Math.ceil(PDFM.W*IN)+40};
+    const regC = await html2canvas(reg, opt);
+    const stubC = await html2canvas(sw, opt);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({unit:"in", format:"letter", orientation:"portrait", compress:true});
+    const pxPerIn = regC.width / PDFM.W;
+    starts.forEach((from,i)=>{
+      const to = i+1<starts.length ? starts[i+1] : need;
+      const sy=Math.round(from*pxPerIn), sh=Math.max(1,Math.round((to-from)*pxPerIn));
+      const c=document.createElement("canvas"); c.width=regC.width; c.height=sh;
+      const g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,sh); g.drawImage(regC,0,sy,regC.width,sh,0,0,regC.width,sh);
+      if(i>0) pdf.addPage("letter","portrait");
+      pdf.addImage(c.toDataURL("image/jpeg",0.92),"JPEG",PDFM.M,PDFM.M,PDFM.W,sh/pxPerIn);
+    });
+    if(lastUsed > PDFM.FORM1) pdf.addPage("letter","portrait");
+    const stubH = stubC.height/(stubC.width/PDFM.W);
+    pdf.addImage(stubC.toDataURL("image/jpeg",0.92),"JPEG",PDFM.M,PDFM.M+PDFM.FORM1,PDFM.W,stubH);
+    return pdf.output("blob");
+  } finally {
+    reg.style.minHeight=""; wrap.style.removeProperty("width"); wrap.style.removeProperty("padding");
+    html.classList.remove("pmeasure","pdfmode"); if(wasIos) html.classList.add("ios");
+    paper.className=cls; if(tail) paper.style.setProperty("--tail",tail);
+    $("done").hidden=wasHidden; window.scrollTo(0,scrollY);
+  }
+}
+let PDF_URL=null, PDF_FILE=null;
+function pdfModal(state){
+  const m=$("pdfModal"), msg=$("pdfMsg"), pr=$("pdfPrint"), sv=$("pdfSave"), cl=$("pdfClose");
+  m.hidden=false; cl.textContent=t("關閉","Close");
+  if(state==="busy"){ msg.innerHTML=`<span class="pdfbusy" aria-hidden="true"></span>${t("正在準備列印檔，請稍等…","Preparing the file to print…")}`; pr.hidden=true; sv.hidden=true; return; }
+  if(state==="error"){ msg.textContent=t("列印檔做不出來（可能是網路不穩）。請再按一次，或改用瀏覽器的列印。","Could not prepare the file (the connection may be unstable). Please try again, or use your browser's print."); pr.hidden=false; pr.textContent=t("用瀏覽器列印","Print with browser"); pr.dataset.mode="browser"; sv.hidden=true; return; }
+  msg.textContent = IOS ? t("列印檔做好了。按「列印」後，在出現的選單裡選「列印」。","Ready. Tap Print, then choose Print in the menu that appears.")
+                        : t("列印檔做好了。","The file is ready to print.");
+  pr.hidden=false; pr.textContent=t("列印","Print"); pr.dataset.mode="pdf";
+  sv.hidden=false; sv.textContent=t("存成 PDF 檔","Save as PDF"); sv.href=PDF_URL; sv.download=PDF_FILE.name;
+}
+async function printPDF(){
+  pdfModal("busy");
+  try{
+    const blob = await buildPDF();
+    if(PDF_URL) URL.revokeObjectURL(PDF_URL);
+    PDF_URL = URL.createObjectURL(blob);
+    PDF_FILE = new File([blob], (CUR?fileTitle(CUR):"報名表")+".pdf", {type:"application/pdf"});
+    window.__lastPdf = blob;
+    pdfModal("ready");
+  }catch(e){ console.error(e); pdfModal("error"); }
+}
+function closePdfModal(){ $("pdfModal").hidden=true; }
+$("pdfClose").addEventListener("click", closePdfModal);
+$("pdfModal").addEventListener("click", e=>{ if(e.target.id==="pdfModal") closePdfModal(); });
+$("pdfPrint").addEventListener("click", async ()=>{
+  if($("pdfPrint").dataset.mode==="browser"){ closePdfModal(); layoutForPrint(); window.print(); return; }
+  // iPhone／iPad、安卓：用分享選單（裡面有「列印」）；電腦：直接叫出列印
+  if((IOS||ANDROID) && navigator.canShare && navigator.canShare({files:[PDF_FILE]})){
+    try{ await navigator.share({files:[PDF_FILE], title:PDF_FILE.name}); }catch(e){} return; }
+  if(IOS || ANDROID || DESK_SAFARI){ window.open(PDF_URL, "_blank"); return; }
+  let f=document.getElementById("pdfFrame");
+  if(!f){ f=document.createElement("iframe"); f.id="pdfFrame"; f.style.cssText="position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0"; document.body.appendChild(f); }
+  f.onload=()=>{ try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){ window.open(PDF_URL,"_blank"); } };
+  f.src=PDF_URL;
+});
 function showRecord(r, mode){
   CUR=r; CUR_MODE=mode||CUR_MODE;
   $("slip").innerHTML = formHTML(r);
@@ -1045,7 +1162,7 @@ document.addEventListener("click", e=>{
   const sl=e.target.closest("[data-slip]"); if(sl){ const x=getSlips().find(y=>y.ref===sl.dataset.slip); if(x) openRecord(x.ref, x.phone, "view", x.rec); }
 });
 $("homeLink").addEventListener("click", e=>{ e.preventDefault(); refreshResume(); renderMySlips(); show("home"); });
-$("printBtn").addEventListener("click", ()=>{ layoutForPrint(); window.print(); });
+$("printBtn").addEventListener("click", ()=>printPDF());
 $("againBtn").addEventListener("click", ()=>{ const f=CUR?CUR.form:"lamp", ev=CUR?CUR.eventId:null; const k=f==="lamp"?"lamp":"fahui-"+ev;
   if(!isOpen(k)){ refreshResume(); renderMySlips(); show("home"); return; } S=load(k)||freshState(f==="lamp"?"lamp":"fahui",ev); show("form"); render(); });
 $("editBtn").addEventListener("click", ()=>{ if(!CUR) return; S=recordToState(CUR); S.editRef=CUR.ref; S.editPhone=LOOKUP_PHONE||CUR.contact.phone; S.step=0; show("form"); render(); });
@@ -1069,7 +1186,7 @@ renderEvents(); renderLampBtn(); renderMySlips();
 loadSettings().then(async ()=>{ renderStatic(); renderEvents(); renderLampBtn(); renderMySlips(); refreshResume();
   const q=new URLSearchParams(location.search);
   if(q.get("print")){ const j=await openRecord(q.get("print"), q.get("tel")||"", "view");
-    if(j && j.ok && q.get("auto")) setTimeout(()=>window.print(), 500);
+    if(j && j.ok && q.get("auto")) setTimeout(()=>printPDF(), 300);
     if(!j || !j.ok){ show("lookup"); $("lkRef").value=q.get("print"); $("lkErr").textContent=ERR_MSG(j&&j.error); }
     return; }
   if(q.has("lookup")){ show("lookup"); return; }
