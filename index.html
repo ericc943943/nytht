@@ -1329,8 +1329,10 @@ const REL_EN={值:"own year",沖:"clash",刑:"punishment",害:"harm",破:"break"
 function tsList(Y){ return ZODIAC.map((z,i)=>[z,tsRel(Y,i)]).filter(x=>x[1].length); }
 function renderTsBar(){
   const Y=lampYear(), L=tsList(Y);
-  $("tsBar").innerHTML = t(`<b>${Y} ${ganzhi(Y)}年犯太歲</b>：${L.map(([z,r])=>`屬<b>${z}</b>（${r.includes("值")?"本命年":r.join("、")+"太歲"}）`).join("、")}，建議點太歲燈。`,
-    `<b>In ${Y}, these signs are in conflict with Tai Sui:</b> ${L.map(([z,r])=>`<b>${ZODIAC_EN[z]}</b> (${r.map(x=>REL_EN[x]).join(", ")})`).join(", ")}. The Lamp of Annual Taisui is recommended.`);
+  const zh = L.map(([z,r])=>`<b>${z}</b>（${r.includes("值")?"本命年":r.join("、")+"太歲"}）`);
+  const en = L.map(([z,r])=>`<b>${ZODIAC_EN[z]}</b> (${r.map(x=>REL_EN[x]).join(", ")})`);
+  $("tsBar").innerHTML = t(`<b>${Y} ${ganzhi(Y)}年建議點燈的生肖：</b><br>${zh.join("、<br>")}`,
+    `<b>Signs advised to light the Taisui lamp in ${Y}:</b><br>${en.join(",<br>")}`);
 }
 const HELP={cal:"solar", y:"", m:"", d:"", leap:false, wish:{}, rec:[]};
 // 小幫手：算出農曆出生年（國曆生日換成農曆；農曆只要年）
