@@ -403,7 +403,8 @@ const API = {
 
 /* ================= 狀態 ================= */
 let ROWS = [], F = {q:"", paid:"all", form:"all", item:"all"}, confirming = null;
-const LAMP_TYPES = ["個人光明燈","太歲燈","五路財神燈","文昌燈"];
+const LAMP_TYPES = ["個人光明燈","文昌燈","太歲燈","五路財神燈"];   // 照燈種代碼 01、02、03、05
+const sortLamps = a => (a||[]).slice().sort((x,y)=>(LAMP_TYPES.indexOf(x)+99)%99-(LAMP_TYPES.indexOf(y)+99)%99);
 const FAHUI_ITEMS = ["超渡牌位","蓮花福慧燈","供齋"];
 // 「點燈」分頁只看目前的點燈年度；舊年度的在「全部」裡找得到，報表可以選年度
 const inTab = (r,tab) => tab==="all" || (tab==="lamp" ? r.form==="lamp" && recYear(r)===curYear() : r.form!=="lamp" && r.eventId===tab);
@@ -480,7 +481,7 @@ function cardHTML(r, m){
     return `<span class="chip${isLamp&&!s?" wl":""}">${esc(t)}${isLamp?`<span class="seat">${s?hl(seatLabel(s),q):"候補"}</span>`:""}</span>`; };
   const lampSec = (r.lamps||[]).length ? `<div class="sec${r.form==="lamp"?"":secDim("蓮花福慧燈")}"><h3>${r.form==="lamp"?"點燈":"蓮花福慧燈"}</h3>${r.lamps.map(p=>`
       <div class="person${LAMP_TYPES.includes(F.item)&&!(p.lampTypes||[]).includes(F.item)?" dim":""}"><span class="nm">${hl(p.name,q)}</span><span class="info">${p.gender?esc(p.gender)+"・":""}${esc(p.zodiac)}・${p.age_xu??""} 歲・${lunarText(p.birth)}</span>
-      ${r.form==="lamp"?`<div class="chips">${(p.lampTypes||[]).map(t=>seatChip(p,t)).join("")}</div>`:""}</div>`).join("")}</div>` : "";
+      ${r.form==="lamp"?`<div class="chips">${sortLamps(p.lampTypes).map(t=>seatChip(p,t)).join("")}</div>`:""}</div>`).join("")}</div>` : "";
   const soulSec = (r.chaodu||[]).length ? `<div class="sec${secDim("超渡牌位")}"><h3>超渡牌位</h3>${r.chaodu.map(c=>`
       <div class="person"><span class="nm">${c.type==="往生者"?`${esc(c.title)} ${hl(c.name,q)}`:hl(c.name||c.type,q)}</span><span class="info">陽世報恩人 ${hl(c.sponsor,q)}</span></div>`).join("")}</div>` : "";
   const mealSec = (r.meals||[]).length ? `<div class="sec${secDim("供齋")}"><h3>供齋</h3>${r.meals.map(x=>`

@@ -376,12 +376,13 @@ const CONFIG = {
     title: "啟點光明燈暨安奉太歲",
     titleEn: "Lamp Lighting & Tai Sui Blessing",
     year: 2027,   // 預設的點燈年度；正式使用時以後台「設定」為準
+    // 順序照燈種代碼：光明燈 01、文昌燈 02、太歲燈 03、財神燈 05（報名表、收執聯都照這個順序）
     // price：每盞金額（美元）；留 null 則不顯示金額。en／enDesc：英文介面用的名稱和說明
     types: [
       {k:"guangming", name:"個人光明燈", short:"光明燈", price:120, en:"Lamp of Blessing", enDesc:"For peace, good health and a bright year ahead"},
+      {k:"wenchang",  name:"文昌燈",     short:"文昌燈", price:120, en:"Lamp of Wenchang", enDesc:"Prays to Wenchang, the deity of learning, for studies, exams and career"},
       {k:"taisui",    name:"太歲燈",     short:"太歲燈", price:120, en:"Lamp of Annual Taisui", enDesc:"Tai Sui is the guardian deity of the year. Light this lamp for protection, especially if your zodiac sign clashes with Tai Sui this year"},
       {k:"caishen",   name:"五路財神燈", short:"財神燈", price:120, en:"Lamp of Wealth and Fortune", enDesc:"Prays to the Gods of Wealth for prosperity in work and business"},
-      {k:"wenchang",  name:"文昌燈",     short:"文昌燈", price:120, en:"Lamp of Wenchang", enDesc:"Prays to Wenchang, the deity of learning, for studies, exams and career"},
     ],
   },
   // 法會場次的預設值。正式使用時，開放哪些項目由後台「報名項目設定」決定，會蓋過這裡的設定。
@@ -781,6 +782,8 @@ async function submit(){
 /* ---------- 報名表（上半）＋收執聯（下半） ---------- */
 const money = n => n==null ? t("請洽堂裡","Please ask the temple") : "$"+Number(n).toLocaleString();
 const LAMP_BY_NAME = Object.fromEntries(CONFIG.lampForm.types.map(x=>[x.name,x]));
+const LAMP_ORDER = CONFIG.lampForm.types.map(x=>x.name);
+const sortLamps = a => (a||[]).slice().sort((x,y)=>(LAMP_ORDER.indexOf(x)+99)%99-(LAMP_ORDER.indexOf(y)+99)%99);
 const lampShort = n => { const x=LAMP_BY_NAME[n]; return x ? (EN()?`${x.en}（${x.short}）`:x.short) : n; };
 // 燈號直接顯示英文字母，例 G010512（燈號前面會寫燈的名稱）
 const SEAT_LABEL = {G:"G", W:"W", T:"T", C:"C"};
@@ -816,7 +819,7 @@ function formHTML(r){
   const persons = (r.lamps||[]).map(p=>`<div class="f-person">
       <div class="f-pn"><b>${esc(p.name)}</b>　<span class="f-sub">${[gText(p.gender), zText(p.zodiac), p.age_xu!=null?t(`${p.age_xu} 歲`,`age ${p.age_xu}`):""].filter(Boolean).join("・")}</span></div>
       <div class="f-sub">${esc(recBirth(p.birth))}</div>
-      ${isLamp?`<div class="f-pl">${(p.lampTypes||[]).map(tn=>`<span>${esc(lampShort(tn))} ${seatHTML(p.seats&&p.seats[tn])}</span>`).join("")}</div>`:""}
+      ${isLamp?`<div class="f-pl">${sortLamps(p.lampTypes).map(tn=>`<span>${esc(lampShort(tn))} ${seatHTML(p.seats&&p.seats[tn])}</span>`).join("")}</div>`:""}
     </div>`).join("");
   const souls = (r.chaodu||[]).map(c=>`<div class="f-person"><div class="f-pn"><b>${c.type==="往生者"?`${esc(c.title)} ${esc(c.name)}`:esc(c.name||soulText(c.type))}</b>　<span class="f-sub">${esc(soulText(c.type))}</span></div>
       <div class="f-sub">${[c.birth?t("生 ","Born ")+lunarText(recLunar(c.birth)):"", c.death?t("歿 ","Passed ")+lunarText(recLunar(c.death)):"", c.age!=null?t(`享年 ${c.age} 歲`,`age ${c.age}`):""].filter(Boolean).join("・")}${c.sponsor?`${t("　陽世報恩人：","　Registered by: ")}${esc(c.sponsor)}`:""}</div></div>`).join("");
@@ -841,7 +844,7 @@ function formHTML(r){
   </section>`;
   // 收執聯：繳費後義工簽名、撕下給信眾
   const stubList = isLamp
-    ? (r.lamps||[]).map(p=>`<li><b>${esc(p.name)}</b>　${(p.lampTypes||[]).map(tn=>`${esc(lampShort(tn))} ${seatHTML(p.seats&&p.seats[tn])}`).join("　")}</li>`).join("")
+    ? (r.lamps||[]).map(p=>`<li><b>${esc(p.name)}</b>　${sortLamps(p.lampTypes).map(tn=>`${esc(lampShort(tn))} ${seatHTML(p.seats&&p.seats[tn])}`).join("　")}</li>`).join("")
     : chargeLinesOf(r).map(([a,b])=>`<li>${a}　${money(b)}</li>`).join("");
   const stub = `<div class="cut">✂ ${t("沿虛線剪下，下半部為收執聯","Cut here — the bottom part is your receipt")}</div>
   <section class="stub">

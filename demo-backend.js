@@ -102,7 +102,7 @@ const PRICES = {
   lotus: 60,     // 法會：蓮花福慧燈，每位
   chaodu: 160,   // 法會：超渡牌位，每牌位
 };
-// 燈位：每種燈牆上的排列。
+// 燈位：每種燈牆上的排列。順序照燈種代碼（01、02、03、05）。
 // 燈號 = 英文字母＋燈種代碼（給燈號查詢機用）＋排＋第幾個，例：G010512 ＝ 光明燈第 5 排第 12 個。
 // 字母：G 光明、W 文昌、T 太歲、C 財神。單據上燈號前面都會寫燈的名稱。
 const SEATS = {
@@ -320,7 +320,7 @@ function seatsLeft_(year) {
 const SHORT_ = { "個人光明燈": "光明燈", "五路財神燈": "財神燈" };
 function seatText_(d) {
   return (d.lamps || []).filter(p => p.seats && Object.keys(p.seats).length)
-    .map(p => p.name + "：" + Object.keys(p.seats).map(t => (SHORT_[t] || t) + " " + (seatLabel_(p.seats[t]) || "候補")).join("、")).join("\n");
+    .map(p => p.name + "：" + Object.keys(SEATS).filter(t => t in p.seats).map(t => (SHORT_[t] || t) + " " + (seatLabel_(p.seats[t]) || "候補")).join("、")).join("\n");
 }
 
 /* ================= 讀寫一筆報名 ================= */
