@@ -415,6 +415,8 @@ const API = {
 /* ================= 狀態 ================= */
 let ROWS = [], F = {q:"", paid:"all", form:"all", item:"all"}, confirming = null;
 const LAMP_TYPES = ["個人光明燈","文昌燈","太歲燈","五路財神燈"];   // 照燈種代碼 01、02、03、05
+// 畫面上一律用三個字的燈名（資料裡還是存「個人光明燈」「五路財神燈」）
+const lampShort = t => String(t).replace("個人光明燈","光明燈").replace("五路財神燈","財神燈");
 const sortLamps = a => (a||[]).slice().sort((x,y)=>(LAMP_TYPES.indexOf(x)+99)%99-(LAMP_TYPES.indexOf(y)+99)%99);
 const FAHUI_ITEMS = ["超渡牌位","蓮花福慧燈","供齋"];
 // 「點燈」分頁只看目前的點燈年度；舊年度的在「全部」裡找得到，報表可以選年度
@@ -510,7 +512,7 @@ function cardHTML(r, m){
   const q=F.q, paid=!!r.paid, void_=!!r.cancelled;
   const secDim = name => FAHUI_ITEMS.includes(F.item) && F.item!==name ? " dim" : "";
   const seatChip = (p,t) => { const s=p.seats?p.seats[t]:undefined; const isLamp=r.form==="lamp";
-    return `<span class="chip${isLamp&&!s?" wl":""}">${esc(t)}${isLamp?`<span class="seat">${s?hl(seatLabel(s),q):"候補"}</span>`:""}</span>`; };
+    return `<span class="chip${isLamp&&!s?" wl":""}">${esc(lampShort(t))}${isLamp?`<span class="seat">${s?hl(seatLabel(s),q):"候補"}</span>`:""}</span>`; };
   const lampSec = (r.lamps||[]).length ? `<div class="sec${r.form==="lamp"?"":secDim("蓮花福慧燈")}"><h3>${r.form==="lamp"?"點燈":"蓮花福慧燈"}</h3>${r.lamps.map(p=>`
       <div class="person${LAMP_TYPES.includes(F.item)&&!(p.lampTypes||[]).includes(F.item)?" dim":""}"><span class="nm">${hl(p.name,q)}</span><span class="info">${p.gender?esc(p.gender)+"・":""}${esc(p.zodiac)}・${p.age_xu??""} 歲・${lunarText(p.birth)}</span>
       ${r.form==="lamp"?`<div class="chips">${sortLamps(p.lampTypes).map(t=>seatChip(p,t)).join("")}</div>`:""}</div>`).join("")}</div>` : "";
@@ -578,7 +580,7 @@ function renderTabs(){
   $("tabs").innerHTML=tabs.map(([v,t])=>`<button type="button" role="tab" data-tab="${esc(v)}" aria-selected="${F.form===v}">${esc(t)}${cnt(v)}</button>`).join("");
   const items = F.form==="all" ? [] : F.form==="lamp" ? LAMP_TYPES : FAHUI_ITEMS;
   $("subtabs").hidden=!items.length;
-  $("subtabs").innerHTML = items.length ? [["all", F.form==="lamp"?"全部燈種":"全部項目"],...items.map(x=>[x,x])].map(([v,t])=>`<button type="button" data-item="${esc(v)}" aria-pressed="${F.item===v}">${esc(t)}</button>`).join("") : "";
+  $("subtabs").innerHTML = items.length ? [["all", F.form==="lamp"?"全部燈種":"全部項目"],...items.map(x=>[x,lampShort(x)])].map(([v,t])=>`<button type="button" data-item="${esc(v)}" aria-pressed="${F.item===v}">${esc(t)}</button>`).join("") : "";
 }
 
 /* ================= 事件 ================= */
@@ -808,7 +810,7 @@ function personTable(list, type){
 // 總表：一人一列，每種燈一欄打勾
 function lampSummaryTable(rs){
   const list = sortPeople(rs.flatMap(r=>(r.lamps||[]).filter(p=>(p.lampTypes||[]).length).map(p=>({p,r}))));
-  const short = t => t.replace("個人","").replace("五路","");
+  const short = lampShort;
   const head=["",["姓名",""],"信士／信女","生肖",["歲數","num"],"農曆生日",...LAMP_TYPES.map(t=>[short(t),"c"]),["盞數","num"],["報名編號",""]];
   if(!R.paidOnly) head.push("繳費");
   const rows = list.map(({p,r},i)=>{ const c=[[i+1,"num"],[esc(p.name),"nm"],[gText(p.gender),"c"],[esc(p.zodiac),"c"],[p.age_xu!=null?p.age_xu+" 歲":"","num"],esc(lunarText(p.birth)),
@@ -820,16 +822,16 @@ function lampSummaryTable(rs){
 function sheetLamp(rs){
   if(R.type==="sum"){
     const people = rs.reduce((a,r)=>a+(r.lamps||[]).length,0);
-    return {title:"點燈總表", sum:`<span>共 <b>${people}</b> 位</span>`+LAMP_TYPES.map(t=>`<span>${t} <b>${itemUnits(rs,t)}</b> 盞</span>`).join(""), body:`<div class="rsec compact">${lampSummaryTable(rs)}</div>`};
+    return {title:"點燈總表", sum:`<span>共 <b>${people}</b> 位</span>`+LAMP_TYPES.map(t=>`<span>${lampShort(t)} <b>${itemUnits(rs,t)}</b> 盞</span>`).join(""), body:`<div class="rsec compact">${lampSummaryTable(rs)}</div>`};
   }
   const types = R.type==="all" ? LAMP_TYPES : [R.type];
-  const sum = LAMP_TYPES.map(t=>`<span>${t} <b>${itemUnits(rs,t)}</b> 盞</span>`).join("");
+  const sum = LAMP_TYPES.map(t=>`<span>${lampShort(t)} <b>${itemUnits(rs,t)}</b> 盞</span>`).join("");
   const secs = types.map((t,i)=>{
     const list = rs.flatMap(r=>(r.lamps||[]).filter(p=>(p.lampTypes||[]).includes(t)).map(p=>({p,r})));
     const wl = list.filter(x=>!(x.p.seats||{})[t]).length;
-    return `<div class="rsec${i?" pb":""}"><h3>${t}<small>共 ${list.length} 盞${wl?`（候補 ${wl}）`:""}</small></h3>${personTable(list, t)}</div>`;
+    return `<div class="rsec${i?" pb":""}"><h3>${lampShort(t)}<small>共 ${list.length} 盞${wl?`（候補 ${wl}）`:""}</small></h3>${personTable(list, t)}</div>`;
   }).join("");
-  return {title: R.type==="all"?"點燈名冊":`點燈名冊・${R.type}`, sum: R.type==="all"?sum:"", body: secs};
+  return {title: R.type==="all"?"點燈名冊":`點燈名冊・${lampShort(R.type)}`, sum: R.type==="all"?sum:"", body: secs};
 }
 function sheetLotus(rs){
   const list = rs.flatMap(r=>(r.lamps||[]).map(p=>({p,r})));
@@ -863,7 +865,7 @@ function sheetMeal(rs){
 }
 // 某一群報名的項目明細：[項目, 數量, 單價, 金額]
 function itemLines(rs, isLamp){
-  if(isLamp) return LAMP_TYPES.map(t=>{ const n=itemUnits(rs,t); return [t,[n+" 盞","num"],[money(PRICE.lamp),"num"],[money(n*PRICE.lamp),"num"], n*PRICE.lamp]; });
+  if(isLamp) return LAMP_TYPES.map(t=>{ const n=itemUnits(rs,t); return [lampShort(t),[n+" 盞","num"],[money(PRICE.lamp),"num"],[money(n*PRICE.lamp),"num"], n*PRICE.lamp]; });
   const nC=itemUnits(rs,"超渡牌位"), nL=itemUnits(rs,"蓮花福慧燈"), meals=rs.flatMap(r=>r.meals||[]), mSum=meals.reduce((a,m)=>a+(+m.amount||0),0);
   return [["超渡牌位",[nC+" 個","num"],[money(PRICE.chaodu),"num"],[money(nC*PRICE.chaodu),"num"], nC*PRICE.chaodu],
           ["蓮花福慧燈",[nL+" 位","num"],[money(PRICE.lotus),"num"],[money(nL*PRICE.lotus),"num"], nL*PRICE.lotus],
@@ -934,7 +936,7 @@ function renderReport(){
   $("rTypeWrap").hidden = R.kind!=="lamp";
   $("rSortWrap").hidden = R.kind!=="lamp";
   $("rSort").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.rsort===R.sort));
-  $("rType").innerHTML = [["all","依燈種分開"],["sum","總表（一人一列）"],...LAMP_TYPES.map(x=>[x,x])].map(([v,t])=>`<button type="button" data-rt="${esc(v)}" aria-pressed="${R.type===v}">${esc(t)}</button>`).join("");
+  $("rType").innerHTML = [["all","依燈種分開"],["sum","總表（一人一列）"],...LAMP_TYPES.map(x=>[x,lampShort(x)])].map(([v,t])=>`<button type="button" data-rt="${esc(v)}" aria-pressed="${R.type===v}">${esc(t)}</button>`).join("");
   $("rPaidWrap").hidden = R.kind==="money" || TS;
   $("rPaid").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", (b.dataset.rp==="paid")===R.paidOnly));
   $("rDateWrap").hidden = R.kind!=="money"; $("rDate").value = R.date;

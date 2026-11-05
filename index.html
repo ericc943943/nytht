@@ -537,7 +537,7 @@ const soulText = x => EN() ? `${SOUL_EN[x]||x}（${x}）` : x;
 const MONTH_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const ord = n => n + ((n%100>=11&&n%100<=13) ? "th" : ({1:"st",2:"nd",3:"rd"}[n%10]||"th"));
 const genderText = g => EN() ? ({男:"Male",女:"Female"}[g]||"") : g;
-const lampName = tp => EN() ? `${tp.en}（${tp.short||tp.name}）` : tp.name;
+const lampName = tp => EN() ? `${tp.en}（${tp.short||tp.name}）` : (tp.short||tp.name);   // 畫面上用三個字（資料裡存全名）
 const lampNameByZh = zh => { const tp=CONFIG.lampForm.types.find(x=>x.name===zh); return tp ? lampName(tp) : zh; };
 const eventName = e => EN() && CONFIG.eventsEn[e.id] ? CONFIG.eventsEn[e.id] : e.name;
 const hasLunar = typeof window.Solar !== "undefined";
@@ -719,7 +719,7 @@ const VIEWS = {
       ${dateBlock(`lamps.${p.id}.birth`, p.birth, t("出生日期","Date of birth"))}
       <div class="derived" id="dv-${p.id}"></div>
       ${LF?`<div class="field" data-err="lamps.${p.id}.types" style="margin:18px 0 0"><span class="legend">${t("要點的燈（可複選）","Lamps (check one or more)")}</span>
-        <div class="lamppick">${CONFIG.lampForm.types.map(tp=>`<label class="pickcard"><input type="checkbox" data-path="lamps.${p.id}.types.${tp.k}"${p.types&&p.types[tp.k]?" checked":""}><span><b>${EN()?esc(tp.en):tp.name}</b>${EN()?`<small>${tp.short||tp.name}・${esc(tp.enDesc||"")}</small>`:""}${tp.price?`<small>$${tp.price}</small>`:""}${SEATS_LEFT[tp.name]===0?`<small class="left">${t("已額滿，可登記候補，由堂裡另外安排","Full — you can join the waiting list; the temple will arrange a spot")}</small>`:""}</span></label>`).join("")}</div></div>`:""}
+        <div class="lamppick">${CONFIG.lampForm.types.map(tp=>`<label class="pickcard"><input type="checkbox" data-path="lamps.${p.id}.types.${tp.k}"${p.types&&p.types[tp.k]?" checked":""}><span><b>${EN()?esc(tp.en):(tp.short||tp.name)}</b>${EN()?`<small>${tp.short||tp.name}・${esc(tp.enDesc||"")}</small>`:""}${tp.price?`<small>$${tp.price}</small>`:""}${SEATS_LEFT[tp.name]===0?`<small class="left">${t("已額滿，可登記候補，由堂裡另外安排","Full — you can join the waiting list; the temple will arrange a spot")}</small>`:""}</span></label>`).join("")}</div></div>`:""}
     </div>`).join("")}
     <button class="btn add" data-add="lamps" type="button">${t("＋ 再加一位","＋ Add another person")}</button>`; },
 
@@ -938,7 +938,7 @@ const dateText = iso => iso ? new Date(iso).toLocaleDateString(t("zh-TW","en-US"
 function chargeLinesOf(r, short){
   const T=r.totals||{};
   if(r.form==="lamp") return CONFIG.lampForm.types.map(tp=>{ const n=(r.lamps||[]).filter(p=>(p.lampTypes||[]).includes(tp.name)).length;
-      return n ? [t(`${short?(tp.short||tp.name):tp.name} × ${n} 盞`,`${lampName(tp)} × ${n}`), n*(tp.price||0)] : null; }).filter(Boolean);
+      return n ? [t(`${tp.short||tp.name} × ${n} 盞`,`${lampName(tp)} × ${n}`), n*(tp.price||0)] : null; }).filter(Boolean);
   const a=[];
   if((r.lamps||[]).length) a.push([t(`蓮花福慧燈 × ${r.lamps.length} 位`,`Lotus Lamp（蓮花福慧燈）× ${r.lamps.length}`), T.lamp]);
   if((r.chaodu||[]).length) a.push([t(`超渡 × ${r.chaodu.length} 牌位`,`Memorial tablet（超渡牌位）× ${r.chaodu.length}`), T.chaodu]);
@@ -1343,7 +1343,7 @@ function renderHelper(){
   let rec="";
   HELP.rec=[];
   if(LY){ const z=zodiacOf(LY), r=tsRel(Y, ZODIAC.indexOf(z)), items=[];
-    const nm = k => { HELP.rec.push(k); const x=CONFIG.lampForm.types.find(a=>a.k===k); return EN()?x.en:x.name; };
+    const nm = k => { HELP.rec.push(k); const x=CONFIG.lampForm.types.find(a=>a.k===k); return EN()?x.en:x.short; };
     if(r.length) items.push([nm("taisui"), r.includes("值") ? t(`屬${z}，${Y} 年是本命年（值太歲）`,`${ZODIAC_EN[z]}: ${Y} is your own Tai Sui year`) : t(`屬${z}，${Y} 年${r.join("、")}太歲`,`${ZODIAC_EN[z]} is in conflict with Tai Sui in ${Y}`)]);
     if(HELP.wish.guangming || !(HELP.wish.wenchang||HELP.wish.caishen)) items.push([nm("guangming"), t("祈求平安健康、前途光明，每個人都適合點","For peace, health and a bright year — suitable for everyone")]);
     if(HELP.wish.wenchang) items.push([nm("wenchang"), t("祈求讀書考試、升學、工作升遷順利","For studies, exams and career advancement")]);
