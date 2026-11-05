@@ -171,9 +171,14 @@ textarea{min-height:5rem;resize:vertical}
 .f-head .doc{font-family:var(--serif);font-size:1.2rem;font-weight:700;letter-spacing:.12em;white-space:nowrap;text-align:right;line-height:1.25}
 .f-head .doc small{display:block;font-size:.6em;letter-spacing:.04em;font-weight:500}
 .f-title{font-family:var(--serif);font-weight:700;font-size:1.02rem;margin:10px 0 4px;line-height:1.4}
-.f-meta{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.f-meta > div:first-child{min-width:0}
-.f-hr{text-align:right;min-width:0;flex:1 1 auto}
+/* 手機畫面：logo＋編號一行、活動名稱＋QR Code 一行；列印時四塊排成一行（見 @media print） */
+.f-band{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.f-band .f-logo{order:1;flex:0 1 auto;grid-area:logo}
+.f-band .f-hr{order:2;flex:1 1 45%}
+.f-band .f-mid{order:3;flex:1 1 55%;min-width:0;grid-area:mid}
+.f-band .f-qr{order:4;grid-area:qr}
+.f-band .f-title{margin:0 0 2px}
+.f-hr{grid-area:hr;text-align:right;min-width:0}
 .f-hr .lbl{font-family:var(--serif);font-weight:700;color:#23201C;font-size:.8rem;letter-spacing:.06em}
 .f-hr .f-ref{margin:0 0 2px}
 @media (max-width:420px){.f-hr .f-ref{font-size:1.05rem;padding:2px 6px}.f-hr .lbl{font-size:.7rem}}
@@ -206,8 +211,7 @@ textarea{min-height:5rem;resize:vertical}
 .cut::before,.cut::after{content:"";flex:1;border-top:2px dashed #9E978C}
 .stub .f-head .doc{font-size:1.05rem}
 html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1.02rem}
-.stub-body{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-top:6px}
-.stub-main{min-width:0;flex:1}
+.stub-list{margin-top:6px}
 .stub-who{margin:2px 0 4px}
 .stub-who .lbl{display:inline;margin-right:6px}
 .stub-list{display:flex;flex-wrap:wrap;gap:2px 16px;font-size:.95rem}
@@ -223,23 +227,22 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
 .left{font-weight:700;color:var(--err)}
 .lkerr{color:var(--err);font-weight:500;margin:0;min-height:1.4em}
 @media print{
-  /* 頁邊距設成 0，瀏覽器就沒有地方印頁首頁尾（網址、日期）；留白改由 .wrap 的 padding 處理 */
-  @page{size:letter;margin:.45in 0 .4in}
-  @page:first{margin:0}
+  /* 每一張四邊都留 0.6 吋：iPhone／iPad／Safari 列印時本來就固定留這麼多，統一之後在哪裡印都一樣 */
+  @page{size:letter;margin:.6in}
   html,:root.big{font-size:12pt}
   body{background:#fff!important;padding:0!important}
-  .wrap{max-width:none;padding:.45in .55in .4in}
+  .wrap{max-width:none;padding:0}
   .top,footer,.nav,.donemsg,#home,#form,#lookup{display:none!important}
   /* 字放大：給長輩看得清楚。內文約小四號字（12pt），姓名、燈號、金額更大 */
   .paper{border:none;padding:0;font-size:12pt;line-height:1.4}
   /* 上半部固定高度，收執聯就會落在同一頁的下方，方便撕下；人多的時候自動延伸到下一頁 */
-  .regform{min-height:6.75in}
+  .regform{min-height:6.4in}
   .f-qr{width:66px}
   .f-head{padding-bottom:4px}
   .f-head img{height:46px}
   .f-head .doc{font-size:15.5pt}
   .f-title{margin:4px 0 0;font-size:13pt}
-  .f-ref{font-size:20pt;margin:0 0 1px;padding:0 10px}
+  .f-ref{font-size:15pt;margin:0 0 1px;padding:0 10px}
   .lbl{font-size:8.5pt;line-height:1.2}
   .f-sec{margin-top:3px;padding-top:2px}
   .f-sec h4{font-size:9pt;margin:0}
@@ -259,7 +262,7 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   .stub .f-head .doc{font-size:14pt}
   .stub{height:3in;overflow:hidden}
   .stub .f-head{padding-bottom:2px}
-  .stub .stub-body{margin-top:3px}
+  .stub .stub-list{margin-top:3px}
   .stub .f-total{margin-top:3px;padding-top:3px}
   .stub .f-note{margin-top:4px}
   .stub .f-temple{margin-top:2px}
@@ -268,7 +271,12 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   /* 收執聯大小固定、在紙張下方：上半部撐到固定高度（人多時自動延伸，收執聯移到下一頁） */
   .f-note{font-size:9.5pt}
   /* 省空間：報名編號放右上角、金額明細並排（字不縮小） */
-  .f-hr .lbl{font-size:10pt}
+  .f-hr .lbl{font-size:9.5pt}
+  /* 頁首一行排完：logo｜活動名稱和日期｜報名編號｜QR Code */
+  .f-band{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;grid-template-areas:"logo mid hr qr";column-gap:14px;row-gap:0;padding-bottom:4px}
+  .f-band .f-logo{max-width:none}
+  .f-band .f-title{margin:0;font-size:12.5pt;line-height:1.3;word-break:keep-all}
+  .stub .f-band{padding-bottom:3px}
   /* 點燈名單兩欄：一列放兩個人；每人：姓名一行、生日一行、燈號每行兩盞 */
   .f-people{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:.3in}
   .f-people .f-person{border-top:1px dotted #D5CFC5}
@@ -278,7 +286,7 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   .f-items li{border:none;gap:8px}
   .f-person,.stub,.stubwrap{break-inside:avoid}
   /* 人多、上半部超過一頁時（.longform）：收執聯換到下一張，一樣排在紙張最下面，剪下來大小、位置都相同 */
-  .longform .stubwrap{break-before:page;height:10.1in;display:flex;flex-direction:column;justify-content:flex-end}
+  .longform .stubwrap{break-before:page;height:9.7in;display:flex;flex-direction:column;justify-content:flex-end}
   .longform .regform{min-height:0}
   .wrap:has(.longform),.wrap:has(.tailfit){padding-bottom:0}
   /* 上半部延伸到下一張、但那一張還放得下收據（.tailfit）：不換頁，用 margin-top 把收據推到那一張最下面 */
@@ -853,10 +861,10 @@ function formHTML(r){
   const sec = (title, body) => body ? `<div class="f-sec"><h4>${title}</h4>${body}</div>` : "";
   const docName = isLamp?t(`${recYear(r)} 點燈報名表`,`${recYear(r)} Lamp Registration`):t("法會報名表","Ceremony Registration");
   const top = `<section class="regform">
-    <div class="f-head"><img src="${logo}" alt="紐約花蓮慈惠堂"><div class="f-hr"><div class="f-ref">${esc(r.ref)}</div><span class="lbl">${docName}・${t("報名編號","No.")}</span></div></div>
-    <div class="f-meta">
-      <div><div class="f-title">${esc(recTitle(r))}${EN()?`<br><span style="font-size:.9em">${esc(recTitleZh(r))}</span>`:""}</div>
+    <div class="f-head f-band"><img class="f-logo" src="${logo}" alt="紐約花蓮慈惠堂">
+      <div class="f-mid"><div class="f-title">${esc(recTitle(r))}${EN()?`<br><span style="font-size:.9em">${esc(recTitleZh(r))}</span>`:""}</div>
         <div class="f-date"><span class="lbl">${t("報名日期","Date")}</span>${dateText(r.submittedAt)}${r.updatedAt?`<span class="f-sub">　${t("最後修改","Last changed")} ${dateText(r.updatedAt)}</span>`:""}</div></div>
+      <div class="f-hr"><div class="f-ref">${esc(r.ref)}</div><span class="lbl">${docName}・${t("報名編號","No.")}</span></div>
       <div class="f-qr" aria-hidden="true">${qrSVG(`${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`)}</div>
     </div>
     ${sec(t("聯絡人","Contact"), `<div><b>${esc(r.contact.name)}</b>　<span style="white-space:nowrap">${esc(r.contact.phone)}</span></div><div class="f-sub">${esc(r.contact.address)}</div>`)}
@@ -883,14 +891,12 @@ function formHTML(r){
   const adminLink = `${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`;
   const stub = `<div class="stubwrap"><div class="cut">✂ ${t("沿虛線剪下，下半部為收執聯","Cut here — the bottom part is your receipt")}</div>
   <section class="stub">
-    <div class="f-head"><img src="${logo}" alt="紐約花蓮慈惠堂"><div class="f-hr"><div class="f-ref stub-ref">${esc(r.ref)}</div><span class="lbl">${isLamp?t(`${recYear(r)} 點燈收執聯`,`${recYear(r)} Lamp Receipt`):t("收執聯","Receipt")}・${t("憑此編號領取點燈卡","Show this No. to collect your lamp cards")}</span></div></div>
-    <div class="stub-body">
-      <div class="stub-main">
-        <div class="stub-who"><span class="lbl">${t("聯絡人","Contact")}</span> <b>${esc(r.contact.name)}</b></div>
-        <div class="stub-list">${stubList}</div>
-      </div>
+    <div class="f-head f-band"><img class="f-logo" src="${logo}" alt="紐約花蓮慈惠堂">
+      <div class="f-mid stub-who"><span class="lbl">${t("聯絡人","Contact")}</span> <b>${esc(r.contact.name)}</b></div>
+      <div class="f-hr"><div class="f-ref stub-ref">${esc(r.ref)}</div><span class="lbl">${isLamp?t(`${recYear(r)} 點燈收執聯`,`${recYear(r)} Lamp Receipt`):t("收執聯","Receipt")}・${t("憑此編號領取點燈卡","Show this No. to collect your lamp cards")}</span></div>
       <div class="f-qr stub-qr" aria-hidden="true">${qrSVG(adminLink)}</div>
     </div>
+    <div class="stub-list">${stubList}</div>
     <div class="f-total"><span>${t("應繳金額","Amount due")}</span><span>${money(r.totals&&r.totals.all)}</span></div>
     <div class="f-temple"><div class="sign">實收現金 $＿＿＿＿＿　經手人簽名＿＿＿＿＿＿　日期＿＿＿＿＿</div></div>
     <p class="f-note">${t("請妥善保存本聯。燈號可用報名編號上網查詢。","Please keep this receipt. You can look up your lamp numbers online with your registration number.")} ${t("紐約花蓮慈惠堂","New York Hua Lian Tsu Hui Temple")}　${CONFIG.phone}</p>
@@ -904,20 +910,8 @@ let CUR=null, CUR_MODE="new", LOOKUP_PHONE="";
 const fileTitle = r => `${r.form==="lamp" ? recYear(r)+"點燈報名表" : "法會報名表"}_${r.ref}_${String(r.contact&&r.contact.name||"").trim()}`.replace(/[\\/:*?"<>|\s]+/g,"");
 // 列印前先用「列印時的樣式」量一次上半部高度，決定收執聯放同一張還是下一張的底部。
 // 做法：把 @media print 裡的規則複製一份，前面加上 html.pmeasure，量完就拿掉。
-// iPhone／iPad（所有瀏覽器）和 Safari：列印時四邊都會自己留白、加上網址日期，
-// 不管網頁的 @page 設定。這些瀏覽器改成四邊固定留 0.6 吋，用剩下的空間排版。
-const WK = (()=>{ const u=navigator.userAgent||"", p=new URLSearchParams(location.search);
-  if(p.get("wk")==="1") return true; if(p.get("wk")==="0") return false;
-  return /iPad|iPhone|iPod/.test(u) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1)
-    || (/Safari\//.test(u) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/.test(u)); })();
-const PG = WK ? {first:9.8, page:9.8, min:6.4, stub:9.7} : {first:10.55, page:10.15, min:6.75, stub:10.1};
-if(WK){ document.documentElement.classList.add("wk");
-  const st=document.createElement("style");
-  st.textContent=`@page{margin:.6in} @page:first{margin:.6in}
-  @media print{ html.wk .wrap{padding:0!important} html.wk .regform{min-height:${PG.min}in}
-    html.wk .longform .regform,html.wk .tailfit .regform{min-height:0}
-    html.wk .longform .stubwrap{height:${PG.stub}in} }`;
-  document.head.appendChild(st); }
+// 紙張可用範圍：Letter 11 吋高，上下各留 0.6 吋 → 9.8 吋。上半部最少 6.4 吋，收執聯就落在下方。
+const PG = {first:9.8, page:9.8, min:6.4, stub:9.7};
 let PM_READY=false;
 function preparePrintMeasure(){
   if(PM_READY) return; PM_READY=true;
@@ -927,8 +921,7 @@ function preparePrintMeasure(){
       for(const x of r.cssRules){ if(!x.selectorText) continue;
         out.push(x.selectorText.split(",").map(sel=>{ const m=sel.trim().match(/^(?:html|:root)((?:\.[\w-]+)*)\s*(.*)$/);
           return m ? "html.pmeasure"+m[1]+" "+m[2] : "html.pmeasure "+sel.trim(); }).join(",")+"{"+x.style.cssText+"}"); } } } }
-  out.push(WK ? "html.pmeasure .wrap{width:7.3in!important;max-width:none!important;padding:0!important}"
-              : "html.pmeasure .wrap{width:8.5in!important;max-width:none!important}");
+  out.push("html.pmeasure .wrap{width:7.3in!important;max-width:none!important;padding:0!important}");
   const st=document.createElement("style"); st.textContent=out.join("\n"); document.head.appendChild(st);
 }
 function layoutForPrint(){
@@ -943,7 +936,7 @@ function layoutForPrint(){
   const need=reg.getBoundingClientRect().height/IN;     // 上半部需要的高度（吋）
   const stubH=sw.getBoundingClientRect().height/IN;     // 剪線＋收執聯的高度
   // 模擬換頁：每一塊（標題、每一位、每一行金額…）不會被切開，放不下就整塊移到下一頁
-  const atoms=[...reg.querySelectorAll(".f-head,.f-title,.f-meta,.f-sec > h4,.f-sec > div:not(.f-person):not(.f-people),.f-person,.f-items li,.f-total,.f-temple")]
+  const atoms=[...reg.querySelectorAll(".f-head,.f-sec > h4,.f-sec > div:not(.f-person):not(.f-people),.f-person,.f-items li,.f-total,.f-temple")]
     .map(el=>{ const b=el.getBoundingClientRect(); return [(b.top-base)/IN,(b.bottom-base)/IN]; })
     .sort((a,b)=>a[0]-b[0]);
   reg.style.minHeight="";
