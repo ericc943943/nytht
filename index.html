@@ -167,7 +167,7 @@ textarea{min-height:5rem;resize:vertical}
 .donemsg.warn{background:var(--red-soft)}
 .paper{background:#fff;color:#23201C;border:1.5px solid #23201C;border-radius:4px;padding:18px 18px 14px;font-size:.92rem;line-height:1.5}
 .f-head{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:2px solid #23201C;padding-bottom:10px}
-.f-head img{height:36px;width:auto;min-width:0;max-width:44%;flex:none;object-fit:contain;object-position:left center}
+.f-head img{height:48px;width:auto;min-width:0;max-width:44%;flex:none;object-fit:contain;object-position:left center}
 .f-head .doc{font-family:var(--serif);font-size:1.2rem;font-weight:700;letter-spacing:.12em;white-space:nowrap;text-align:right;line-height:1.25}
 .f-head .doc small{display:block;font-size:.6em;letter-spacing:.04em;font-weight:500}
 .f-title{font-family:var(--serif);font-weight:700;font-size:1.02rem;margin:10px 0 4px;line-height:1.4}
@@ -175,7 +175,7 @@ textarea{min-height:5rem;resize:vertical}
 .f-meta > div:first-child{min-width:0}
 .f-hr{text-align:right;min-width:0;flex:1 1 auto}
 .f-hr .lbl{font-family:var(--serif);font-weight:700;color:#23201C;font-size:.8rem;letter-spacing:.06em}
-.f-hr .f-ref{margin:2px 0 0}
+.f-hr .f-ref{margin:0 0 2px}
 @media (max-width:420px){.f-hr .f-ref{font-size:1.05rem;padding:2px 6px}.f-hr .lbl{font-size:.7rem}}
 .f-date .lbl{display:inline;margin-right:8px}
 .lbl{display:block;font-size:.75rem;color:#6B645A;letter-spacing:.06em}
@@ -237,7 +237,7 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   .regform{min-height:6.75in}
   .f-qr{width:66px}
   .f-head{padding-bottom:4px}
-  .f-head img{height:30px}
+  .f-head img{height:46px}
   .f-head .doc{font-size:15.5pt}
   .f-title{margin:4px 0 0;font-size:13pt}
   .f-ref{font-size:17pt;margin:0 0 1px;padding:0 10px}
@@ -256,7 +256,7 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   .stamp{font-size:12pt}
   .sign{line-height:1.9;font-size:11pt}
   .cut{margin:6px 0;font-size:9pt}
-  .stub .f-head img{height:24px}
+  .stub .f-head img{height:42px}
   .stub .f-head .doc{font-size:14pt}
   .stub{height:3in;overflow:hidden}
   .stub .f-head{padding-bottom:2px}
@@ -855,7 +855,7 @@ function formHTML(r){
   const sec = (title, body) => body ? `<div class="f-sec"><h4>${title}</h4>${body}</div>` : "";
   const docName = isLamp?t(`${recYear(r)} 點燈報名表`,`${recYear(r)} Lamp Registration`):t("法會報名表","Ceremony Registration");
   const top = `<section class="regform">
-    <div class="f-head"><img src="${logo}" alt="紐約花蓮慈惠堂"><div class="f-hr"><span class="lbl">${docName}・${t("報名編號","No.")}</span><div class="f-ref">${esc(r.ref)}</div></div></div>
+    <div class="f-head"><img src="${logo}" alt="紐約花蓮慈惠堂"><div class="f-hr"><div class="f-ref">${esc(r.ref)}</div><span class="lbl">${docName}・${t("報名編號","No.")}</span></div></div>
     <div class="f-meta">
       <div><div class="f-title">${esc(recTitle(r))}${EN()?`<br><span style="font-size:.9em">${esc(recTitleZh(r))}</span>`:""}</div>
         <div class="f-date"><span class="lbl">${t("報名日期","Date")}</span>${dateText(r.submittedAt)}${r.updatedAt?`<span class="f-sub">　${t("最後修改","Last changed")} ${dateText(r.updatedAt)}</span>`:""}</div></div>
@@ -885,7 +885,7 @@ function formHTML(r){
   const adminLink = `${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`;
   const stub = `<div class="stubwrap"><div class="cut">✂ ${t("沿虛線剪下，下半部為收執聯","Cut here — the bottom part is your receipt")}</div>
   <section class="stub">
-    <div class="f-head"><img src="${logo}" alt="紐約花蓮慈惠堂"><div class="f-hr"><span class="lbl">${isLamp?t(`${recYear(r)} 點燈收執聯`,`${recYear(r)} Lamp Receipt`):t("收執聯","Receipt")}・${t("憑此編號領取點燈卡","Show this No. to collect your lamp cards")}</span><div class="f-ref stub-ref">${esc(r.ref)}</div></div></div>
+    <div class="f-head"><img src="${logo}" alt="紐約花蓮慈惠堂"><div class="f-hr"><div class="f-ref stub-ref">${esc(r.ref)}</div><span class="lbl">${isLamp?t(`${recYear(r)} 點燈收執聯`,`${recYear(r)} Lamp Receipt`):t("收執聯","Receipt")}・${t("憑此編號領取點燈卡","Show this No. to collect your lamp cards")}</span></div></div>
     <div class="stub-body">
       <div class="stub-main">
         <div class="stub-who"><span class="lbl">${t("聯絡人","Contact")}</span> <b>${esc(r.contact.name)}</b></div>
