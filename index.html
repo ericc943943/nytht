@@ -167,12 +167,17 @@ textarea{min-height:5rem;resize:vertical}
 .donemsg.warn{background:var(--red-soft)}
 .paper{background:#fff;color:#23201C;border:1.5px solid #23201C;border-radius:4px;padding:18px 18px 14px;font-size:.92rem;line-height:1.5}
 .f-head{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:2px solid #23201C;padding-bottom:10px}
-.f-head img{height:36px;width:auto}
+.f-head img{height:36px;width:auto;min-width:0;max-width:44%;object-fit:contain;object-position:left center}
 .f-head .doc{font-family:var(--serif);font-size:1.2rem;font-weight:700;letter-spacing:.12em;white-space:nowrap;text-align:right;line-height:1.25}
 .f-head .doc small{display:block;font-size:.6em;letter-spacing:.04em;font-weight:500}
 .f-title{font-family:var(--serif);font-weight:700;font-size:1.02rem;margin:10px 0 4px;line-height:1.4}
 .f-meta{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .f-meta > div:first-child{min-width:0}
+.f-hr{text-align:right;min-width:0;flex:none}
+.f-hr .lbl{font-family:var(--serif);font-weight:700;color:#23201C;font-size:.8rem;letter-spacing:.06em}
+.f-hr .f-ref{margin:2px 0 0}
+@media (max-width:420px){.f-hr .f-ref{font-size:1.05rem;padding:2px 6px}.f-hr .lbl{font-size:.7rem}}
+.f-date .lbl{display:inline;margin-right:8px}
 .lbl{display:block;font-size:.75rem;color:#6B645A;letter-spacing:.06em}
 .f-ref{font-family:ui-monospace,Menlo,monospace;font-weight:700;font-size:clamp(1.05rem,5vw,1.4rem);border:2px solid #23201C;border-radius:6px;padding:2px 10px;display:inline-block;margin:2px 0 6px;white-space:nowrap;letter-spacing:.04em}
 .f-qr{width:84px;flex:none}
@@ -264,8 +269,8 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   .stub-qr{width:72px}
   /* 收執聯大小固定、在紙張下方：上半部撐到固定高度（人多時自動延伸，收執聯移到下一頁） */
   .f-note{font-size:9.5pt}
-  /* 省空間：編號和日期並排、姓名和生日同一行、金額明細並排（字不縮小） */
-  .regform .f-meta > div:first-child{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;grid-auto-flow:column;column-gap:22px;align-items:end}
+  /* 省空間：報名編號放右上角、金額明細並排（字不縮小） */
+  .f-hr .lbl{font-size:10pt}
   /* 點燈名單兩欄：一列放兩個人；每人：姓名一行、生日一行、燈號每行兩盞 */
   .f-people{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:.3in}
   .f-people .f-person{border-top:1px dotted #D5CFC5}
@@ -849,12 +854,12 @@ function formHTML(r){
       <div class="f-sub">${[c.birth?t("生 ","Born ")+lunarText(recLunar(c.birth)):"", c.death?t("歿 ","Passed ")+lunarText(recLunar(c.death)):"", c.age!=null?t(`享年 ${c.age} 歲`,`age ${c.age}`):""].filter(Boolean).join("・")}${c.sponsor?`${t("　陽世報恩人：","　Registered by: ")}${esc(c.sponsor)}`:""}</div></div>`).join("");
   const meals = (r.meals||[]).map(m=>`<div class="f-person" style="display:flex;justify-content:space-between"><b>${esc(m.name)}</b><span>${money(m.amount)}</span></div>`).join("");
   const sec = (title, body) => body ? `<div class="f-sec"><h4>${title}</h4>${body}</div>` : "";
+  const docName = isLamp?t(`${recYear(r)} 點燈報名表`,`${recYear(r)} Lamp Registration`):t("法會報名表","Ceremony Registration");
   const top = `<section class="regform">
-    ${head(isLamp?t(`${recYear(r)} 點燈報名表`,`${recYear(r)} Lamp Registration`):t("法會報名表","Ceremony Registration"), t("Registration Form","報名表"))}
-    <div class="f-title">${esc(recTitle(r))}${EN()?`<br><span style="font-size:.9em">${esc(recTitleZh(r))}</span>`:""}</div>
+    <div class="f-head"><img src="${logo}" alt="紐約花蓮慈惠堂"><div class="f-hr"><span class="lbl">${docName}・${t("報名編號","No.")}</span><div class="f-ref">${esc(r.ref)}</div></div></div>
     <div class="f-meta">
-      <div><span class="lbl">${t("報名編號","Registration No.")}</span><div class="f-ref">${esc(r.ref)}</div>
-        <span class="lbl">${t("報名日期","Date")}</span><div>${dateText(r.submittedAt)}${r.updatedAt?`<span class="f-sub">　${t("最後修改","Last changed")} ${dateText(r.updatedAt)}</span>`:""}</div></div>
+      <div><div class="f-title">${esc(recTitle(r))}${EN()?`<br><span style="font-size:.9em">${esc(recTitleZh(r))}</span>`:""}</div>
+        <div class="f-date"><span class="lbl">${t("報名日期","Date")}</span>${dateText(r.submittedAt)}${r.updatedAt?`<span class="f-sub">　${t("最後修改","Last changed")} ${dateText(r.updatedAt)}</span>`:""}</div></div>
       <div class="f-qr" aria-hidden="true">${qrSVG(`${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`)}</div>
     </div>
     ${sec(t("聯絡人","Contact"), `<div><b>${esc(r.contact.name)}</b>　<span style="white-space:nowrap">${esc(r.contact.phone)}</span></div><div class="f-sub">${esc(r.contact.address)}</div>`)}
