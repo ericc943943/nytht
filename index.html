@@ -201,8 +201,10 @@ textarea{min-height:5rem;resize:vertical}
 .f-items li{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-top:1px dashed #BDB5A8}
 .f-total{display:flex;justify-content:center;gap:18px;align-items:baseline;border-top:2px solid #23201C;margin-top:6px;padding-top:6px;font-weight:700;font-variant-numeric:tabular-nums}
 .f-total .amt{font-size:1.45rem;color:#356D82}
-.f-total{align-items:center}
-.f-total .stamp{margin-left:6px}
+/* 金額絕對置中：左右兩欄一樣寬，待繳費章放右欄 */
+.f-total{display:grid!important;grid-template-columns:1fr auto 1fr;align-items:center}
+.f-total .tot-c{display:flex;align-items:baseline;gap:18px}
+.f-total .stamp{justify-self:start;margin-left:14px}
 .sign{display:flex;flex-wrap:wrap;column-gap:22px}
 .f-temple{display:flex;align-items:center;gap:14px;margin-top:10px}
 .f-temple .f-qr{margin-left:auto}   /* QR Code 放右下角 */
@@ -902,7 +904,7 @@ function formHTML(r){
     ${sec(t("供齋","Food offering"), meals)}
     ${r.note?sec(t("備註","Notes"), `<div class="f-sub">${esc(r.note)}</div>`):""}
     <ul class="f-items">${chargeLinesOf(r,true).map(([a,b])=>`<li><span>${a}</span><span>${money(b)}</span></li>`).join("")}</ul>
-    <div class="f-total"><span>${t("應繳金額（現金）","Amount due (cash)")}</span><span class="amt">${money(r.totals&&r.totals.all)}</span>${stampHTML(r)}</div>
+    <div class="f-total"><i></i><span class="tot-c"><span>${t("應繳金額（現金）","Amount due (cash)")}</span><span class="amt">${money(r.totals&&r.totals.all)}</span></span>${stampHTML(r)}</div>
     <div class="f-temple"><div class="sign"><span>□ 已收現金 $＿＿＿＿</span><span>經手人簽名＿＿＿＿＿＿</span><span>日期＿＿＿＿＿</span></div><div class="f-qr" aria-hidden="true">${qrSVG(`${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`)}</div></div>
   </section>`;
   // 收執聯：繳費後義工簽名、撕下給信眾
@@ -925,7 +927,7 @@ function formHTML(r){
       <div class="f-right"><div class="f-hr"><div class="f-ref stub-ref">${esc(r.ref)}</div><span class="lbl">${isLamp?t(`${recYear(r)} 點燈收執聯`,`${recYear(r)} Lamp Receipt`):t("收執聯","Receipt")}<br>${t("憑此編號領取點燈卡","Show this No. to collect your lamp cards")}</span></div></div>
     </div>
     <div class="stub-list">${stubList}</div>
-    <div class="f-total"><span>${t("應繳金額","Amount due")}</span><span class="amt">${money(r.totals&&r.totals.all)}</span></div>
+    <div class="f-total"><i></i><span class="tot-c"><span>${t("應繳金額","Amount due")}</span><span class="amt">${money(r.totals&&r.totals.all)}</span></span><i></i></div>
     <div class="stub-foot"><div class="stub-foot-l">
     <div class="f-temple"><div class="sign"><span>實收現金 $＿＿＿＿</span><span>經手人簽名＿＿＿＿＿＿</span><span>日期＿＿＿＿＿</span></div></div>
     <p class="f-note">${t("請妥善保存本聯。燈號可用報名編號上網查詢。","Please keep this receipt. You can look up your lamp numbers online with your registration number.")} ${t("紐約花蓮慈惠堂","New York Hua Lian Tsu Hui Temple")}　${CONFIG.phone}</p>
