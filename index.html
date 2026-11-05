@@ -229,7 +229,7 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   /* 字放大：給長輩看得清楚。內文約小四號字（12pt），姓名、燈號、金額更大 */
   .paper{border:none;padding:0;font-size:12pt;line-height:1.4}
   /* 上半部固定高度，收執聯就會落在同一頁的下方，方便撕下；人多的時候自動延伸到下一頁 */
-  .regform{min-height:6.55in}
+  .regform{min-height:6.75in}
   .f-qr{width:66px}
   .f-head{padding-bottom:4px}
   .f-head img{height:30px}
@@ -253,7 +253,11 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   .cut{margin:6px 0;font-size:9pt}
   .stub .f-head img{height:24px}
   .stub .f-head .doc{font-size:14pt}
-  .stub{height:3.2in;overflow:hidden}
+  .stub{height:3in;overflow:hidden}
+  .stub .f-head{padding-bottom:2px}
+  .stub .stub-body{margin-top:3px}
+  .stub .f-total{margin-top:3px;padding-top:3px}
+  .stub .f-note{margin-top:4px}
   .stub .f-temple{margin-top:2px}
   .stub-ref{font-size:20pt}
   .stub-list{font-size:12.5pt}
@@ -266,7 +270,11 @@ html[lang="en"] .f-head .doc{letter-spacing:.03em;white-space:normal;font-size:1
   .f-person > .f-pn + .f-sub{margin-left:10px}
   .f-items{display:flex;flex-wrap:wrap;gap:0 26px;border-top:1px dashed #BDB5A8;padding-top:2px}
   .f-items li{border:none;gap:8px}
-  .f-person,.stub{break-inside:avoid}
+  .f-person,.stub,.stubwrap{break-inside:avoid}
+  /* 人多、上半部超過一頁時（.longform）：收執聯換到下一張，一樣排在紙張最下面，剪下來大小、位置都相同 */
+  .longform .stubwrap{break-before:page;height:10.1in;display:flex;flex-direction:column;justify-content:flex-end}
+  .longform .regform{min-height:0}
+  .wrap:has(.longform){padding-bottom:0}
 }
 footer span{white-space:nowrap}
 footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem;text-align:center}
@@ -856,12 +864,16 @@ function formHTML(r){
   // 收執聯：只寫重點，大小固定。廟裡依報名編號綁好每一捆點燈卡，信眾憑收據上的編號領取
   const nLamps = p => (p.lampTypes||[]).length;
   const totalLamps = (r.lamps||[]).reduce((a,p)=>a+nLamps(p),0);
+  const nPeople = (r.lamps||[]).length;
+  // 收據大小固定：超過 10 位就簡寫成「某某 等 N 位，共 M 盞」
   const stubList = isLamp
-    ? (r.lamps||[]).map(p=>`<span class="sp"><b>${esc(p.name)}</b> ${t(`${nLamps(p)}盞`,`× ${nLamps(p)}`)}</span>`).join("")
-      + `<span class="sp sptotal">${t(`共 ${totalLamps} 盞`,`${totalLamps} lamps in total`)}</span>`
+    ? (nPeople > 10
+        ? `<span class="sp"><b>${esc(r.lamps[0].name)}</b> ${t(`等 ${nPeople} 位`,`and ${nPeople-1} others`)}</span><span class="sp sptotal">${t(`共 ${totalLamps} 盞`,`${totalLamps} lamps in total`)}</span>`
+        : (r.lamps||[]).map(p=>`<span class="sp"><b>${esc(p.name)}</b> ${t(`${nLamps(p)}盞`,`× ${nLamps(p)}`)}</span>`).join("")
+          + `<span class="sp sptotal">${t(`共 ${totalLamps} 盞`,`${totalLamps} lamps in total`)}</span>`)
     : chargeLinesOf(r).map(([a,b])=>`<span class="sp">${a}　${money(b)}</span>`).join("");
   const adminLink = `${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`;
-  const stub = `<div class="cut">✂ ${t("沿虛線剪下，下半部為收執聯","Cut here — the bottom part is your receipt")}</div>
+  const stub = `<div class="stubwrap"><div class="cut">✂ ${t("沿虛線剪下，下半部為收執聯","Cut here — the bottom part is your receipt")}</div>
   <section class="stub">
     ${head(isLamp?t(`${recYear(r)} 點燈收執聯`,`${recYear(r)} Lamp Receipt`):t("收執聯","Receipt"), t("Receipt","收執聯"))}
     <div class="stub-body">
@@ -876,7 +888,7 @@ function formHTML(r){
     <div class="f-total"><span>${t("應繳金額","Amount due")}</span><span>${money(r.totals&&r.totals.all)}</span></div>
     <div class="f-temple"><div class="sign">實收現金 $＿＿＿＿＿　經手人簽名＿＿＿＿＿＿　日期＿＿＿＿＿</div></div>
     <p class="f-note">${t("請妥善保存本聯。燈號可用報名編號上網查詢。","Please keep this receipt. You can look up your lamp numbers online with your registration number.")} ${t("紐約花蓮慈惠堂","New York Hua Lian Tsu Hui Temple")}　${CONFIG.phone}</p>
-  </section>`;
+  </section></div>`;
   return `<article class="paper">${top}${stub}</article>`;
 }
 function qrSVG(text){ try{ if(typeof qrcode==="function"){ const q=qrcode(0,"M"); q.addData(text); q.make(); return q.createSvgTag({cellSize:4,margin:2,scalable:true}); } }catch(e){} return ""; }
@@ -884,6 +896,32 @@ function qrSVG(text){ try{ if(typeof qrcode==="function"){ const q=qrcode(0,"M")
 let CUR=null, CUR_MODE="new", LOOKUP_PHONE="";
 // 存成 PDF 時用網頁標題當檔名：每張報名表一個名字，例「2027點燈報名表_L261104-001_鄭煒平」
 const fileTitle = r => `${r.form==="lamp" ? recYear(r)+"點燈報名表" : "法會報名表"}_${r.ref}_${String(r.contact&&r.contact.name||"").trim()}`.replace(/[\\/:*?"<>|\s]+/g,"");
+// 列印前先用「列印時的樣式」量一次上半部高度，決定收執聯放同一張還是下一張的底部。
+// 做法：把 @media print 裡的規則複製一份，前面加上 html.pmeasure，量完就拿掉。
+let PM_READY=false;
+function preparePrintMeasure(){
+  if(PM_READY) return; PM_READY=true;
+  const out=[];
+  for(const sh of document.styleSheets){ let rules; try{ rules=sh.cssRules; }catch(e){ continue; }
+    for(const r of rules){ if(r.media && /print/.test(r.media.mediaText)){
+      for(const x of r.cssRules){ if(!x.selectorText) continue;
+        out.push(x.selectorText.split(",").map(sel=>"html.pmeasure "+sel.trim().replace(/^(html|:root)(\.big)?/,"")).join(",")+"{"+x.style.cssText+"}"); } } } }
+  out.push("html.pmeasure .wrap{width:8.5in!important;max-width:none!important}");
+  const st=document.createElement("style"); st.textContent=out.join("\n"); document.head.appendChild(st);
+}
+function layoutForPrint(){
+  const paper=document.querySelector("#slip .paper"); if(!paper) return;
+  preparePrintMeasure();
+  const html=document.documentElement, wasHidden=$("done").hidden;
+  paper.classList.remove("longform"); $("done").hidden=false; html.classList.add("pmeasure");
+  const reg=paper.querySelector(".regform");
+  reg.style.minHeight="0";
+  const need=reg.getBoundingClientRect().height/96;   // 吋
+  reg.style.minHeight="";
+  html.classList.remove("pmeasure"); $("done").hidden=wasHidden;
+  paper.classList.toggle("longform", need > 6.75);   // 6.75 吋＝一張紙扣掉收執聯（3 吋）和剪線
+}
+window.addEventListener("beforeprint", layoutForPrint);
 function showRecord(r, mode){
   CUR=r; CUR_MODE=mode||CUR_MODE;
   $("slip").innerHTML = formHTML(r);
@@ -900,6 +938,7 @@ function showRecord(r, mode){
   $("printBtn").textContent = t("列印報名表","Print form");
   show("done");
   document.title = fileTitle(r);
+  layoutForPrint();
 }
 function recordToState(r){
   const st=freshState(r.form==="lamp"?"lamp":"fahui", r.eventId);
@@ -963,7 +1002,7 @@ document.addEventListener("click", e=>{
   const sl=e.target.closest("[data-slip]"); if(sl){ const x=getSlips().find(y=>y.ref===sl.dataset.slip); if(x) openRecord(x.ref, x.phone, "view", x.rec); }
 });
 $("homeLink").addEventListener("click", e=>{ e.preventDefault(); refreshResume(); renderMySlips(); show("home"); });
-$("printBtn").addEventListener("click", ()=>window.print());
+$("printBtn").addEventListener("click", ()=>{ layoutForPrint(); window.print(); });
 $("againBtn").addEventListener("click", ()=>{ const f=CUR?CUR.form:"lamp", ev=CUR?CUR.eventId:null; const k=f==="lamp"?"lamp":"fahui-"+ev;
   if(!isOpen(k)){ refreshResume(); renderMySlips(); show("home"); return; } S=load(k)||freshState(f==="lamp"?"lamp":"fahui",ev); show("form"); render(); });
 $("editBtn").addEventListener("click", ()=>{ if(!CUR) return; S=recordToState(CUR); S.editRef=CUR.ref; S.editPhone=LOOKUP_PHONE||CUR.contact.phone; S.step=0; show("form"); render(); });
