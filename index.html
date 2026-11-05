@@ -1025,8 +1025,8 @@ async function buildPDF(){
     let tail = tailEls.length ? [Math.min(...tailEls.map(x=>x[0])), Math.max(...tailEls.map(x=>x[1]))] : null;
     if(tail && rows.length){ const last=rows.pop(); tail=[last[0], tail[1], "row"]; }
     const atoms=[...blocks, ...rows, ...(tail?[tail]:[])].sort((a,b)=>a[0]-b[0]);
-    // 換頁：放不下的那一塊整塊換到下一張；名單一張最多五列（10 位）
-    const MAXROWS=5;
+    // 換頁：放不下的那一塊整塊換到下一張；名單一張最多六列（12 位）
+    const MAXROWS=6;
     const starts=[0]; let start=0, nrows=0;
     for(const [top,bottom,kind] of atoms){
       const isRow = kind==="row";
