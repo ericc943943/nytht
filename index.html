@@ -167,13 +167,13 @@ textarea{min-height:5rem;resize:vertical}
 .donemsg.warn{background:var(--red-soft)}
 .paper{background:#fff;color:#23201C;border:1.5px solid #23201C;border-radius:4px;padding:18px 18px 14px;font-size:.92rem;line-height:1.5}
 .f-head{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:2px solid #23201C;padding-bottom:10px}
-.f-head img{height:36px;width:auto;min-width:0;max-width:44%;object-fit:contain;object-position:left center}
+.f-head img{height:36px;width:auto;min-width:0;max-width:44%;flex:none;object-fit:contain;object-position:left center}
 .f-head .doc{font-family:var(--serif);font-size:1.2rem;font-weight:700;letter-spacing:.12em;white-space:nowrap;text-align:right;line-height:1.25}
 .f-head .doc small{display:block;font-size:.6em;letter-spacing:.04em;font-weight:500}
 .f-title{font-family:var(--serif);font-weight:700;font-size:1.02rem;margin:10px 0 4px;line-height:1.4}
 .f-meta{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .f-meta > div:first-child{min-width:0}
-.f-hr{text-align:right;min-width:0;flex:none}
+.f-hr{text-align:right;min-width:0;flex:1 1 auto}
 .f-hr .lbl{font-family:var(--serif);font-weight:700;color:#23201C;font-size:.8rem;letter-spacing:.06em}
 .f-hr .f-ref{margin:2px 0 0}
 @media (max-width:420px){.f-hr .f-ref{font-size:1.05rem;padding:2px 6px}.f-hr .lbl{font-size:.7rem}}
@@ -843,7 +843,6 @@ function stampHTML(r){
 }
 function formHTML(r){
   const logo=document.querySelector(".logo img").src;
-  const head = (doc,sub) => `<div class="f-head"><img src="${logo}" alt="紐約花蓮慈惠堂"><span class="doc">${doc}${sub?`<small>${sub}</small>`:""}</span></div>`;
   const isLamp = r.form==="lamp";
   const persons = (r.lamps||[]).map(p=>`<div class="f-person">
       <div class="f-pn"><b>${esc(p.name)}</b>　<span class="f-sub">${[gText(p.gender), zText(p.zodiac), p.age_xu!=null?t(`${p.age_xu} 歲`,`age ${p.age_xu}`):""].filter(Boolean).join("・")}</span></div>
@@ -886,11 +885,9 @@ function formHTML(r){
   const adminLink = `${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`;
   const stub = `<div class="stubwrap"><div class="cut">✂ ${t("沿虛線剪下，下半部為收執聯","Cut here — the bottom part is your receipt")}</div>
   <section class="stub">
-    ${head(isLamp?t(`${recYear(r)} 點燈收執聯`,`${recYear(r)} Lamp Receipt`):t("收執聯","Receipt"), t("Receipt","收執聯"))}
+    <div class="f-head"><img src="${logo}" alt="紐約花蓮慈惠堂"><div class="f-hr"><span class="lbl">${isLamp?t(`${recYear(r)} 點燈收執聯`,`${recYear(r)} Lamp Receipt`):t("收執聯","Receipt")}・${t("憑此編號領取點燈卡","Show this No. to collect your lamp cards")}</span><div class="f-ref stub-ref">${esc(r.ref)}</div></div></div>
     <div class="stub-body">
       <div class="stub-main">
-        <span class="lbl">${t("報名編號（憑此領取點燈卡）","Registration No. (show this to collect your lamp cards)")}</span>
-        <div class="f-ref stub-ref">${esc(r.ref)}</div>
         <div class="stub-who"><span class="lbl">${t("聯絡人","Contact")}</span> <b>${esc(r.contact.name)}</b></div>
         <div class="stub-list">${stubList}</div>
       </div>
