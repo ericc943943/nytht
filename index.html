@@ -914,6 +914,12 @@ const fileTitle = r => `${r.form==="lamp" ? recYear(r)+"點燈報名表" : "法�
 // 紙張可用範圍：Letter 11 吋高，上下各留 0.6 吋 → 9.8 吋；iPhone 實際可用的比這少一點，所以抓 9.4 吋、多留一點空間。
 // 上半部最少 6.1 吋，收執聯（約 3.1 吋）就落在下方。
 const PG = {page:9.4, min:6.1};
+// iPhone／iPad 列印時會把整份放大約兩成（實測：列印縮放調 80% 剛好），這裡先縮成 80% 抵銷。
+// 它換頁的位置算不準，所以人多時收執聯一律放到下一張最下面，不跟報名表擠同一張。
+const IOS = /iPad|iPhone|iPod/.test(navigator.userAgent||"") || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1)
+  || new URLSearchParams(location.search).get("ios")==="1";
+if(IOS){ document.documentElement.classList.add("ios");
+  const st=document.createElement("style"); st.textContent="@media print{html.ios .paper{zoom:.8}}"; document.head.appendChild(st); }
 let PM_READY=false;
 function preparePrintMeasure(){
   if(PM_READY) return; PM_READY=true;
@@ -923,7 +929,8 @@ function preparePrintMeasure(){
       for(const x of r.cssRules){ if(!x.selectorText) continue;
         out.push(x.selectorText.split(",").map(sel=>{ const m=sel.trim().match(/^(?:html|:root)((?:\.[\w-]+)*)\s*(.*)$/);
           return m ? "html.pmeasure"+m[1]+" "+m[2] : "html.pmeasure "+sel.trim(); }).join(",")+"{"+x.style.cssText+"}"); } } } }
-  out.push("html.pmeasure .wrap{width:7.3in!important;max-width:none!important;padding:0!important}");
+  // iPhone 實際可排的寬度（放大兩成、再縮 80% 之後）大約等於這裡的 6.1 吋 ÷ 0.8 ≈ 7.6 吋
+  out.push(`html.pmeasure .wrap{width:${IOS?6.1:7.3}in!important;max-width:none!important;padding:0!important}`);
   const st=document.createElement("style"); st.textContent=out.join("\n"); document.head.appendChild(st);
 }
 function layoutForPrint(){
@@ -934,7 +941,7 @@ function layoutForPrint(){
   const reg=paper.querySelector(".regform"), sw=paper.querySelector(".stubwrap");
   paper.classList.remove("tailfit"); paper.style.removeProperty("--tail");
   reg.style.minHeight="0";
-  const IN=96, base=reg.getBoundingClientRect().top;
+  const IN=96*(IOS?.8:1), base=reg.getBoundingClientRect().top;
   const need=reg.getBoundingClientRect().height/IN;     // 上半部需要的高度（吋）
   const stubH=sw.getBoundingClientRect().height/IN;     // 剪線＋收執聯的高度
   // 模擬換頁：每一塊（標題、每一位、每一行金額…）不會被切開，放不下就整塊移到下一頁
@@ -950,7 +957,7 @@ function layoutForPrint(){
   const sim = cap => { let start=0, pages=1; for(const [top,bottom] of atoms){ if(bottom-start > cap){ start=top; pages++; } } return {start,pages}; };
   // 電腦（9.8 吋）和 iPhone（約 9.4 吋）換頁的位置一樣，才把收據排在最後一張下面；不一樣就保險起見換到下一張
   const a=sim(9.8), b=sim(PAGE);
-  if(a.pages > 1 && a.pages===b.pages && Math.abs(a.start-b.start)<0.01){
+  if(!IOS && a.pages > 1 && a.pages===b.pages && Math.abs(a.start-b.start)<0.01){
     const used = need - a.start, free = PAGE - used;    // 上半部最後一張用掉／剩下的空間
     if(free >= stubH + SAFE){                            // 放得下：收據排在這一張最下面
       paper.classList.remove("longform"); paper.classList.add("tailfit");
