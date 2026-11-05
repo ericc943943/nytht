@@ -666,8 +666,8 @@ function dateBlock(path, b, label, opts={}){
   const days = b.cal==="lunar" ? LDAY.map((x,i)=>[i+1, EN()?`${i+1}（${x}）`:x]) : Array.from({length:31},(_,i)=>[i+1, EN()?String(i+1):(i+1)+"日"]);
   const hours = HOURS.map(([z,r])=>[z, EN()?`${HOURS_EN[z][1]}（${z}時）`:`${z}時 ${r}`]);
   const calSeg = hasLunar ? `<div class="seg" role="radiogroup" aria-label="${label}">
-      <label><input type="radio" name="${path}.cal" value="lunar" data-path="${path}.cal"${b.cal==="lunar"?" checked":""}>${t("農曆","Lunar calendar")}</label>
-      <label><input type="radio" name="${path}.cal" value="solar" data-path="${path}.cal"${b.cal==="solar"?" checked":""}>${t("國曆","Western calendar")}</label></div>` : "";
+      <label><input type="radio" name="${path}.cal" value="solar" data-path="${path}.cal"${b.cal==="solar"?" checked":""}>${t("國曆","Western calendar")}</label>
+      <label><input type="radio" name="${path}.cal" value="lunar" data-path="${path}.cal"${b.cal==="lunar"?" checked":""}>${t("農曆","Lunar calendar")}</label></div>` : "";
   return `<div class="field" data-err="${path}">
     <span class="legend">${label}${opts.optional?`<span class="hint">${t("（不清楚可空白）"," (optional — leave blank if unsure)")}</span>`:""}</span>
     ${calSeg}
