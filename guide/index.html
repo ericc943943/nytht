@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>線上點燈報名 使用說明</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:#f6f4ef;color:#2a2520;font-family:"PingFang TC","Noto Sans TC","Noto Sans CJK TC","Microsoft JhengHei",system-ui,sans-serif;font-size:17px;line-height:1.65}
+html[lang=en] body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;line-height:1.55}
+.wrap{max-width:820px;margin:0 auto;padding:0 18px 40px}
+.topbar{position:sticky;top:0;z-index:5;background:#f6f4ef;border-bottom:1px solid #e3ddd2;display:flex;align-items:center;gap:8px;padding:10px 0;flex-wrap:wrap}
+.topbar a{display:inline-block;border:1.5px solid #d8d1c6;background:#fff;border-radius:999px;padding:6px 14px;color:#2a2520;text-decoration:none;font-size:.9rem;white-space:nowrap}
+.topbar a.home{font-weight:700;color:#356D82;border-color:#356D82}
+.topbar .sp{flex:1}
+.cover{display:flex;align-items:center;gap:16px;border-bottom:3px solid #356D82;padding:18px 0 12px;margin-bottom:14px}
+.cover img.logo{height:58px;max-width:45%;object-fit:contain}
+.cover .t{flex:1;min-width:0}
+.cover h1{margin:0;font-size:1.6rem;color:#356D82;line-height:1.25}
+.cover .sub{font-size:.95rem;color:#6b6158}
+h2{font-size:1.3rem;color:#356D82;margin:28px 0 10px;padding:4px 0 4px 12px;border-left:6px solid #356D82;line-height:1.3}
+.box{background:#EEF5F8;border-radius:12px;padding:12px 18px;margin:10px 0 14px}
+.box.warn{background:#FBF1E2}
+.box b{color:#1f4f61}
+.box ul{margin:4px 0;padding-left:1.3em}.box li{margin:3px 0}
+.url{font-size:1.25rem;font-weight:700;color:#1f4f61}
+.go{display:inline-block;margin-top:8px;background:#356D82;color:#fff;border-radius:10px;padding:10px 18px;font-weight:700;text-decoration:none}
+.step{display:flex;gap:22px;align-items:flex-start;margin:10px 0 18px;background:#fff;border:1px solid #e3ddd2;border-radius:14px;padding:16px 18px}
+.step .txt{flex:1;min-width:0}
+.step .num{display:inline-flex;align-items:center;justify-content:center;width:1.8em;height:1.8em;border-radius:50%;background:#356D82;color:#fff;font-weight:700;font-size:.95rem;margin-right:8px;flex:none}
+.step h3{margin:0 0 6px;font-size:1.15rem;display:flex;align-items:center;line-height:1.3}
+.step p{margin:6px 0}.step ul{margin:6px 0;padding-left:1.2em}.step li{margin:4px 0}
+.shot{flex:none;width:240px;border:1.5px solid #cfc8bd;border-radius:12px;overflow:hidden;background:#fff}
+.shot img{display:block;width:100%;height:auto}
+.shots{display:flex;flex-direction:column;gap:10px;flex:none;width:240px}
+.shots .shot{width:100%}
+.btn{display:inline-block;padding:0 8px;border-radius:6px;background:#356D82;color:#fff;font-weight:700;font-size:.92em;line-height:1.6;white-space:nowrap}
+.btn.g{background:#2E7D4F}.btn.o{background:#fff;color:#2a2520;border:1.5px solid #9d958a;line-height:1.45}
+.faq dt{font-weight:700;margin-top:10px;color:#1f4f61}.faq dd{margin:2px 0 8px 1.1em}
+.two{display:flex;gap:14px}.two>div{flex:1}
+small{color:#6b6158;font-size:.88em}
+.foot{margin-top:20px;border-top:1px solid #d8d1c6;padding-top:10px;font-size:.9rem;color:#6b6158;text-align:center}
+.foot a{color:#356D82}
+.big body{font-size:21px}
+@media (max-width:640px){
+  .step{flex-direction:column;gap:12px;padding:14px}
+  .shot,.shots{width:100%;max-width:300px;align-self:center}
+  .shots{gap:12px}
+  .cover h1{font-size:1.35rem}
+}
+@media print{.topbar,.go{display:none}body{background:#fff}.step{break-inside:avoid;border:none;padding:0}}</style></head>
+<body>
+<div class="wrap"><nav class="topbar"><a class="home" href="/">← 回報名首頁</a><span class="sp"></span><a href="/guide/en" lang="en">English</a><a href="/guide/guide-zh.pdf" download="線上點燈報名_信眾使用說明.pdf">下載 PDF</a></nav>
+<div class="cover">
+  <img class="logo" src="data:image/jpeg;base64,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" alt="">
+  <div class="t"><h1>線上點燈報名<br>使用說明</h1><div class="sub">用手機或電腦就能報名，填好再到堂裡繳費</div></div>
+</div>
+
+<div class="box"><div>報名網址：<span class="url">nytht.vercel.app</span></div><div><small>字太小可以按右上角「字放大」；需要英文請按左上角「EN」。</small></div><a class="go" href="/">前往報名</a></div>
+
+<div class="box warn">
+  <b>報名前請準備好：</b>
+  <ul>
+    <li>聯絡人的姓名、電話、住址</li>
+    <li>每一位要點燈的人的<b>姓名、性別、生日</b>（國曆或農曆都可以，時辰不知道可以空白）</li>
+    <li>每一位要點哪幾盞燈：光明燈、文昌燈、太歲燈、財神燈（每盞 $120，可以點多盞）</li>
+  </ul>
+  一張報名表限<b>同一住址的家人</b>。不同住址的親友，請各填一張。
+</div>
+
+<h2>報名步驟</h2>
+
+<div class="step">
+  <div class="txt">
+    <h3><span class="num">1</span>按「點燈報名」</h3>
+    <p>在首頁的「點燈」這一格按 <span class="btn">點燈報名</span>。</p>
+    <p>上面會寫今年的點燈年度和每盞的金額。</p>
+  </div>
+  <div class="shot"><img src="/guide/img/zh_home.webp" width="640" height="1128" loading="lazy" alt=""></div>
+</div>
+
+<div class="step">
+  <div class="txt">
+    <h3><span class="num">2</span>填寫聯絡人</h3>
+    <p>填聯絡人的<b>姓名、電話、住址</b>。堂裡需要聯絡您時會用到。</p>
+    <p>填好按 <span class="btn">下一步</span>。</p>
+    <p><small>最上面的橫條會顯示現在是第幾步，總共 3 步。</small></p>
+  </div>
+  <div class="shot"><img src="/guide/img/zh_contact.webp" width="640" height="1117" loading="lazy" alt=""></div>
+</div>
+
+<div class="step">
+  <div class="txt">
+    <h3><span class="num">3</span>填寫每一位點燈的人</h3>
+    <ul>
+      <li><b>姓名</b>：如果第一位就是聯絡人本人，可以按「填入聯絡人」，不用再打一次。</li>
+      <li><b>性別</b>：按「男（信士）」或「女（信女）」。</li>
+      <li><b>出生日期</b>：先選<b>國曆</b>或<b>農曆</b>，再選年、月、日。農曆閏月請勾「是閏月」。時辰不知道可以空白。</li>
+      <li>選好生日，下面會自動顯示<b>生肖和歲數</b>，請看一下對不對。</li>
+      <li>如果您的生肖今年<b>建議點太歲燈</b>，會出現提醒，按「幫我勾選太歲燈」就會幫您勾好。</li>
+      <li><b>要點的燈</b>：勾選要點的燈，可以勾很多盞。</li>
+    </ul>
+  </div>
+  <div class="shots">
+    <div class="shot"><img src="/guide/img/zh_person_c.webp" width="640" height="1884" loading="lazy" alt=""></div>
+    <div class="shot"><img src="/guide/img/zh_tsok.webp" width="640" height="465" loading="lazy" alt=""></div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="txt">
+    <h3><span class="num">4</span>還有家人要點燈？</h3>
+    <p>按 <span class="btn o">＋ 再加一位</span>，會多出「第 2 位」的格子，照第 3 步填寫。加錯了可以按「刪除這位」。</p>
+    <p>全部填完，按 <span class="btn">下一步</span>。</p>
+    <p>如果有漏填，格子會變紅色，下面有紅字告訴您要補什麼。</p>
+  </div>
+  <div class="shots">
+    <div class="shot"><img src="/guide/img/zh_addnext.webp" width="640" height="276" loading="lazy" alt=""></div>
+    <div class="shot"><img src="/guide/img/zh_err_c.webp" width="640" height="542" loading="lazy" alt=""></div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="txt">
+    <h3><span class="num">5</span>核對資料，按「確認送出」</h3>
+    <p>畫面會列出所有資料、每種燈幾盞和<b>合計金額</b>。</p>
+    <p>有地方要改，按那一項旁邊的「修改」。</p>
+    <p>有話要告訴堂裡可以寫在「備註」。</p>
+    <p>都對了，按 <span class="btn">確認送出</span>。</p>
+  </div>
+  <div class="shot"><img src="/guide/img/zh_review_c.webp" width="640" height="1524" loading="lazy" alt=""></div>
+</div>
+
+<div class="step">
+  <div class="txt">
+    <h3><span class="num">6</span>報名表出現了</h3>
+    <p>送出後，畫面會出現您的<b>報名表</b>，上面有：</p>
+    <ul>
+      <li><b>報名編號</b>（例：L261108-003），請記下來</li>
+      <li>每一位的<b>燈號</b>（例：光明燈 G010104）</li>
+      <li><b>應繳金額</b></li>
+    </ul>
+    <p>燈號寫「候補」，表示那種燈已經滿了，堂裡會另外安排，再與您聯絡。</p>
+  </div>
+  <div class="shot"><img src="/guide/img/zh_done_c.webp" width="640" height="1473" loading="lazy" alt=""></div>
+</div>
+
+<div class="step">
+  <div class="txt">
+    <h3><span class="num">7</span>列印或存起來</h3>
+    <p>按 <span class="btn">列印報名表</span>，稍等幾秒，會跳出小視窗：</p>
+    <ul>
+      <li><b>列印</b>：直接印出來。iPhone、iPad、安卓手機會先出現分享選單，請在選單裡再選一次「<b>列印</b>」。</li>
+      <li><b>存成 PDF 檔</b>：存在手機或電腦裡，之後再印。</li>
+    </ul>
+    <p>沒有印表機也沒關係，<b>截圖</b>或記下報名編號，到堂裡出示就可以，義工會幫您印。</p>
+  </div>
+  <div class="shot"><img src="/guide/img/zh_pdfbox.webp" width="640" height="538" loading="lazy" alt=""></div>
+</div>
+
+<div class="step">
+  <div class="txt">
+    <h3><span class="num">8</span>到慈惠堂繳費</h3>
+    <p>帶著報名表（或手機畫面）到堂裡，<b>繳交現金</b>。</p>
+    <p>義工收款後會在報名表上簽名，剪下下半部的<b>收執聯</b>交給您。</p>
+    <p>請保存好收執聯，之後<b>憑報名編號領取點燈卡</b>。收執聯不見也沒關係，報電話就查得到。</p>
+  </div>
+</div>
+
+<h2>不知道要點什麼燈？</h2>
+<div class="step">
+  <div class="txt">
+    <p>首頁有一張「<b>我需要點什麼燈？</b>」：</p>
+    <ul>
+      <li>上面列出<b>今年建議點太歲燈的生肖</b>。點「太歲燈是什麼？」可以看說明。</li>
+      <li>選<b>國曆或農曆</b>，輸入生日，再勾今年想祈求的事（平安健康、讀書考試、事業財運）。</li>
+      <li>下面會告訴您<b>建議點哪幾盞燈</b>和原因。</li>
+      <li>按「<b>開始點燈報名</b>」，生日和建議的燈會自動幫您帶進報名表。</li>
+    </ul>
+    <p><small>建議僅供參考，可以依自己的心意多點或少點。每位家人可以分別看。</small></p>
+  </div>
+  <div class="shot"><img src="/guide/img/zh_helper.webp" width="640" height="1881" loading="lazy" alt=""></div>
+</div>
+
+<h2>報名後要查詢、修改或加點</h2>
+<div class="step">
+  <div class="txt">
+    <p>回到報名網頁，按 <span class="btn o">查詢／修改報名</span>，輸入<b>報名編號</b>和報名時填的<b>電話</b>，按「查詢」。</p>
+    <ul>
+      <li>可以再看一次燈號、再印一次報名表。</li>
+      <li><b>還沒繳費</b>前，可以按「修改報名」改資料。</li>
+      <li><b>已經繳費</b>後要<b>加點燈或加人</b>，請按「<b>要加點燈？另填一份</b>」：聯絡人會幫您填好，只要填新加的人和燈，會拿到一個新的報名編號，再到堂裡繳這一份的錢。</li>
+    </ul>
+    <p>用同一支手機報名的話，首頁上方會出現「<b>我的報名表</b>」，按「打開」就能看到，不用再輸入。</p>
+  </div>
+  <div class="shots">
+    <div class="shot"><img src="/guide/img/zh_lookup.webp" width="640" height="923" loading="lazy" alt=""></div>
+    <div class="shot"><img src="/guide/img/zh_myslips.webp" width="640" height="281" loading="lazy" alt=""></div>
+  </div>
+</div>
+
+<h2>常見問題</h2>
+<div class="step">
+  <div class="txt">
+    <dl class="faq">
+      <dt>忘記報名編號了？收執聯不見了？</dt>
+      <dd>在「查詢／修改報名」頁按「<b>忘記報名編號？</b>」，輸入報名時填的電話，和報名表上任何一位的姓名（要和報名時寫的一樣），就能找回編號。到堂裡領點燈卡時，也可以直接報電話，義工會幫您查。</dd>
+      <dt>填到一半有事離開，資料會不見嗎？</dt>
+      <dd>不會。資料會先存在這支手機或電腦裡，回來再按「點燈報名」就能接著填。想重新填，按「清除重填」。</dd>
+      <dt>按「確認送出」時說網路有問題？</dt>
+      <dd>資料還沒送出，填好的也不會不見。等一下再按一次就好，不會重複報名。</dd>
+      <dt>可以幫別的家庭一起報名嗎？</dt>
+      <dd>一張報名表限同一住址。報完一家後，按「再填一份」幫另一家填。</dd>
+    </dl>
+  </div>
+  <div class="shot"><img src="/guide/img/zh_found.webp" width="640" height="1079" loading="lazy" alt=""></div>
+</div>
+
+<div class="foot">紐約花蓮慈惠堂　報名與洽詢電話：718-961-1996　傳真：718-961-1992</div>
+</div>
+</body></html>

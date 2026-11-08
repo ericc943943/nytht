@@ -120,6 +120,7 @@ html.big .tsgrid{grid-template-columns:1fr}
 .howto h2{font-size:1.05rem;margin-bottom:8px}
 .howto ol{margin:0;padding-left:1.3em}
 .howto li{margin:4px 0}
+.guidebtn{margin-top:12px;text-decoration:none;color:var(--ink)}
 
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:3.1rem;padding:0 28px;border-radius:12px;border:2px solid transparent;cursor:pointer;font-weight:700;font-size:1.05rem}
 .btn.primary{background:var(--red);color:var(--red-ink)}
@@ -423,6 +424,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
         <li data-en="Review and submit. Your registration form, with lamp numbers, will appear — print it or take a screenshot.">核對無誤後送出，畫面會出現報名表和燈號，可以列印或截圖。</li>
         <li data-en="Pay in cash at the temple. A volunteer will sign the receipt at the bottom of the form and give it to you.">到慈惠堂繳交現金，義工簽名後，撕下報名表下半部的收執聯給您。</li>
       </ol>
+      <a class="btn ghost block guidebtn" id="guideLink" href="/guide" data-en="Step-by-step guide with pictures">看圖解使用說明</a>
     </section>
   </main>
 
@@ -1448,6 +1450,7 @@ function applyLang(){
   document.title = defaultTitle();
   document.querySelectorAll("[data-en]").forEach(el=>{ if(el.dataset.zh===undefined) el.dataset.zh=el.innerHTML; el.innerHTML = EN() ? el.dataset.en : el.dataset.zh; });
   $("langBtn").textContent = t("EN","中文"); $("langBtn").lang = t("en","zh-Hant");
+  $("guideLink").href = t("/guide","/guide/en");
   $("langBtn").setAttribute("aria-label", t("Switch to English","切換成中文"));
   $("homeLink").setAttribute("aria-label", t("回到報名首頁","Back to home"));
   setBig(document.documentElement.classList.contains("big"));
