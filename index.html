@@ -250,6 +250,7 @@ textarea{min-height:5rem;resize:vertical}
 .stamp.void{border-color:#6B645A;color:#6B645A}
 .sign{flex:1;font-size:.82rem;color:#4A443C;line-height:2.1}
 .f-note{margin:8px 0 0;font-size:.8rem;color:#4A443C}
+.f-note .cardday{color:#23201C;font-size:.95rem}
 .cut{display:flex;align-items:center;gap:8px;color:#6B645A;font-size:.78rem;margin:16px 0;white-space:nowrap}
 .cut::before,.cut::after{content:"";flex:1;border-top:2px dashed #9E978C}
 .stub .f-head .doc{font-size:1.05rem}
@@ -955,6 +956,12 @@ const recLunar = b => b&&b.lunar ? {y:b.lunar.year, m:b.lunar.month, leap:!!b.lu
 const recBirth = b => { const L=recLunar(b); if(!L) return ""; const sol=b.entered==="solar"&&b.solar?solarText({y:b.solar.year,m:b.solar.month,d:b.solar.day}):"";
   return EN() ? `${sol?`Born ${sol} · `:""}Lunar: ${lunarText(L)}` : `農曆 ${lunarText(L)}${sol?`（${sol}）`:""}`; };
 const recYear = r => Number(r.lampYear || lampYear());
+// 農曆正月初一（國曆月/日）
+const CNY = {2025:"1/29",2026:"2/17",2027:"2/6",2028:"1/26",2029:"2/13",2030:"2/3",2031:"1/23",2032:"2/11",2033:"1/31",2034:"2/19",2035:"2/8",2036:"1/28",2037:"2/15",2038:"2/4",2039:"1/24",2040:"2/12",
+  2041:"2/1",2042:"1/22",2043:"2/10",2044:"1/30",2045:"2/17",2046:"2/6",2047:"1/26",2048:"2/14",2049:"2/2",2050:"1/23"};
+// 點燈卡從點燈年度的正月初九（天公生）開始發
+const cardDay = y => { const d=CNY[y]; if(!d) return null; const [m,dd]=d.split("/").map(Number); return new Date(y, m-1, dd+8); };
+const cardDayText = y => { const d=cardDay(y); return !d ? "" : t(`${y}/${d.getMonth()+1}/${d.getDate()}（正月初九）起`, `from ${d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})} (9th day of Lunar New Year)`); };
 const recTitle = r => r.form==="lamp" ? `${yearText(recYear(r))} ${t(CONFIG.lampForm.title, CONFIG.lampForm.titleEn)}` : eventName(EVENTS().find(e=>e.id===r.eventId)||{id:r.eventId, name:r.formTitle||"法會"});
 const recTitleZh = r => r.form==="lamp" ? `${recYear(r)} ${ganzhi(recYear(r))}年 ${CONFIG.lampForm.title}` : (EVENTS().find(e=>e.id===r.eventId)||{name:r.formTitle||"法會"}).name;
 const gText = g => EN() ? genderText(g) : (g==="男"?"信士":g==="女"?"信女":"");
@@ -1000,7 +1007,7 @@ function formHTML(r){
     ${r.note?sec(t("備註","Notes"), `<div class="f-sub">${esc(r.note)}</div>`):""}
     <ul class="f-items">${chargeLinesOf(r,true).map(([a,b])=>`<li><span>${a}</span><span>${money(b)}</span></li>`).join("")}</ul>
     <div class="f-total"><span class="tot-l">${t("應繳金額（現金）","Amount due (cash)")}</span><span class="amt">${money(r.totals&&r.totals.all)}</span>${stampHTML(r)}</div>
-    <div class="f-temple"><div class="sign"><span>已收 $＿＿＿＿　□ 現金　□ 支票 #＿＿＿＿</span><span>經手人簽名＿＿＿＿＿＿</span><span>日期＿＿＿＿＿</span></div><div class="f-qr" aria-hidden="true">${qrSVG(`${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`)}</div></div>
+    <div class="f-temple"><div class="sign"><span>已收 $＿＿＿＿ □現金 □支票#＿＿＿</span><span>經手人簽名＿＿＿＿＿＿</span><span>日期＿＿＿＿＿</span></div><div class="f-qr" aria-hidden="true">${qrSVG(`${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`)}</div></div>
   </section>`;
   // 收執聯：繳費後義工簽名、撕下給信眾
   // 收執聯：只寫重點，大小固定。廟裡依報名編號綁好每一捆點燈卡，信眾憑收據上的編號領取
@@ -1024,8 +1031,8 @@ function formHTML(r){
     <div class="stub-list">${stubList}</div>
     <div class="f-total"><span class="tot-l">${t("應繳金額","Amount due")}</span><span class="amt">${money(r.totals&&r.totals.all)}</span><i></i></div>
     <div class="stub-foot"><div class="stub-foot-l">
-    <div class="f-temple"><div class="sign"><span>實收現金 $＿＿＿＿</span><span>經手人簽名＿＿＿＿＿＿</span><span>日期＿＿＿＿＿</span></div></div>
-    <p class="f-note">${t("請妥善保存本聯。燈號可用報名編號上網查詢。","Please keep this receipt. You can look up your lamp numbers online with your registration number.")} ${t("紐約花蓮慈惠堂","New York Hua Lian Tsu Hui Temple")}　${CONFIG.phone}</p>
+    <div class="f-temple"><div class="sign"><span>實收 $＿＿＿＿ □現金 □支票#＿＿＿</span><span>經手人簽名＿＿＿＿＿＿</span><span>日期＿＿＿＿＿</span></div></div>
+    <p class="f-note">${isLamp&&cardDayText(recYear(r))?`<b class="cardday">${t(`領取點燈卡：${cardDayText(recYear(r))}，憑本聯領取。`,`Collect your lamp cards ${cardDayText(recYear(r))} with this receipt.`)}</b><br>`:""}${t("請妥善保存本聯。燈號可用報名編號上網查詢。","Please keep this receipt. You can look up your lamp numbers online with your registration number.")} ${t("紐約花蓮慈惠堂","New York Hua Lian Tsu Hui Temple")}　${CONFIG.phone}</p>
     </div><div class="f-qr stub-qr" aria-hidden="true">${qrSVG(adminLink)}</div></div>
   </section></div>`;
   return `<article class="paper">${top}${stub}</article>`;

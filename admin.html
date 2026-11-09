@@ -599,8 +599,8 @@ function cardHTML(r, m){
       <button class="btn ghost small" data-do="back" type="button">${t("返回","Back")}</button></div>`;
   }
   else if(void_) action = `<button class="btn ghost small" data-ask="restore" data-ref="${esc(r.ref)}" type="button">${t("恢復報名","Restore registration")}</button>`;
-  // 點燈卡：狀態看上方標籤；按鈕只寫動作。農曆年前點燈的，年後統一祭改發卡，所以年前不放大按鈕（避免收完錢順手按到），只留下方小字連結；
-  // 年後點燈的可以現場祭改發卡，大按鈕一直都在
+  // 點燈卡：狀態看上方標籤；按鈕只寫動作。正月初九（天公生）起統一祭改發卡，之前不放大按鈕（避免收完錢順手按到），只留下方小字連結；
+  // 初九以後點燈的可以現場祭改發卡，大按鈕一直都在
   else if(paid && r.form==="lamp") action = r.cardAt || !cardTime(r) ? ""
       : `<button class="btn cardb" data-ask="card" data-ref="${esc(r.ref)}" type="button">${t("交點燈卡給信眾","Give lamp card to devotee")}</button>`;
   else action = paid ? `<button class="linkbtn" data-ask="unpay" data-ref="${esc(r.ref)}" type="button">${t("改回未繳費","Change back to unpaid")}</button>`
@@ -616,7 +616,7 @@ function cardHTML(r, m){
   return `<article class="card ${void_?"void":paid?"paid":"unpaid"}">
     <div class="card-head">
       <div><div class="ref">${hl(r.ref,q.replace(/-/g,""))}</div><div class="meta">${esc(formName(r))}・${t("報名","Submitted")} ${fmtDate(r.submittedAt)}${r.sample?`<span class="tag">${t("範例","Sample")}</span>`:""}${r.lang==="en"?`<span class="tag">${t("英文報名","English form")}</span>`:""}${r.updatedAt?`<span class="tag">${t("信眾修改過","Edited by devotee")}</span>`:""}${r.addTo?`<span class="tag">${t("追加・原","Add-on to")} ${hl(r.addTo,q.replace(/-/g,""))}</span>`:""}${(ADDONS[r.ref]||[]).length?`<span class="tag">${t("有追加","Has add-on")} ${ADDONS[r.ref].map(esc).join(t("、",", "))}</span>`:""}${!void_&&hasWait(r)?`<span class="tag">${t("有候補","Waitlisted")}</span>`:""}</div></div>
-      ${status}${paid&&!void_&&r.form==="lamp"?(r.cardAt?`<span class="status cardin">${t("點燈卡已領","Card collected")} ${fmtDate(r.cardAt)}${r.cardBy?"・"+esc(r.cardBy):""}</span>`:(cardTime(r)?`<span class="status cardout">${t("點燈卡未領","Card not collected")}</span>`:`<span class="status cardwait">${t("點燈卡年後發","Card after Lunar New Year")}</span>`)):""}${paid?`<span class="paidby">${esc(payText(r))}${r.paidBy?`・${t("經手：","handled by ")}${esc(r.paidBy)}`:""}</span>`:""}
+      ${status}${paid&&!void_&&r.form==="lamp"?(r.cardAt?`<span class="status cardin">${t("點燈卡已領","Card collected")} ${fmtDate(r.cardAt)}${r.cardBy?"・"+esc(r.cardBy):""}</span>`:(cardTime(r)?`<span class="status cardout">${t("點燈卡未領","Card not collected")}</span>`:`<span class="status cardwait">${t(`點燈卡 ${cardDay(recYear(r))?.getMonth()+1}/${cardDay(recYear(r))?.getDate()} 起發`,`Cards from ${cardDay(recYear(r))?.toLocaleDateString("en-US",{month:"short",day:"numeric"})}`)}</span>`)):""}${paid?`<span class="paidby">${esc(payText(r))}${r.paidBy?`・${t("經手：","handled by ")}${esc(r.paidBy)}`:""}</span>`:""}
     </div>
     <div class="contact"><span>${t("聯絡人","Contact")} <b>${hl(r.contact.name,q)}</b></span><span class="phone">${esc(r.contact.phone)}</span></div>
     ${lampSec}${soulSec}${mealSec}
@@ -624,10 +624,12 @@ function cardHTML(r, m){
     ${(r.payLog||[]).length?`<details class="log"><summary>${t("處理紀錄","History")}${t(`（${r.payLog.length}）`,` (${r.payLog.length})`)}</summary><ul>${r.payLog.map(l=>`<li>${fmtDate(l.at)}　${esc(l.by)}　${LOG_TEXT(l)}</li>`).join("")}</ul></details>`:""}
   </article>`;
 }
-// 農曆正月初一（國曆月/日）。點燈卡在點燈年度的春節後才發
+// 農曆正月初一（國曆月/日）
 const CNY = {2025:"1/29",2026:"2/17",2027:"2/6",2028:"1/26",2029:"2/13",2030:"2/3",2031:"1/23",2032:"2/11",2033:"1/31",2034:"2/19",2035:"2/8",2036:"1/28",2037:"2/15",2038:"2/4",2039:"1/24",2040:"2/12",
   2041:"2/1",2042:"1/22",2043:"2/10",2044:"1/30",2045:"2/17",2046:"2/6",2047:"1/26",2048:"2/14",2049:"2/2",2050:"1/23"};
-const cardTime = r => { const y=recYear(r), d=CNY[y]; if(!d) return true; const [m,dd]=d.split("/").map(Number); return new Date() >= new Date(y, m-1, dd); };
+// 點燈卡從點燈年度的正月初九（天公生）開始發
+const cardDay = y => { const d=CNY[y]; if(!d) return null; const [m,dd]=d.split("/").map(Number); return new Date(y, m-1, dd+8); };
+const cardTime = r => { const d=cardDay(recYear(r)); return !d || new Date() >= d; };
 let ADDONS={};   // 原報名編號 → 追加的報名編號
 function render(){
   ADDONS={}; ROWS.forEach(r=>{ if(r.addTo && !r.cancelled) (ADDONS[r.addTo]=ADDONS[r.addTo]||[]).push(r.ref); });
