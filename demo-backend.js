@@ -659,13 +659,19 @@ function userOp_(me, b) {
   if (!canAccounts_(me)) return { ok: false, error: "auth" };
   // 網站管理員只能管義工；指定堂主、財務、網站管理員要堂主（或管理員）
   const roleOK = role => ROLES.includes(role) && (role === "volunteer" || canAssignRoles_(me)) && (role !== "admin" || me.role === "admin");
+  // 堂主只能有一位。現任堂主把堂主交給別人時，自己改成義工（由新堂主重新指定）；其他人要換堂主，得先把原堂主改成別的身分
+  const ownerNow = exceptId => list.find(x => x.role === "owner" && x.active && x.id !== exceptId);
+  const handOver = (toName) => { meU.role = "volunteer"; writeUser_(meU); audit_(me, "移交堂主", toName, me.name + " 改為義工"); };
   if (b.op === "add") {
     const name = String(b.name || "").trim(), role = String(b.role || "volunteer");
     if (!name || !pinOK(b.newPin)) return { ok: false, error: "bad-data" };
     if (!roleOK(role)) return { ok: false, error: "role-auth" };
     if (list.some(x => x.name === name)) return { ok: false, error: "dup" };
+    const cur = role === "owner" ? ownerNow("") : null;
+    if (cur && cur.id !== me.id) return { ok: false, error: "one-owner", owner: cur.name };
     writeUser_({ id: "u-" + Date.now().toString(36), name: name, role: role, pin: hashPin_(b.newPin), active: true, mustChange: true });
     audit_(me, "新增帳號", name, ROLE_ZH[role]);
+    if (cur) { handOver(name); return { ok: true, handedOver: true }; }
     return { ok: true };
   }
   const u = list.find(x => x.id === b.id);
@@ -683,6 +689,7 @@ function userOp_(me, b) {
   if (b.op === "setActive") {
     if (u.id === me.id) return { ok: false, error: "self" };
     if (!b.active && lastAdmin) return { ok: false, error: "last-admin" };
+    if (b.active && u.role === "owner" && ownerNow(u.id)) return { ok: false, error: "one-owner", owner: ownerNow(u.id).name };
     u.active = !!b.active; writeUser_(u);
     audit_(me, u.active ? "重新啟用帳號" : "停用帳號", u.name, "");
     return { ok: true };
@@ -699,10 +706,13 @@ function userOp_(me, b) {
       if (lastAdmin && role !== "admin" && role !== "owner") return { ok: false, error: "last-admin" };
       changes.push("身分：" + ROLE_ZH[u.role] + " → " + ROLE_ZH[role]);
     }
+    const cur = role === "owner" && u.role !== "owner" ? ownerNow(u.id) : null;
+    if (cur && cur.id !== me.id) return { ok: false, error: "one-owner", owner: cur.name };
     if (name !== u.name) changes.push("姓名：" + u.name + " → " + name);
     const oldName = u.name;
     u.name = name; u.role = role; writeUser_(u);
     if (changes.length) audit_(me, "修改帳號", oldName, changes.join("；"));
+    if (cur) { handOver(u.name); return { ok: true, user: pub_(u), handedOver: true }; }
     return { ok: true, user: pub_(u) };
   }
   if (b.op === "delete") {   // 只能刪沒經手過任何報名的帳號（建錯的）；經手過的請用停用

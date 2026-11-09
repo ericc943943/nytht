@@ -325,7 +325,7 @@ details.log li{margin:2px 0}
      </div>
      <div id="setUsersBox">
       <h2 data-en="Volunteer accounts">義工帳號</h2>
-      <p class="hint" data-en="Roles: the temple head can see all accounts and change everything; finance can see all accounts; the site admin manages settings and volunteer accounts; volunteers can collect payments and give out lamp cards, and see only the payments they received. Only the temple head can assign the temple head, finance and site admin roles. Each volunteer has their own name and PIN, and payment records show who handled them. Press &quot;Edit&quot; to change a name or role, or to reset a PIN. For volunteers who no longer help, press &quot;Disable&quot; — their past records are kept. An account created by mistake can be deleted.">身分：堂主看得到全部帳目、什麼都能改；財務看得到全部帳目；網站管理員管設定和義工帳號；義工可以收款、發點燈卡，只看得到自己收的款。堂主、財務、網站管理員只有堂主能指定。每位義工有自己的名字和 PIN 碼，收款紀錄會記下是誰經手。按「修改」可以改名字、身分、重設 PIN 碼。不再幫忙的義工請按「停用」，過去的紀錄會保留；建錯的帳號可以刪除。</p>
+      <p class="hint" data-en="Roles: the temple head can see all accounts and change everything; finance can see all accounts; the site admin manages settings and volunteer accounts; volunteers can collect payments and give out lamp cards, and see only the payments they received. There can be only one temple head, and only the temple head can assign the temple head, finance and site admin roles. Each volunteer has their own name and PIN, and payment records show who handled them. Press &quot;Edit&quot; to change a name or role, or to reset a PIN. For volunteers who no longer help, press &quot;Disable&quot; — their past records are kept. An account created by mistake can be deleted.">身分：堂主看得到全部帳目、什麼都能改；財務看得到全部帳目；網站管理員管設定和義工帳號；義工可以收款、發點燈卡，只看得到自己收的款。堂主只能有一位，堂主、財務、網站管理員只有堂主能指定。每位義工有自己的名字和 PIN 碼，收款紀錄會記下是誰經手。按「修改」可以改名字、身分、重設 PIN 碼。不再幫忙的義工請按「停用」，過去的紀錄會保留；建錯的帳號可以刪除。</p>
       <div id="userRows" class="evrows"></div>
       <p class="pwmsg" id="usersMsg" role="status"></p>
       <div class="pwcard">
@@ -486,7 +486,7 @@ const API = {
   async users(){ return (await apiGet({action:"users"})).users; },   // 登入名單：只有名字，不含 PIN
   async login(uid, pin){ const j=await apiGet({action:"login", uid, pin}); if(j.error==="locked") throw new Error("locked"); return j.ok?j.user:null; },
   // 帳號管理（管理員）：add / edit / delete / resetPin / setActive；個人：changeMyPin。新的 PIN 用 newPin 傳，避免跟登入用的 pin 撞名
-  async userOp(op, data){ const d={...data}; if("pin" in d){ d.newPin=d.pin; delete d.pin; } okOrThrow(await apiPost({action:"userOp", op, ...d, ...auth()})); },
+  async userOp(op, data){ const d={...data}; if("pin" in d){ d.newPin=d.pin; delete d.pin; } return okOrThrow(await apiPost({action:"userOp", op, ...d, ...auth()})); },
 };
 
 /* ================= 身分與權限 ================= */
@@ -846,7 +846,11 @@ const U_ERR_EN = { self:"You can't disable or delete yourself.", "self-role":"Yo
   dup:"An account with this name already exists. Please add something to tell them apart.", used:"This person has handled registrations, so the account can't be deleted (records must show who handled them). If they no longer help, press \"Disable\".", pin:"The PIN must be 4–8 digits." };
 const U_ERR = { self:"不能停用或刪除自己。", "self-role":"不能改自己的身分，請另一位管理員幫您改。", "last-admin":"這是最後一位堂主／管理員，不能停用、刪除或改成其他身分。請先指定另一位堂主。", "role-auth":"這個身分要由堂主指定或修改。",
   dup:"已經有同名的帳號，請在名字後面加註區別。", used:"這位經手過報名，不能刪除（查帳時要找得到人）。不再幫忙請按「停用」。", pin:"PIN 碼要 4～8 位數字。" };
-const uErr = err => (EN()?U_ERR_EN:U_ERR)[err.message] || t("操作失敗，請重新登入後再試。","Something went wrong. Please log in again and try again.");
+// 堂主只能有一位
+const ownerName = () => (U_LIST.find(u=>u.role==="owner"&&u.active)||{}).name||"";
+const handOverOK = (toName, role) => role!=="owner" || myRole()!=="owner" || confirm(t(`堂主只能有一位。\n把堂主交給「${toName}」之後，您會改成義工，之後要請新堂主重新指定您的身分。\n確定要移交嗎？`,`There can be only one temple head.\nAfter handing over to "${toName}", you will become a volunteer, and the new temple head will need to assign your role again.\nHand over?`));
+async function afterHandOver(){ alert(t("已移交堂主。您現在是義工。","The temple head role has been handed over. You are now a volunteer.")); try{ ROWS=await API.list(); }catch(e){} openSettings(); }
+const uErr = err => err.message==="one-owner" ? t(`已經有一位堂主（${ownerName()}）。堂主只能有一位，要換人請先把原本的堂主改成其他身分。`,`There is already a temple head (${ownerName()}). There can be only one; change the current temple head's role first.`) : (EN()?U_ERR_EN:U_ERR)[err.message] || t("操作失敗，請重新登入後再試。","Something went wrong. Please log in again and try again.");
 async function renderUsers(){
   U_LIST=await API.users(); const me=sess();
   if(U_OPEN && !U_LIST.some(u=>u.id===U_OPEN)) U_OPEN=null;
@@ -877,7 +881,9 @@ $("userRows").addEventListener("click", async e=>{
   try{
     if(act==="save"){ const name=$("ueName").value.trim(); if(!name) return uMsg(t("請填姓名。","Please enter a name."),false);
       const me=sess(), role=id===me.uid?u.role:U_ROLE;
-      await API.userOp("edit",{id,name,role});
+      if(role!==u.role && !handOverOK(name, role)) return;
+      const res = await API.userOp("edit",{id,name,role});
+      if(res.handedOver){ U_OPEN=null; return afterHandOver(); }
       if(id===me.uid) setSess({...me, name});
       U_OPEN=null; uMsg(t(`已儲存「${name}」。`,`Saved "${name}".`),true); }
     else if(act==="reset"){ const v=document.querySelector(`[data-pin="${id}"]`).value.trim(); if(!pinOK(v)) return uMsg(t("PIN 碼要 4～8 位數字。","The PIN must be 4–8 digits."),false);
@@ -893,8 +899,9 @@ $("nuRole").addEventListener("click", e=>{ const b=e.target.closest("[data-role]
 $("nuAdd").addEventListener("click", async ()=>{
   const name=$("nuName").value.trim(), pin=$("nuPin").value.trim();
   if(!name) return uMsg(t("請填姓名。","Please enter a name."),false); if(!pinOK(pin)) return uMsg(t("PIN 碼要 4～8 位數字。","The PIN must be 4–8 digits."),false);
-  try{ await API.userOp("add",{name,role:NU_ROLE,pin}); uMsg(t(`已新增「${name}」。請把 PIN 碼告訴對方，第一次登入時會被要求改成自己的 PIN 碼。`,`Added "${name}". Please tell them the PIN. They will be asked to change it to their own PIN when they first log in.`),true); $("nuName").value=$("nuPin").value=""; renderUsers(); }
-  catch(err){ uMsg(["dup","role-auth"].includes(err.message)?uErr(err):t("新增失敗，請重新登入後再試。","Couldn't add. Please log in again and try again."),false); }
+  if(!handOverOK(name, NU_ROLE)) return;
+  try{ const res=await API.userOp("add",{name,role:NU_ROLE,pin}); if(res.handedOver){ $("nuName").value=$("nuPin").value=""; return afterHandOver(); } uMsg(t(`已新增「${name}」。請把 PIN 碼告訴對方，第一次登入時會被要求改成自己的 PIN 碼。`,`Added "${name}". Please tell them the PIN. They will be asked to change it to their own PIN when they first log in.`),true); $("nuName").value=$("nuPin").value=""; renderUsers(); }
+  catch(err){ uMsg(["dup","role-auth","one-owner"].includes(err.message)?uErr(err):t("新增失敗，請重新登入後再試。","Couldn't add. Please log in again and try again."),false); }
 });
 $("mySave").addEventListener("click", async ()=>{
   const cur=$("myCur").value.trim(), a=$("myNew").value.trim(), b2=$("myNew2").value.trim();
