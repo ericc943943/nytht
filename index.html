@@ -423,7 +423,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
         <li data-en="Enter the contact person's name, phone number and address.">填寫聯絡人的姓名、電話、住址。</li>
         <li data-en="Fill in the details for each person.">依序填寫每一位的資料。</li>
         <li data-en="Review and submit. Your registration form, with lamp numbers, will appear — print it or take a screenshot.">核對無誤後送出，畫面會出現報名表和燈號，可以列印或截圖。</li>
-        <li data-en="Pay in cash at the temple. A volunteer will sign the receipt at the bottom of the form and give it to you.">到慈惠堂繳交現金，義工簽名後，撕下報名表下半部的收執聯給您。</li>
+        <li data-en="Pay at the temple by cash or check. A volunteer will sign the receipt at the bottom of the form and give it to you.">到慈惠堂繳費（現金或支票），義工簽名後，撕下報名表下半部的收執聯給您。</li>
       </ol>
       <a class="btn ghost block guidebtn" id="guideLink" href="/guide" data-en="Step-by-step guide with pictures">看圖解使用說明</a>
     </section>
@@ -1217,8 +1217,8 @@ function showRecord(r, mode){
   const wl = (r.lamps||[]).some(p=>Object.values(p.seats||{}).some(v=>!v));
   let m = r.cancelled ? t("這筆報名已經取消。","This registration has been cancelled.")
     : r.paid ? t("這筆報名已經繳費，謝謝您。燈號請看下方報名表。","This registration has been paid — thank you. Your lamp numbers are on the form below.")
-    : CUR_MODE==="edited" ? t("已經儲存修改。請帶這張報名表到慈惠堂繳交現金。","Your changes have been saved. Please bring this form to the temple and pay in cash.")
-    : CUR_MODE==="new" ? t("報名已送出。請把這張報名表印出來或截圖，帶到慈惠堂繳交現金。","Your registration has been submitted. Please print this form or take a screenshot, and bring it to the temple to pay in cash.")
+    : CUR_MODE==="edited" ? t("已經儲存修改。請帶這張報名表到慈惠堂繳費（現金或支票）。","Your changes have been saved. Please bring this form to the temple and pay by cash or check.")
+    : CUR_MODE==="new" ? t("報名已送出。請把這張報名表印出來或截圖，帶到慈惠堂繳費（現金或支票）。","Your registration has been submitted. Please print this form or take a screenshot, and bring it to the temple to pay by cash or check.")
     : t("這是您的報名表。繳費前如果有資料要改，可以按下方「修改報名」。","Here is your registration form. If anything needs to change before you pay, press \"Make changes\" below.");
   if(wl && !r.cancelled) m += t("　標示「候補」的燈目前已額滿，堂裡會另外安排，再與您聯絡。"," Lamps marked \"Waitlist\" are currently full; the temple will arrange a spot and contact you.");
   msg.textContent = m; msg.classList.toggle("warn", !!r.cancelled);
