@@ -3,7 +3,7 @@
  * 改了 Code.gs 之後執行 python3 backend/build-demo.py 重新產生。 */
 window.DemoBackend = (function () {
   "use strict";
-  const KEY = "tsuhui-demo-v4";
+  const KEY = "tsuhui-demo-v5";
   let db = null;
   try { db = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
   if (!db || !db.sheets) db = { sheets: {}, order: [] };
@@ -746,7 +746,7 @@ function out_(obj) {
     setup();
     const users = sheet_(SHEET.users);
     users.getRange(2, 6).setValue(false);   // 示範版管理員不用改 PIN
-    [["u-wang", "王師姐", "volunteer", "1234"], ["u-li", "李師兄", "volunteer", "5678"], ["u-chen", "陳師姐", "finance", "2468"], ["u-lin", "林網管", "web", "1357"]].forEach(([id, n, role, pin]) => users.appendRow([id, n, role, hashPin_(pin), true, false]));
+    [["u-wang", "王師姐", "volunteer", "1234"], ["u-li", "李師兄", "volunteer", "5678"], ["u-head", "堂主", "owner", "6666"], ["u-chen", "陳師姐", "finance", "2468"], ["u-lin", "林網管", "web", "1357"]].forEach(([id, n, role, pin]) => users.appendRow([id, n, role, hashPin_(pin), true, false]));
     const B = (y, m, d, h) => ({ lunar: { year: y, month: m, leap: false, day: d, hour: h || "" }, solar: null, entered: "lunar" });
     const samples = [
       { contact: { name: "王秀英", phone: "(718) 555-0142", address: "範例地址" }, lamps: [
