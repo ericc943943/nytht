@@ -291,7 +291,7 @@ details.log li{margin:2px 0}
       <button class="btn primary" id="fpSave" type="button" data-en="Change PIN and continue">更改 PIN 碼並進入</button>
     </div>
     <div class="err" id="loginErr" role="alert"></div>
-    <p id="demoLoginNote" hidden data-en="Demo PINs: Admin 8888; temple head 堂主 6666; volunteers 王師姐 1234, 李師兄 5678; finance 陳師姐 2468; site admin 林網管 1357.">示範版 PIN：管理員 8888；堂主 6666；義工 王師姐 1234、李師兄 5678；財務 陳師姐 2468；網站管理員 林網管 1357。</p>
+    <p id="demoLoginNote" hidden data-en="Demo PINs: Admin 8888; temple head 堂主 6666; deputy 副堂主 7777; volunteers 王師姐 1234, 李師兄 5678; finance 陳師姐 2468; site admin 林網管 1357.">示範版 PIN：管理員 8888；堂主 6666；副堂主 7777；義工 王師姐 1234、李師兄 5678；財務 陳師姐 2468；網站管理員 林網管 1357。</p>
   </section>
 
   <!-- 密碼設定（只有管理員看得到） -->
@@ -325,7 +325,7 @@ details.log li{margin:2px 0}
      </div>
      <div id="setUsersBox">
       <h2 data-en="Volunteer accounts">義工帳號</h2>
-      <p class="hint" data-en="Roles: the temple head can see all accounts and change everything; finance can see all accounts; the site admin manages settings and volunteer accounts; volunteers can collect payments and give out lamp cards, and see only the payments they received. There can be only one temple head, and only the temple head can assign the temple head, finance and site admin roles. Each volunteer has their own name and PIN, and payment records show who handled them. Press &quot;Edit&quot; to change a name or role, or to reset a PIN. For volunteers who no longer help, press &quot;Disable&quot; — their past records are kept. An account created by mistake can be deleted.">身分：堂主看得到全部帳目、什麼都能改；財務看得到全部帳目；網站管理員管設定和義工帳號；義工可以收款、發點燈卡，只看得到自己收的款。堂主只能有一位，堂主、財務、網站管理員只有堂主能指定。每位義工有自己的名字和 PIN 碼，收款紀錄會記下是誰經手。按「修改」可以改名字、身分、重設 PIN 碼。不再幫忙的義工請按「停用」，過去的紀錄會保留；建錯的帳號可以刪除。</p>
+      <p class="hint" data-en="Roles: the temple head can see all accounts and change everything; the deputy head can do the same except change the temple head's account; finance can see all accounts; the site admin manages settings and volunteer accounts; volunteers can collect payments and give out lamp cards, and see only the payments they received. There can be only one temple head and one deputy, assigned only by the temple head; finance and site admins are assigned by the temple head or deputy. Each volunteer has their own name and PIN, and payment records show who handled them. Press &quot;Edit&quot; to change a name or role, or to reset a PIN. For volunteers who no longer help, press &quot;Disable&quot; — their past records are kept. An account created by mistake can be deleted.">身分：堂主看得到全部帳目、什麼都能改；副堂主跟堂主一樣，但不能動堂主的帳號；財務看得到全部帳目；網站管理員管設定和義工帳號；義工可以收款、發點燈卡，只看得到自己收的款。堂主、副堂主各只能有一位，只有堂主能指定；財務、網站管理員由堂主或副堂主指定。每位義工有自己的名字和 PIN 碼，收款紀錄會記下是誰經手。按「修改」可以改名字、身分、重設 PIN 碼。不再幫忙的義工請按「停用」，過去的紀錄會保留；建錯的帳號可以刪除。</p>
       <div id="userRows" class="evrows"></div>
       <p class="pwmsg" id="usersMsg" role="status"></p>
       <div class="pwcard">
@@ -493,10 +493,10 @@ const API = {
 // admin 管理員（舊身分＝全部）、owner 堂主、finance 財務、web 網站管理員、volunteer 義工。真正的把關在後端 Code.gs，這裡只決定畫面
 let FEAT = [];   // 後端支援的功能（舊 Code.gs 沒有）
 const myRole = () => sess()?.role || "volunteer";
-const canMoney = () => ["admin","owner","finance"].includes(myRole());        // 總帳、別人經手的付款、改回別人收的款
-const canSettings = () => ["admin","owner","web"].includes(myRole());
-const canAccounts = () => ["admin","owner","web"].includes(myRole()) || (!FEAT.includes("roles") && myRole()==="admin");
-const canAssign = () => ["admin","owner"].includes(myRole());                  // 指定堂主、財務、網站管理員
+const canMoney = () => ["admin","owner","deputy","finance"].includes(myRole());        // 總帳、別人經手的付款、改回別人收的款
+const canSettings = () => ["admin","owner","deputy","web"].includes(myRole());
+const canAccounts = () => ["admin","owner","deputy","web"].includes(myRole()) || (!FEAT.includes("roles") && myRole()==="admin");
+const canAssign = () => ["admin","owner","deputy"].includes(myRole());         // 指定財務、網站管理員（堂主、副堂主只有堂主能指定）
 const paidByMe = r => !!r.paidBy && r.paidBy===sess()?.name;
 const canUnpay = r => canMoney() || paidByMe(r);
 
@@ -833,13 +833,14 @@ $("backBtn").addEventListener("click", ()=>{ $("settingsView").hidden=true; $("m
 const pinOK = p => /^\d{4,8}$/.test(p);
 const uMsg=(t,ok)=>{ $("usersMsg").textContent=t; $("usersMsg").className="pwmsg "+(ok?"ok":"bad"); };
 let U_OPEN=null, U_ROLE="volunteer", U_LIST=[];
-const ROLE_NAME = r => ({admin:t("管理員","Admin"), owner:t("堂主","Temple head"), finance:t("財務","Finance"), web:t("網站管理員","Site admin"), volunteer:t("義工","Volunteer")})[r] || t("義工","Volunteer");
+const ROLE_NAME = r => ({admin:t("管理員","Admin"), owner:t("堂主","Temple head"), deputy:t("副堂主","Deputy head"), finance:t("財務","Finance"), web:t("網站管理員","Site admin"), volunteer:t("義工","Volunteer")})[r] || t("義工","Volunteer");
 const ROLE_CLS = r => r==="volunteer" ? "" : r==="finance" ? "fin" : "adm";
 // 能指定的身分：堂主（或管理員）可以指定全部；網站管理員只能開義工帳號
-const assignable = cur => canAssign() ? ["volunteer","finance","web","owner", ...(myRole()==="admin"||cur==="admin"?["admin"]:[])] : ["volunteer"];
+const assignable = cur => !canAssign() ? ["volunteer"] : myRole()==="deputy" ? ["volunteer","finance","web"]
+  : ["volunteer","finance","web","deputy","owner", ...(myRole()==="admin"||cur==="admin"?["admin"]:[])];
 function renderRoleSeg(el, cur){
   const opts = assignable(cur);
-  if(opts.length<2){ el.innerHTML = `<span class="hint">${ROLE_NAME("volunteer")}${t("（其他身分要請堂主指定）"," (other roles are assigned by the temple head)")}</span>`; return; }
+  if(opts.length<2){ el.innerHTML = `<span class="hint">${ROLE_NAME("volunteer")}${t("（其他身分要請堂主或副堂主指定）"," (other roles are assigned by the temple head or deputy)")}</span>`; return; }
   el.innerHTML = opts.map(v=>`<button type="button" data-role="${v}" aria-pressed="${cur===v}">${ROLE_NAME(v)}</button>`).join("");
 }
 const U_ERR_EN = { self:"You can't disable or delete yourself.", "self-role":"You can't change your own role. Please ask another admin.", "last-admin":"This is the last temple head / admin, so it can't be disabled, deleted or given another role. Make someone else the temple head first.", "role-auth":"Only the temple head can assign or change this role.",
@@ -850,12 +851,12 @@ const U_ERR = { self:"不能停用或刪除自己。", "self-role":"不能改自
 const ownerName = () => (U_LIST.find(u=>u.role==="owner"&&u.active)||{}).name||"";
 const handOverOK = (toName, role) => role!=="owner" || myRole()!=="owner" || confirm(t(`堂主只能有一位。\n把堂主交給「${toName}」之後，您會改成義工，之後要請新堂主重新指定您的身分。\n確定要移交嗎？`,`There can be only one temple head.\nAfter handing over to "${toName}", you will become a volunteer, and the new temple head will need to assign your role again.\nHand over?`));
 async function afterHandOver(){ alert(t("已移交堂主。您現在是義工。","The temple head role has been handed over. You are now a volunteer.")); try{ ROWS=await API.list(); }catch(e){} openSettings(); }
-const uErr = err => err.message==="one-owner" ? t(`已經有一位堂主（${ownerName()}）。堂主只能有一位，要換人請先把原本的堂主改成其他身分。`,`There is already a temple head (${ownerName()}). There can be only one; change the current temple head's role first.`) : (EN()?U_ERR_EN:U_ERR)[err.message] || t("操作失敗，請重新登入後再試。","Something went wrong. Please log in again and try again.");
+const uErr = err => err.message==="one-deputy" ? t("已經有一位副堂主。副堂主只能有一位，要換人請先把原本的副堂主改成其他身分。","There is already a deputy head. There can be only one; change the current deputy's role first.") : err.message==="one-owner" ? t(`已經有一位堂主（${ownerName()}）。堂主只能有一位，要換人請先把原本的堂主改成其他身分。`,`There is already a temple head (${ownerName()}). There can be only one; change the current temple head's role first.`) : (EN()?U_ERR_EN:U_ERR)[err.message] || t("操作失敗，請重新登入後再試。","Something went wrong. Please log in again and try again.");
 async function renderUsers(){
   U_LIST=await API.users(); const me=sess();
   if(U_OPEN && !U_LIST.some(u=>u.id===U_OPEN)) U_OPEN=null;
   $("userRows").innerHTML=U_LIST.map(u=>{ const mine=u.id===me.uid, open=u.id===U_OPEN;
-    const locked = !mine && !canAssign() && u.role!=="volunteer";   // 網站管理員不能動堂主、財務等帳號
+    const locked = !mine && ((!canAssign() && u.role!=="volunteer") || (myRole()==="deputy" && ["owner","deputy","admin"].includes(u.role)));   // 網站管理員不能動堂主、財務等帳號；副堂主不能動堂主
     return `<div class="urow ${u.active?"":"off"}">
       <b>${esc(u.name)}</b><span class="rtag ${ROLE_CLS(u.role)}">${ROLE_NAME(u.role)}</span>${u.active?"":`<span class="rtag">${t("已停用","Disabled")}</span>`}${u.active&&u.mustChange?`<span class="rtag">${t("待本人改 PIN","Must change PIN")}</span>`:""}
       ${mine?`<span class="hint">${t("（您自己）","(you)")}</span>`:""}
@@ -901,7 +902,7 @@ $("nuAdd").addEventListener("click", async ()=>{
   if(!name) return uMsg(t("請填姓名。","Please enter a name."),false); if(!pinOK(pin)) return uMsg(t("PIN 碼要 4～8 位數字。","The PIN must be 4–8 digits."),false);
   if(!handOverOK(name, NU_ROLE)) return;
   try{ const res=await API.userOp("add",{name,role:NU_ROLE,pin}); if(res.handedOver){ $("nuName").value=$("nuPin").value=""; return afterHandOver(); } uMsg(t(`已新增「${name}」。請把 PIN 碼告訴對方，第一次登入時會被要求改成自己的 PIN 碼。`,`Added "${name}". Please tell them the PIN. They will be asked to change it to their own PIN when they first log in.`),true); $("nuName").value=$("nuPin").value=""; renderUsers(); }
-  catch(err){ uMsg(["dup","role-auth","one-owner"].includes(err.message)?uErr(err):t("新增失敗，請重新登入後再試。","Couldn't add. Please log in again and try again."),false); }
+  catch(err){ uMsg(["dup","role-auth","one-owner","one-deputy"].includes(err.message)?uErr(err):t("新增失敗，請重新登入後再試。","Couldn't add. Please log in again and try again."),false); }
 });
 $("mySave").addEventListener("click", async ()=>{
   const cur=$("myCur").value.trim(), a=$("myNew").value.trim(), b2=$("myNew2").value.trim();

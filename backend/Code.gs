@@ -50,17 +50,17 @@ const AUDIT_HEAD = ["時間", "經手人", "動作", "對象", "內容"];
 
 /* ================= 身分與權限 =================
    admin 管理員（舊的身分，等於全部權限；交接時拆成堂主＋網站管理員）
-   owner 堂主：全部。finance 財務：看全部帳、改別人的收款。web 網站管理員：設定、義工帳號，看不到總帳。volunteer 義工。
+   owner 堂主：全部。deputy 副堂主：跟堂主一樣，但不能動堂主的帳號、不能指定堂主或副堂主。finance 財務：看全部帳、改別人的收款。web 網站管理員：設定、義工帳號，看不到總帳。volunteer 義工。
    錢（總帳、別人經手的付款細節、改回別人收的款）＝ admin／owner／finance
    設定、帳號 ＝ admin／owner／web（web 只能管義工帳號）
-   指定堂主、財務、網站管理員 ＝ admin／owner */
-const ROLES = ["admin", "owner", "finance", "web", "volunteer"];
-const ROLE_ZH = { admin: "管理員", owner: "堂主", finance: "財務", web: "網站管理員", volunteer: "義工" };
-const canMoney_ = u => ["admin", "owner", "finance"].includes(u.role);
-const canSettings_ = u => ["admin", "owner", "web"].includes(u.role);
-const canAccounts_ = u => ["admin", "owner", "web"].includes(u.role);
-const canAssignRoles_ = u => ["admin", "owner"].includes(u.role);
-const isBoss_ = u => (u.role === "admin" || u.role === "owner") && u.active;
+   指定財務、網站管理員 ＝ admin／owner／deputy；指定堂主、副堂主 ＝ admin／owner。堂主、副堂主各限一位 */
+const ROLES = ["admin", "owner", "deputy", "finance", "web", "volunteer"];
+const ROLE_ZH = { admin: "管理員", owner: "堂主", deputy: "副堂主", finance: "財務", web: "網站管理員", volunteer: "義工" };
+const canMoney_ = u => ["admin", "owner", "deputy", "finance"].includes(u.role);
+const canSettings_ = u => ["admin", "owner", "deputy", "web"].includes(u.role);
+const canAccounts_ = u => ["admin", "owner", "deputy", "web"].includes(u.role);
+const canAssignRoles_ = u => ["admin", "owner", "deputy"].includes(u.role);
+const isBoss_ = u => ["admin", "owner", "deputy"].includes(u.role) && u.active;
 
 /* ================= 第一次使用：建立分頁與管理員帳號 ================= */
 function setup() {
@@ -575,9 +575,11 @@ function userOp_(me, b) {
   }
   if (!canAccounts_(me)) return { ok: false, error: "auth" };
   // 網站管理員只能管義工；指定堂主、財務、網站管理員要堂主（或管理員）
-  const roleOK = role => ROLES.includes(role) && (role === "volunteer" || canAssignRoles_(me)) && (role !== "admin" || me.role === "admin");
+  const roleOK = role => ROLES.includes(role) && (role === "volunteer" || canAssignRoles_(me)) && (role !== "admin" || me.role === "admin")
+    && (!["owner", "deputy"].includes(role) || ["admin", "owner"].includes(me.role));
   // 堂主只能有一位。現任堂主把堂主交給別人時，自己改成義工（由新堂主重新指定）；其他人要換堂主，得先把原堂主改成別的身分
   const ownerNow = exceptId => list.find(x => x.role === "owner" && x.active && x.id !== exceptId);
+  const deputyNow = exceptId => list.find(x => x.role === "deputy" && x.active && x.id !== exceptId);
   const handOver = (toName) => { meU.role = "volunteer"; writeUser_(meU); audit_(me, "移交堂主", toName, me.name + " 改為義工"); };
   if (b.op === "add") {
     const name = String(b.name || "").trim(), role = String(b.role || "volunteer");
@@ -586,6 +588,7 @@ function userOp_(me, b) {
     if (list.some(x => x.name === name)) return { ok: false, error: "dup" };
     const cur = role === "owner" ? ownerNow("") : null;
     if (cur && cur.id !== me.id) return { ok: false, error: "one-owner", owner: cur.name };
+    if (role === "deputy" && deputyNow("")) return { ok: false, error: "one-deputy" };
     writeUser_({ id: "u-" + Date.now().toString(36), name: name, role: role, pin: hashPin_(b.newPin), active: true, mustChange: true });
     audit_(me, "新增帳號", name, ROLE_ZH[role]);
     if (cur) { handOver(name); return { ok: true, handedOver: true }; }
@@ -594,6 +597,7 @@ function userOp_(me, b) {
   const u = list.find(x => x.id === b.id);
   if (!u) return { ok: false, error: "not-found" };
   if (u.role !== "volunteer" && !canAssignRoles_(me) && u.id !== me.id) return { ok: false, error: "role-auth" };   // 網站管理員不能動其他身分的帳號
+  if (["owner", "deputy", "admin"].includes(u.role) && me.role === "deputy" && u.id !== me.id) return { ok: false, error: "role-auth" };   // 副堂主不能動堂主的帳號
   if (b.op === "resetPin") {
     if (!pinOK(b.newPin)) return { ok: false, error: "pin" };
     u.pin = hashPin_(b.newPin); u.mustChange = true; writeUser_(u);
@@ -607,6 +611,7 @@ function userOp_(me, b) {
     if (u.id === me.id) return { ok: false, error: "self" };
     if (!b.active && lastAdmin) return { ok: false, error: "last-admin" };
     if (b.active && u.role === "owner" && ownerNow(u.id)) return { ok: false, error: "one-owner", owner: ownerNow(u.id).name };
+    if (b.active && u.role === "deputy" && deputyNow(u.id)) return { ok: false, error: "one-deputy" };
     u.active = !!b.active; writeUser_(u);
     audit_(me, u.active ? "重新啟用帳號" : "停用帳號", u.name, "");
     return { ok: true };
@@ -625,6 +630,7 @@ function userOp_(me, b) {
     }
     const cur = role === "owner" && u.role !== "owner" ? ownerNow(u.id) : null;
     if (cur && cur.id !== me.id) return { ok: false, error: "one-owner", owner: cur.name };
+    if (role === "deputy" && u.role !== "deputy" && deputyNow(u.id)) return { ok: false, error: "one-deputy" };
     if (name !== u.name) changes.push("姓名：" + u.name + " → " + name);
     const oldName = u.name;
     u.name = name; u.role = role; writeUser_(u);
