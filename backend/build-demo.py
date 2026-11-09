@@ -12,7 +12,7 @@ shell = r'''/* 自動產生，請勿直接修改：示範模式用的後端。
  * 改了 Code.gs 之後執行 python3 backend/build-demo.py 重新產生。 */
 window.DemoBackend = (function () {
   "use strict";
-  const KEY = "tsuhui-demo-v2";
+  const KEY = "tsuhui-demo-v3";
   let db = null;
   try { db = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
   if (!db || !db.sheets) db = { sheets: {}, order: [] };
@@ -110,10 +110,11 @@ window.DemoBackend = (function () {
         { pid: "s5", name: "陳品妍", gender: "女", birth: B(2015, 1, 9), zodiac: "羊", age_xu: 13, lampTypes: ["文昌燈"] }] },
     ];
     const refs = samples.map(s => submit_(Object.assign({ form: "lamp", eventId: null, formTitle: "啟點光明燈暨安奉太歲", note: "", lang: "zh", chaodu: [], meals: [] }, s)).ref);
-    // 標成範例，第一筆設為已繳清
+    // 標成範例，第一筆設為已繳清（現金），第二筆用支票
     const sh = sheet_(SHEET.reg);
     for (let r = 2; r <= sh.getLastRow(); r++) { const d = JSON.parse(sh.getRange(r, C.json).getValue()); d.sample = true; sh.getRange(r, C.json).setValue(JSON.stringify(d)); }
     setPaid_({ id: "u-admin", name: "管理員" }, refs[0], true);
+    setPaid_({ id: "u-admin", name: "管理員" }, refs[1], true, { method: "check", checkName: "張雅婷", checkNo: "1052" });
     db.seeded = true;
   }
   if (!db.seeded) { seed(); persist(); }

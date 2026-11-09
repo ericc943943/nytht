@@ -1000,7 +1000,7 @@ function formHTML(r){
     ${r.note?sec(t("備註","Notes"), `<div class="f-sub">${esc(r.note)}</div>`):""}
     <ul class="f-items">${chargeLinesOf(r,true).map(([a,b])=>`<li><span>${a}</span><span>${money(b)}</span></li>`).join("")}</ul>
     <div class="f-total"><span class="tot-l">${t("應繳金額（現金）","Amount due (cash)")}</span><span class="amt">${money(r.totals&&r.totals.all)}</span>${stampHTML(r)}</div>
-    <div class="f-temple"><div class="sign"><span>□ 已收現金 $＿＿＿＿</span><span>經手人簽名＿＿＿＿＿＿</span><span>日期＿＿＿＿＿</span></div><div class="f-qr" aria-hidden="true">${qrSVG(`${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`)}</div></div>
+    <div class="f-temple"><div class="sign"><span>已收 $＿＿＿＿　□ 現金　□ 支票 #＿＿＿＿</span><span>經手人簽名＿＿＿＿＿＿</span><span>日期＿＿＿＿＿</span></div><div class="f-qr" aria-hidden="true">${qrSVG(`${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`)}</div></div>
   </section>`;
   // 收執聯：繳費後義工簽名、撕下給信眾
   // 收執聯：只寫重點，大小固定。廟裡依報名編號綁好每一捆點燈卡，信眾憑收據上的編號領取

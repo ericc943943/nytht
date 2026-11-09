@@ -3,7 +3,7 @@
  * 改了 Code.gs 之後執行 python3 backend/build-demo.py 重新產生。 */
 window.DemoBackend = (function () {
   "use strict";
-  const KEY = "tsuhui-demo-v2";
+  const KEY = "tsuhui-demo-v3";
   let db = null;
   try { db = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
   if (!db || !db.sheets) db = { sheets: {}, order: [] };
@@ -126,8 +126,8 @@ const MAX_FAILS = 8;          // PIN 或查詢連續打錯幾次就暫時鎖住
 const LOCK_MINUTES = 15;
 
 const SHEET = { reg: "報名", users: "帳號", settings: "設定" };
-const REG_HEAD = ["報名編號", "報名時間", "表單", "場次", "聯絡人", "電話", "住址", "應繳", "已繳清", "收款時間", "經手人", "語言", "備註", "收款紀錄", "送出代碼", "完整資料", "已取消", "燈位", "點燈年度"];
-const C = { ref: 1, time: 2, form: 3, event: 4, name: 5, phone: 6, address: 7, total: 8, paid: 9, paidAt: 10, paidBy: 11, lang: 12, note: 13, log: 14, cid: 15, json: 16, cancelled: 17, seats: 18, year: 19 };
+const REG_HEAD = ["報名編號", "報名時間", "表單", "場次", "聯絡人", "電話", "住址", "應繳", "已繳清", "收款時間", "經手人", "語言", "備註", "收款紀錄", "送出代碼", "完整資料", "已取消", "燈位", "點燈年度", "付款方式", "支票人", "支票號碼"];
+const C = { ref: 1, time: 2, form: 3, event: 4, name: 5, phone: 6, address: 7, total: 8, paid: 9, paidAt: 10, paidBy: 11, lang: 12, note: 13, log: 14, cid: 15, json: 16, cancelled: 17, seats: 18, year: 19, method: 20, checkName: 21, checkNo: 22 };
 const USER_HEAD = ["id", "姓名", "身分", "PIN（加密）", "啟用", "待改PIN"];
 
 /* ================= 第一次使用：建立分頁與管理員帳號 ================= */
@@ -188,7 +188,7 @@ function doPost(e) {
     const me = checkLogin_(body.uid, body.pin);
     if (!me) return out_({ ok: false, error: "auth" });
     switch (body.action) {
-      case "setPaid":      return out_(setPaid_(me, body.ref, !!body.paid));
+      case "setPaid":      return out_(setPaid_(me, body.ref, !!body.paid, body));
       case "setCancelled": return out_(setCancelled_(me, body.ref, !!body.cancelled));
       case "assignSeats":  return out_(assignWaitlist_(me, body.ref));
       case "setCard":      return out_(setCard_(me, body.ref, !!body.given));
@@ -350,6 +350,10 @@ function readRecord_(r) {
   d.paidAt = r[C.paidAt - 1] ? new Date(r[C.paidAt - 1]).toISOString() : null;
   d.paidBy = r[C.paidBy - 1] || null;
   d.cancelled = r[C.cancelled - 1] === true;
+  // 付款方式：支票要記支票人和支票號碼；以前收的（沒記方式）都算現金
+  d.payMethod = d.paid ? (r[C.method - 1] === "支票" ? "check" : "cash") : null;
+  d.checkName = d.payMethod === "check" ? String(r[C.checkName - 1] || "") : null;
+  d.checkNo = d.payMethod === "check" ? String(r[C.checkNo - 1] || "") : null;
   d.payLog = log;
   // 點燈卡：看處理紀錄裡最後一次「發點燈卡／改回未領」
   let card = null; log.forEach(l => { if (l.action === "card") card = l; else if (l.action === "uncard") card = null; });
@@ -368,7 +372,7 @@ function findRow_(ref) {
 }
 // 把修改後的報名內容寫回（繳費、取消、收款紀錄另外處理）
 function writeData_(f, d) {
-  const keep = {}; ["paid", "paidAt", "paidBy", "payLog", "cancelled"].forEach(k => { keep[k] = d[k]; delete d[k]; });
+  const keep = {}; ["paid", "paidAt", "paidBy", "payLog", "cancelled", "payMethod", "checkName", "checkNo"].forEach(k => { keep[k] = d[k]; delete d[k]; });
   f.sh.getRange(f.row, C.name, 1, 4).setValues([[d.contact.name || "", d.contact.phone || "", d.contact.address || "", d.totals.all]]);
   f.sh.getRange(f.row, C.note).setValue(d.note || "");
   f.sh.getRange(f.row, C.json).setValue(JSON.stringify(d));
@@ -384,7 +388,7 @@ function addLog_(f, entry) {
 // 給信眾看的資料：不含收款紀錄和內部欄位
 function publicRecord_(d) {
   const o = JSON.parse(JSON.stringify(d));
-  delete o.payLog; delete o.clientId; delete o.paidBy; delete o.cardBy;
+  delete o.payLog; delete o.clientId; delete o.paidBy; delete o.cardBy; delete o.checkName;
   return o;
 }
 
@@ -457,14 +461,27 @@ function update_(b) {
 }
 
 /* ================= 後台：收款、取消、分配燈位 ================= */
-function setPaid_(me, ref, paid) {
+// 收款：現金或支票。支票要填支票人和支票號碼（寫在「付款方式／支票人／支票號碼」三欄，也記進收款紀錄）
+function setPaid_(me, ref, paid, pay) {
   const f = findRow_(ref);
   if (!f) return { ok: false, error: "not-found" };
   if (paid && f.rec.cancelled) return { ok: false, error: "cancelled" };
+  const check = paid && pay && pay.method === "check";
+  const ckName = check ? String(pay.checkName || "").trim().slice(0, 60) : "";
+  const ckNo = check ? String(pay.checkNo || "").trim().slice(0, 30) : "";
+  if (check && (!ckName || !ckNo)) return { ok: false, error: "check" };
   const now = new Date(), amount = f.rec.totals ? f.rec.totals.all : f.sh.getRange(f.row, C.total).getValue();
   f.sh.getRange(f.row, C.paid, 1, 3).setValues([[paid, paid ? now : "", paid ? me.name : ""]]);
-  addLog_(f, { action: paid ? "paid" : "unpaid", by: me.name, byId: me.id, at: now.toISOString(), amount: amount });
-  return { ok: true, record: { paid: paid, paidAt: paid ? now.toISOString() : null, paidBy: paid ? me.name : null, paidById: paid ? me.id : null, payLog: f.rec.payLog } };
+  if (f.sh.getRange(1, C.method).getValue() !== REG_HEAD[C.method - 1])   // 舊的試算表：補上新欄位的標題
+    f.sh.getRange(1, C.method, 1, 3).setValues([REG_HEAD.slice(C.method - 1, C.method + 2)]).setFontWeight("bold");
+  f.sh.getRange(f.row, C.checkNo).setNumberFormat("@");
+  f.sh.getRange(f.row, C.method, 1, 3).setValues([[paid ? (check ? "支票" : "現金") : "", ckName, ckNo]]);
+  const entry = { action: paid ? "paid" : "unpaid", by: me.name, byId: me.id, at: now.toISOString(), amount: amount };
+  if (paid) entry.method = check ? "check" : "cash";
+  if (check) { entry.checkName = ckName; entry.checkNo = ckNo; }
+  addLog_(f, entry);
+  return { ok: true, record: { paid: paid, paidAt: paid ? now.toISOString() : null, paidBy: paid ? me.name : null, paidById: paid ? me.id : null,
+    payMethod: paid ? (check ? "check" : "cash") : null, checkName: check ? ckName : null, checkNo: check ? ckNo : null, payLog: f.rec.payLog } };
 }
 // 發點燈卡：只有已繳清的點燈報名可以標記；紀錄在處理紀錄裡
 function setCard_(me, ref, given) {
@@ -655,10 +672,11 @@ function out_(obj) {
         { pid: "s5", name: "陳品妍", gender: "女", birth: B(2015, 1, 9), zodiac: "羊", age_xu: 13, lampTypes: ["文昌燈"] }] },
     ];
     const refs = samples.map(s => submit_(Object.assign({ form: "lamp", eventId: null, formTitle: "啟點光明燈暨安奉太歲", note: "", lang: "zh", chaodu: [], meals: [] }, s)).ref);
-    // 標成範例，第一筆設為已繳清
+    // 標成範例，第一筆設為已繳清（現金），第二筆用支票
     const sh = sheet_(SHEET.reg);
     for (let r = 2; r <= sh.getLastRow(); r++) { const d = JSON.parse(sh.getRange(r, C.json).getValue()); d.sample = true; sh.getRange(r, C.json).setValue(JSON.stringify(d)); }
     setPaid_({ id: "u-admin", name: "管理員" }, refs[0], true);
+    setPaid_({ id: "u-admin", name: "管理員" }, refs[1], true, { method: "check", checkName: "張雅婷", checkNo: "1052" });
     db.seeded = true;
   }
   if (!db.seeded) { seed(); persist(); }
