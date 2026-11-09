@@ -559,7 +559,9 @@ function printURL(r){
   return `${base}?print=${encodeURIComponent(r.ref)}&tel=${encodeURIComponent(digits(r.contact.phone))}&auto=1&lang=${r.lang==="en"?"en":"zh"}`;
 }
 // 付款方式：「現金」或「支票 #1052・張雅婷」
-const payText = r => r.payMethod==="check" ? `${t("支票","Check")} #${r.checkNo||""}${r.checkName?"・"+r.checkName:""}` : t("現金","Cash");
+// 後端（Code.gs）還沒更新時，資料裡沒有 payMethod：先不顯示付款方式、也不讓選支票，免得支票資料送出去被丟掉
+const payOK = () => ROWS.some(r=>"payMethod" in r);
+const payText = r => !("payMethod" in r) ? "" : r.payMethod==="check" ? `${t("支票","Check")} #${r.checkNo||""}${r.checkName?"・"+r.checkName:""}` : t("現金","Cash");
 const LOG_TEXT = l => EN() ? ({paid:`Marked paid (${money(l.amount)}${l.method==="check"?`, check #${l.checkNo} from ${l.checkName}`:l.method==="cash"?", cash":""})`, unpaid:"Changed back to unpaid", cancel:"Registration cancelled", restore:"Registration restored", seat:"Assigned waitlisted lamps", card:"Lamp card given", uncard:"Changed back to card not collected", edit:`Edited by devotee (now ${money(l.amount)})`}[l.action]||l.action) : ({paid:`標記已繳清（${money(l.amount)}${l.method==="check"?`，支票 #${l.checkNo}・${l.checkName}`:l.method==="cash"?"，現金":""}）`, unpaid:"改回未繳費", cancel:"取消報名", restore:"恢復報名", seat:"分配候補燈位", card:"發點燈卡", uncard:"改回未領點燈卡", edit:`信眾自己修改（應繳 ${money(l.amount)}）`}[l.action]||l.action);
 const hasWait = r => (r.lamps||[]).some(p=>Object.values(p.seats||{}).some(v=>!v));
 function cardHTML(r, m){
@@ -592,7 +594,7 @@ function cardHTML(r, m){
       : k==="uncard" ? `確定要把 ${esc(r.ref)} 改回「未領點燈卡」？`
       : k==="void" ? `確定要取消 ${esc(r.ref)}？燈位會放出來給別人用。`
       : `確定要恢復 ${esc(r.ref)}？會重新分配燈位（原位還空著就用原位）。`;
-    const payPick = k!=="pay" ? "" : `<div class="seg paym" role="group" aria-label="${t("付款方式","Payment method")}"><button type="button" data-pm="cash" aria-pressed="${!ck}">${t("現金","Cash")}</button><button type="button" data-pm="check" aria-pressed="${ck}">${t("支票","Check")}</button></div>
+    const payPick = k!=="pay" || !payOK() ? "" : `<div class="seg paym" role="group" aria-label="${t("付款方式","Payment method")}"><button type="button" data-pm="cash" aria-pressed="${!ck}">${t("現金","Cash")}</button><button type="button" data-pm="check" aria-pressed="${ck}">${t("支票","Check")}</button></div>
       ${ck?`<div class="ckrow"><label>${t("支票人","Check from")}<input id="ckName" value="${esc(confirming.checkName??r.contact.name??"")}" autocomplete="off"></label><label>${t("支票號碼","Check no.")}<input id="ckNo" value="${esc(confirming.checkNo||"")}" inputmode="numeric" autocomplete="off"></label></div>`:""}`;
     action = `<div class="confirm">${payPick}<span class="cmsg">${msg}</span>
       <button class="btn ${k==="pay"||k==="card"?"okb":"primary"} small" data-do="${k}" data-ref="${esc(r.ref)}" type="button">${t("確定","Confirm")}</button>
@@ -616,7 +618,7 @@ function cardHTML(r, m){
   return `<article class="card ${void_?"void":paid?"paid":"unpaid"}">
     <div class="card-head">
       <div><div class="ref">${hl(r.ref,q.replace(/-/g,""))}</div><div class="meta">${esc(formName(r))}・${t("報名","Submitted")} ${fmtDate(r.submittedAt)}${r.sample?`<span class="tag">${t("範例","Sample")}</span>`:""}${r.lang==="en"?`<span class="tag">${t("英文報名","English form")}</span>`:""}${r.updatedAt?`<span class="tag">${t("信眾修改過","Edited by devotee")}</span>`:""}${r.addTo?`<span class="tag">${t("追加・原","Add-on to")} ${hl(r.addTo,q.replace(/-/g,""))}</span>`:""}${(ADDONS[r.ref]||[]).length?`<span class="tag">${t("有追加","Has add-on")} ${ADDONS[r.ref].map(esc).join(t("、",", "))}</span>`:""}${!void_&&hasWait(r)?`<span class="tag">${t("有候補","Waitlisted")}</span>`:""}</div></div>
-      ${status}${paid&&!void_&&r.form==="lamp"?(r.cardAt?`<span class="status cardin">${t("點燈卡已領","Card collected")} ${fmtDate(r.cardAt)}${r.cardBy?"・"+esc(r.cardBy):""}</span>`:(cardTime(r)?`<span class="status cardout">${t("點燈卡未領","Card not collected")}</span>`:`<span class="status cardwait">${t(`點燈卡 ${cardDay(recYear(r))?.getMonth()+1}/${cardDay(recYear(r))?.getDate()} 起發`,`Cards from ${cardDay(recYear(r))?.toLocaleDateString("en-US",{month:"short",day:"numeric"})}`)}</span>`)):""}${paid?`<span class="paidby">${esc(payText(r))}${r.paidBy?`・${t("經手：","handled by ")}${esc(r.paidBy)}`:""}</span>`:""}
+      ${status}${paid&&!void_&&r.form==="lamp"?(r.cardAt?`<span class="status cardin">${t("點燈卡已領","Card collected")} ${fmtDate(r.cardAt)}${r.cardBy?"・"+esc(r.cardBy):""}</span>`:(cardTime(r)?`<span class="status cardout">${t("點燈卡未領","Card not collected")}</span>`:`<span class="status cardwait">${t(`點燈卡 ${cardDay(recYear(r))?.getMonth()+1}/${cardDay(recYear(r))?.getDate()} 起發`,`Cards from ${cardDay(recYear(r))?.toLocaleDateString("en-US",{month:"short",day:"numeric"})}`)}</span>`)):""}${paid?`<span class="paidby">${[esc(payText(r)), r.paidBy?`${t("經手：","handled by ")}${esc(r.paidBy)}`:""].filter(Boolean).join("・")}</span>`:""}
     </div>
     <div class="contact"><span>${t("聯絡人","Contact")} <b>${hl(r.contact.name,q)}</b></span><span class="phone">${esc(r.contact.phone)}</span></div>
     ${lampSec}${soulSec}${mealSec}
