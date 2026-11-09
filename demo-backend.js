@@ -3,7 +3,7 @@
  * 改了 Code.gs 之後執行 python3 backend/build-demo.py 重新產生。 */
 window.DemoBackend = (function () {
   "use strict";
-  const KEY = "tsuhui-demo-v3";
+  const KEY = "tsuhui-demo-v4";
   let db = null;
   try { db = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
   if (!db || !db.sheets) db = { sheets: {}, order: [] };
@@ -125,10 +125,25 @@ const FIRST_ADMIN = { name: "管理員", pin: "8888" };   // 第一次登入會�
 const MAX_FAILS = 8;          // PIN 或查詢連續打錯幾次就暫時鎖住
 const LOCK_MINUTES = 15;
 
-const SHEET = { reg: "報名", users: "帳號", settings: "設定" };
+const SHEET = { reg: "報名", users: "帳號", settings: "設定", audit: "紀錄" };
 const REG_HEAD = ["報名編號", "報名時間", "表單", "場次", "聯絡人", "電話", "住址", "應繳", "已繳清", "收款時間", "經手人", "語言", "備註", "收款紀錄", "送出代碼", "完整資料", "已取消", "燈位", "點燈年度", "付款方式", "支票人", "支票號碼"];
 const C = { ref: 1, time: 2, form: 3, event: 4, name: 5, phone: 6, address: 7, total: 8, paid: 9, paidAt: 10, paidBy: 11, lang: 12, note: 13, log: 14, cid: 15, json: 16, cancelled: 17, seats: 18, year: 19, method: 20, checkName: 21, checkNo: 22 };
 const USER_HEAD = ["id", "姓名", "身分", "PIN（加密）", "啟用", "待改PIN"];
+const AUDIT_HEAD = ["時間", "經手人", "動作", "對象", "內容"];
+
+/* ================= 身分與權限 =================
+   admin 管理員（舊的身分，等於全部權限；交接時拆成堂主＋網站管理員）
+   owner 堂主：全部。finance 財務：看全部帳、改別人的收款。web 網站管理員：設定、義工帳號，看不到總帳。volunteer 義工。
+   錢（總帳、別人經手的付款細節、改回別人收的款）＝ admin／owner／finance
+   設定、帳號 ＝ admin／owner／web（web 只能管義工帳號）
+   指定堂主、財務、網站管理員 ＝ admin／owner */
+const ROLES = ["admin", "owner", "finance", "web", "volunteer"];
+const ROLE_ZH = { admin: "管理員", owner: "堂主", finance: "財務", web: "網站管理員", volunteer: "義工" };
+const canMoney_ = u => ["admin", "owner", "finance"].includes(u.role);
+const canSettings_ = u => ["admin", "owner", "web"].includes(u.role);
+const canAccounts_ = u => ["admin", "owner", "web"].includes(u.role);
+const canAssignRoles_ = u => ["admin", "owner"].includes(u.role);
+const isBoss_ = u => (u.role === "admin" || u.role === "owner") && u.active;
 
 /* ================= 第一次使用：建立分頁與管理員帳號 ================= */
 function setup() {
@@ -167,8 +182,14 @@ function doGet(e) {
         return out_(u ? { ok: true, user: pub_(u) } : { ok: false, error: "auth" });
       }
       case "list": {
-        if (!checkLogin_(p.uid, p.pin)) return out_({ ok: false, error: "auth" });
-        return out_({ ok: true, rows: listRows_() });
+        const me = checkLogin_(p.uid, p.pin);
+        if (!me) return out_({ ok: false, error: "auth" });
+        return out_({ ok: true, me: pub_(me), features: ["payMethod", "roles"], rows: listRows_().map(d => viewFor_(me, d)) });
+      }
+      case "audit": {      // 帳號與設定的變動紀錄
+        const me = checkLogin_(p.uid, p.pin);
+        if (!me || me.role === "volunteer") return out_({ ok: false, error: "auth" });
+        return out_({ ok: true, rows: readAudit_() });
       }
       case "lookup": return out_(lookup_(p.ref, p.phone));    // 信眾用編號＋電話查自己的報名
       case "findRefs": return out_(findRefs_(p.phone, p.name)); // 忘記報名編號：電話＋聯絡人姓名找回編號
@@ -192,8 +213,8 @@ function doPost(e) {
       case "setCancelled": return out_(setCancelled_(me, body.ref, !!body.cancelled));
       case "assignSeats":  return out_(assignWaitlist_(me, body.ref));
       case "setCard":      return out_(setCard_(me, body.ref, !!body.given));
-      case "saveSettings": if (me.role !== "admin") return out_({ ok: false, error: "auth" });
-                           return out_(saveSettings_(body.settings));
+      case "saveSettings": if (!canSettings_(me)) return out_({ ok: false, error: "auth" });
+                           return out_(saveSettings_(body.settings, me));
       case "userOp":       return out_(userOp_(me, body));
       default:             return out_({ ok: false, error: "unknown-action" });
     }
@@ -385,6 +406,34 @@ function addLog_(f, entry) {
   f.sh.getRange(f.row, C.log).setValue(JSON.stringify(log));
   f.rec.payLog = log;
 }
+// 這筆是不是我收的款（看最後一次「標記已繳清」是誰）
+function paidByMe_(me, d) {
+  const last = (d.payLog || []).filter(x => x.action === "paid").pop();
+  return last ? (last.byId ? last.byId === me.id : last.by === me.name) : d.paidBy === me.name;
+}
+// 後台清單：看不到總帳的人（網站管理員、義工），別人收的款不給經手人和付款細節
+function viewFor_(me, d) {
+  if (canMoney_(me) || !d.paid || paidByMe_(me, d)) return d;
+  const o = JSON.parse(JSON.stringify(d));
+  delete o.paidBy; delete o.paidById; delete o.payMethod; delete o.checkName; delete o.checkNo;
+  o.payLog = (o.payLog || []).map(x => (x.action === "paid" || x.action === "unpaid") && x.byId !== me.id && x.by !== me.name
+    ? { action: x.action, at: x.at, amount: x.amount } : x);
+  return o;
+}
+// 帳號、設定的變動寫進「紀錄」分頁
+function audit_(me, action, target, detail) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sh = ss.getSheetByName(SHEET.audit);
+  if (!sh) { sh = ss.insertSheet(SHEET.audit); sh.getRange(1, 1, 1, AUDIT_HEAD.length).setValues([AUDIT_HEAD]).setFontWeight("bold"); sh.setFrozenRows(1); }
+  sh.appendRow([new Date(), me.name, action, target || "", detail || ""]);
+}
+function readAudit_() {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET.audit);
+  if (!sh || sh.getLastRow() < 2) return [];
+  const n = sh.getLastRow() - 1, from = Math.max(2, sh.getLastRow() - 499);
+  return sh.getRange(from, 1, sh.getLastRow() - from + 1, AUDIT_HEAD.length).getValues().map(r => ({
+    at: r[0] instanceof Date ? r[0].toISOString() : String(r[0]), by: String(r[1]), action: String(r[2]), target: String(r[3]), detail: String(r[4]) })).reverse();
+}
 // 給信眾看的資料：不含收款紀錄和內部欄位
 function publicRecord_(d) {
   const o = JSON.parse(JSON.stringify(d));
@@ -466,6 +515,7 @@ function setPaid_(me, ref, paid, pay) {
   const f = findRow_(ref);
   if (!f) return { ok: false, error: "not-found" };
   if (paid && f.rec.cancelled) return { ok: false, error: "cancelled" };
+  if (!paid && f.rec.paid && !canMoney_(me) && !paidByMe_(me, f.rec)) return { ok: false, error: "not-mine" };   // 別人收的款，要堂主或財務才能改回
   const check = paid && pay && pay.method === "check";
   const ckName = check ? String(pay.checkName || "").trim().slice(0, 60) : "";
   const ckNo = check ? String(pay.checkNo || "").trim().slice(0, 30) : "";
@@ -521,8 +571,9 @@ function getSettings_() {
   try { const v = sheet_(SHEET.settings).getRange("A1").getValue(); if (v) { const s = JSON.parse(v); if (s && s.events) { s.lamp = s.lamp || { status: "open" }; if (!s.lamp.year) s.lamp.year = DEFAULT_LAMP_YEAR; return s; } } } catch (e) {}
   return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
 }
-function saveSettings_(s) {
+function saveSettings_(s, me) {
   if (!s || !s.lamp || !Array.isArray(s.events)) return { ok: false, error: "bad-data" };
+  const old = getSettings_();
   const y = Number(s.lamp.year);
   if (!(y >= 2020 && y <= 2100)) return { ok: false, error: "year" };
   s.lamp.year = y;
@@ -535,7 +586,27 @@ function saveSettings_(s) {
   delete s.seatsLeft;
   s.updatedAt = new Date().toISOString();
   sheet_(SHEET.settings).getRange("A1").setValue(JSON.stringify(s));
+  if (me) { const d = settingsDiff_(old, s); if (d) audit_(me, "修改報名設定", "", d); }
   return { ok: true };
+}
+
+// 設定改了什麼（寫進紀錄用）
+function settingsDiff_(a, b) {
+  const ST = { open: "開放報名", paused: "暫停", hidden: "不顯示" }, out = [];
+  const al = a.lamp || {}, bl = b.lamp || {};
+  if (al.status !== bl.status) out.push("點燈報名：" + (ST[al.status] || al.status || "—") + " → " + (ST[bl.status] || bl.status));
+  if (Number(al.year) !== Number(bl.year)) out.push("點燈年度：" + (al.year || "—") + " → " + bl.year);
+  const at = JSON.stringify((al.taisui || {})[bl.year] || null), bt = JSON.stringify((bl.taisui || {})[bl.year] || null);
+  if (at !== bt) out.push(bl.year + " 太歲生肖：" + (((bl.taisui || {})[bl.year]) ? bl.taisui[bl.year].join("") : "恢復預設"));
+  const ae = {}; (a.events || []).forEach(e => ae[e.id] = e);
+  (b.events || []).forEach(e => { const o = ae[e.id];
+    if (!o) out.push("新增法會「" + e.name + "」（" + (ST[e.status] || e.status) + "）");
+    else { if (o.name !== e.name) out.push("法會改名：" + o.name + " → " + e.name);
+           if (o.status !== e.status) out.push("「" + e.name + "」：" + (ST[o.status] || o.status) + " → " + (ST[e.status] || e.status));
+           if ((o.date || "") !== (e.date || "")) out.push("「" + e.name + "」日期：" + (e.date || "（空白）")); }
+    delete ae[e.id]; });
+  Object.keys(ae).forEach(id => out.push("移除法會「" + ae[id].name + "」"));
+  return out.join("；");
 }
 
 /* ================= 帳號 ================= */
@@ -543,7 +614,7 @@ function readUsers_() {
   const sh = sheet_(SHEET.users), n = sh.getLastRow() - 1;
   if (n < 1) return [];
   return sh.getRange(2, 1, n, USER_HEAD.length).getValues().map((r, i) => ({
-    row: i + 2, id: String(r[0]), name: String(r[1]), role: r[2] === "admin" ? "admin" : "volunteer",
+    row: i + 2, id: String(r[0]), name: String(r[1]), role: ROLES.includes(String(r[2])) ? String(r[2]) : "volunteer",
     pin: String(r[3]), active: r[4] === true, mustChange: r[5] === true,
   }));
 }
@@ -582,42 +653,56 @@ function userOp_(me, b) {
     if (!pinOK(b.newPin)) return { ok: false, error: "pin" };
     if (hashPin_(b.newPin) === meU.pin) return { ok: false, error: "same" };
     meU.pin = hashPin_(b.newPin); meU.mustChange = false; writeUser_(meU);
+    audit_(me, "改自己的 PIN", me.name, "");
     return { ok: true };
   }
-  if (me.role !== "admin") return { ok: false, error: "auth" };
+  if (!canAccounts_(me)) return { ok: false, error: "auth" };
+  // 網站管理員只能管義工；指定堂主、財務、網站管理員要堂主（或管理員）
+  const roleOK = role => ROLES.includes(role) && (role === "volunteer" || canAssignRoles_(me)) && (role !== "admin" || me.role === "admin");
   if (b.op === "add") {
-    const name = String(b.name || "").trim();
+    const name = String(b.name || "").trim(), role = String(b.role || "volunteer");
     if (!name || !pinOK(b.newPin)) return { ok: false, error: "bad-data" };
+    if (!roleOK(role)) return { ok: false, error: "role-auth" };
     if (list.some(x => x.name === name)) return { ok: false, error: "dup" };
-    writeUser_({ id: "u-" + Date.now().toString(36), name: name, role: b.role === "admin" ? "admin" : "volunteer", pin: hashPin_(b.newPin), active: true, mustChange: true });
+    writeUser_({ id: "u-" + Date.now().toString(36), name: name, role: role, pin: hashPin_(b.newPin), active: true, mustChange: true });
+    audit_(me, "新增帳號", name, ROLE_ZH[role]);
     return { ok: true };
   }
   const u = list.find(x => x.id === b.id);
   if (!u) return { ok: false, error: "not-found" };
+  if (u.role !== "volunteer" && !canAssignRoles_(me) && u.id !== me.id) return { ok: false, error: "role-auth" };   // 網站管理員不能動其他身分的帳號
   if (b.op === "resetPin") {
     if (!pinOK(b.newPin)) return { ok: false, error: "pin" };
     u.pin = hashPin_(b.newPin); u.mustChange = true; writeUser_(u);
     CacheService.getScriptCache().remove("fail-" + u.id);   // 重設 PIN 時順便解鎖
+    audit_(me, "重設 PIN", u.name, "");
     return { ok: true };
   }
-  // 最後一位（還能登入的）管理員不能被停用、改成義工或刪除，免得沒有人能進設定
-  const lastAdmin = u.role === "admin" && u.active && list.filter(x => x.role === "admin" && x.active).length <= 1;
+  // 最後一位（還能登入的）堂主／管理員不能被停用、改身分或刪除，免得沒有人能管
+  const lastAdmin = isBoss_(u) && list.filter(isBoss_).length <= 1;
   if (b.op === "setActive") {
     if (u.id === me.id) return { ok: false, error: "self" };
     if (!b.active && lastAdmin) return { ok: false, error: "last-admin" };
     u.active = !!b.active; writeUser_(u);
+    audit_(me, u.active ? "重新啟用帳號" : "停用帳號", u.name, "");
     return { ok: true };
   }
   if (b.op === "edit") {     // 改名字、改身分
     const name = String(b.name || "").trim();
-    const role = b.role === "admin" ? "admin" : "volunteer";
+    const role = ROLES.includes(String(b.role)) ? String(b.role) : u.role;
     if (!name) return { ok: false, error: "bad-data" };
     if (list.some(x => x.id !== u.id && x.name === name)) return { ok: false, error: "dup" };
+    const changes = [];
     if (role !== u.role) {
       if (u.id === me.id) return { ok: false, error: "self-role" };
-      if (lastAdmin) return { ok: false, error: "last-admin" };
+      if (!roleOK(role)) return { ok: false, error: "role-auth" };
+      if (lastAdmin && role !== "admin" && role !== "owner") return { ok: false, error: "last-admin" };
+      changes.push("身分：" + ROLE_ZH[u.role] + " → " + ROLE_ZH[role]);
     }
+    if (name !== u.name) changes.push("姓名：" + u.name + " → " + name);
+    const oldName = u.name;
     u.name = name; u.role = role; writeUser_(u);
+    if (changes.length) audit_(me, "修改帳號", oldName, changes.join("；"));
     return { ok: true, user: pub_(u) };
   }
   if (b.op === "delete") {   // 只能刪沒經手過任何報名的帳號（建錯的）；經手過的請用停用
@@ -626,6 +711,7 @@ function userOp_(me, b) {
     if (userUsed_(u)) return { ok: false, error: "used" };
     sheet_(SHEET.users).deleteRow(u.row);
     CacheService.getScriptCache().remove("fail-" + u.id);
+    audit_(me, "刪除帳號", u.name, ROLE_ZH[u.role]);
     return { ok: true };
   }
   return { ok: false, error: "unknown-op" };
@@ -660,7 +746,7 @@ function out_(obj) {
     setup();
     const users = sheet_(SHEET.users);
     users.getRange(2, 6).setValue(false);   // 示範版管理員不用改 PIN
-    [["u-wang", "王師姐", "1234"], ["u-li", "李師兄", "5678"]].forEach(([id, n, pin]) => users.appendRow([id, n, "volunteer", hashPin_(pin), true, false]));
+    [["u-wang", "王師姐", "volunteer", "1234"], ["u-li", "李師兄", "volunteer", "5678"], ["u-chen", "陳師姐", "finance", "2468"], ["u-lin", "林網管", "web", "1357"]].forEach(([id, n, role, pin]) => users.appendRow([id, n, role, hashPin_(pin), true, false]));
     const B = (y, m, d, h) => ({ lunar: { year: y, month: m, leap: false, day: d, hour: h || "" }, solar: null, entered: "lunar" });
     const samples = [
       { contact: { name: "王秀英", phone: "(718) 555-0142", address: "範例地址" }, lamps: [

@@ -12,7 +12,7 @@ shell = r'''/* 自動產生，請勿直接修改：示範模式用的後端。
  * 改了 Code.gs 之後執行 python3 backend/build-demo.py 重新產生。 */
 window.DemoBackend = (function () {
   "use strict";
-  const KEY = "tsuhui-demo-v3";
+  const KEY = "tsuhui-demo-v4";
   let db = null;
   try { db = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
   if (!db || !db.sheets) db = { sheets: {}, order: [] };
@@ -98,7 +98,7 @@ window.DemoBackend = (function () {
     setup();
     const users = sheet_(SHEET.users);
     users.getRange(2, 6).setValue(false);   // 示範版管理員不用改 PIN
-    [["u-wang", "王師姐", "1234"], ["u-li", "李師兄", "5678"]].forEach(([id, n, pin]) => users.appendRow([id, n, "volunteer", hashPin_(pin), true, false]));
+    [["u-wang", "王師姐", "volunteer", "1234"], ["u-li", "李師兄", "volunteer", "5678"], ["u-chen", "陳師姐", "finance", "2468"], ["u-lin", "林網管", "web", "1357"]].forEach(([id, n, role, pin]) => users.appendRow([id, n, role, hashPin_(pin), true, false]));
     const B = (y, m, d, h) => ({ lunar: { year: y, month: m, leap: false, day: d, hour: h || "" }, solar: null, entered: "lunar" });
     const samples = [
       { contact: { name: "王秀英", phone: "(718) 555-0142", address: "範例地址" }, lamps: [

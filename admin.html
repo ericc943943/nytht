@@ -153,6 +153,16 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 2px}
 .paidby{font-size:.85rem;color:var(--muted)}
 .btn.cardb{background:#7A5C1E;color:#fff}
 .status.cardout{background:var(--gold-soft);color:var(--gold);border:1px solid var(--gold)}
+.roleseg{flex-wrap:wrap}.roleseg button{flex:1 1 30%}
+.rtag.fin{background:var(--gold-soft);color:var(--gold)}
+.loglist{max-width:760px;margin:0 auto;padding:0 12px 40px}
+.logday{font-weight:700;color:var(--muted);margin:16px 0 6px;font-size:.9rem}
+.logrow{display:flex;gap:10px;align-items:baseline;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:6px 0;flex-wrap:wrap}
+.logrow .tm{font-variant-numeric:tabular-nums;color:var(--muted);min-width:3.2em}
+.logrow .who{font-weight:700}
+.logrow .act{flex:1 1 14em}
+.logrow .ref{font-family:ui-monospace,Menlo,monospace;font-size:.9rem}
+.logrow .ref button{font:inherit;background:none;border:none;color:var(--accent,#356D82);text-decoration:underline;cursor:pointer;padding:0}
 .status.cardwait{background:var(--line);color:var(--muted)}
 .status.cardin{background:var(--ok-soft);color:var(--ok)}
 details.log{font-size:.85rem;color:var(--muted)}
@@ -253,6 +263,7 @@ details.log li{margin:2px 0}
       <button class="pillbtn" id="sizeBtn" type="button">字放大</button>
       <span class="paidby" id="whoAmI" style="align-self:center"></span>
       <button class="pillbtn" id="reportBtn" type="button" hidden data-en="Reports">報表</button>
+      <button class="pillbtn" id="logBtn" type="button" hidden data-en="Records">紀錄</button>
       <button class="pillbtn" id="settingsBtn" type="button" hidden data-en="Settings">設定</button>
       <button class="pillbtn" id="logoutBtn" type="button" hidden data-en="Log out">登出</button>
     </div>
@@ -286,6 +297,7 @@ details.log li{margin:2px 0}
   <!-- 密碼設定（只有管理員看得到） -->
   <section id="settingsView" hidden>
     <div class="settings" id="adminOnly">
+     <div id="setItemsBox">
       <h2 data-en="Registration settings">報名項目設定</h2>
       <p class="hint" data-en="Choose what can be registered for on the signup page. &quot;Paused&quot; shows on the signup page but the button is gray and can't be pressed; &quot;Hidden&quot; does not appear on the signup page at all.">決定報名頁上哪些項目可以報名。「暫停」會在報名頁顯示，但按鈕是灰色的、不能點；「不顯示」則完全不出現在報名頁。</p>
       <div class="pwcard">
@@ -310,18 +322,22 @@ details.log li{margin:2px 0}
       <button class="btn primary" id="itemsSave" type="button" data-en="Save registration settings">儲存報名項目</button>
       <p class="pwmsg" id="itemsMsg" role="status"></p>
       <hr style="border:none;border-top:1px solid var(--line);width:100%;margin:8px 0">
+     </div>
+     <div id="setUsersBox">
       <h2 data-en="Volunteer accounts">義工帳號</h2>
-      <p class="hint" data-en="Each volunteer has their own name and PIN, and payment records show who handled them. Press &quot;Edit&quot; to change a name or role, or to reset a PIN. For volunteers who no longer help, press &quot;Disable&quot; — their past records are kept. An account created by mistake can be deleted.">每位義工有自己的名字和 PIN 碼，收款紀錄會記下是誰經手。按「修改」可以改名字、身分、重設 PIN 碼。不再幫忙的義工請按「停用」，過去的紀錄會保留；建錯的帳號可以刪除。</p>
+      <p class="hint" data-en="Roles: the temple head can see all accounts and change everything; finance can see all accounts; the site admin manages settings and volunteer accounts; volunteers can collect payments and give out lamp cards, and see only the payments they received. Only the temple head can assign the temple head, finance and site admin roles. Each volunteer has their own name and PIN, and payment records show who handled them. Press &quot;Edit&quot; to change a name or role, or to reset a PIN. For volunteers who no longer help, press &quot;Disable&quot; — their past records are kept. An account created by mistake can be deleted.">身分：堂主看得到全部帳目、什麼都能改；財務看得到全部帳目；網站管理員管設定和義工帳號；義工可以收款、發點燈卡，只看得到自己收的款。堂主、財務、網站管理員只有堂主能指定。每位義工有自己的名字和 PIN 碼，收款紀錄會記下是誰經手。按「修改」可以改名字、身分、重設 PIN 碼。不再幫忙的義工請按「停用」，過去的紀錄會保留；建錯的帳號可以刪除。</p>
       <div id="userRows" class="evrows"></div>
       <p class="pwmsg" id="usersMsg" role="status"></p>
       <div class="pwcard">
         <h3 data-en="Add a volunteer">新增義工</h3>
         <label for="nuName" data-en="Name (e.g. 王師姐)">姓名（例：王師姐）</label><input id="nuName" autocomplete="off">
         <label data-en="Role">身分</label>
-        <div class="seg" id="nuRole" role="group" aria-label="身分"><button type="button" data-role="volunteer" aria-pressed="true" data-en="Volunteer">義工</button><button type="button" data-role="admin" aria-pressed="false" data-en="Admin">管理員</button></div>
+        <div class="seg roleseg" id="nuRole" role="group" aria-label="身分"></div>
         <label for="nuPin" data-en="PIN (4–8 digits)">PIN 碼（4～8 位數字）</label><input id="nuPin" type="password" inputmode="numeric" autocomplete="new-password">
         <button class="btn primary" id="nuAdd" type="button" data-en="Add">新增</button>
       </div>
+      <hr style="border:none;border-top:1px solid var(--line);width:100%;margin:8px 0">
+     </div>
     </div>
     <div class="settings" style="margin-top:0">
       <h2 data-en="My PIN">我的 PIN 碼</h2>
@@ -334,6 +350,19 @@ details.log li{margin:2px 0}
       <p class="pwmsg" id="pwMsg" role="status"></p>
       <button class="btn ghost" id="backBtn" type="button" data-en="Back to registrations">回到報名名單</button>
     </div>
+  </section>
+
+  <!-- 紀錄：報名處理紀錄＋帳號與設定的變動 -->
+  <section id="logView" hidden>
+    <div class="rpt-ctl">
+      <h2 data-en="Records">紀錄</h2>
+      <p class="hint" id="logHint"></p>
+      <div class="rlabel" data-en="Which records?">要看哪一種？</div>
+      <div class="subtabs" id="logTabs" role="group" aria-label="紀錄種類"></div>
+      <div id="logKindsWrap"><div class="subtabs" id="logKinds" role="group" aria-label="動作"></div></div>
+      <div class="row2"><button class="btn ghost" id="logBack" type="button" data-en="Back to registrations">回到報名名單</button></div>
+    </div>
+    <div id="logList" class="loglist"></div>
   </section>
 
   <!-- 報表 -->
@@ -444,7 +473,11 @@ function setSess(v){ try{ v?sessionStorage.setItem("tsuhui-admin",JSON.stringify
 const auth = () => { const s=sess()||{}; return {uid:s.uid, pin:s.pin}; };
 const okOrThrow = j => { if(!j || !j.ok) throw new Error((j&&j.error)||"fail"); return j; };
 const API = {
-  async list(){ return okOrThrow(await apiGet({action:"list", ...auth()})).rows; },
+  // 清單：後端也會回傳我目前的身分（管理員改了身分，下次讀清單就生效）
+  async list(){ const d=okOrThrow(await apiGet({action:"list", ...auth()})); FEAT=d.features||[];
+    if(d.me){ const s0=sess(); if(s0 && (s0.role!==d.me.role || s0.name!==d.me.name)) setSess({...s0, role:d.me.role, name:d.me.name}); }
+    return d.rows; },
+  async audit(){ return okOrThrow(await apiGet({action:"audit", ...auth()})).rows; },
   // 收款、取消、分配燈位：後端會記錄經手人和時間
   async setPaid(ref, paid, pay){ return okOrThrow(await apiPost({action:"setPaid", ...auth(), ref, paid, ...(pay||{})})).record; },
   async setCard(ref, given){ return okOrThrow(await apiPost({action:"setCard", ...auth(), ref, given})).record; },
@@ -455,6 +488,17 @@ const API = {
   // 帳號管理（管理員）：add / edit / delete / resetPin / setActive；個人：changeMyPin。新的 PIN 用 newPin 傳，避免跟登入用的 pin 撞名
   async userOp(op, data){ const d={...data}; if("pin" in d){ d.newPin=d.pin; delete d.pin; } okOrThrow(await apiPost({action:"userOp", op, ...d, ...auth()})); },
 };
+
+/* ================= 身分與權限 ================= */
+// admin 管理員（舊身分＝全部）、owner 堂主、finance 財務、web 網站管理員、volunteer 義工。真正的把關在後端 Code.gs，這裡只決定畫面
+let FEAT = [];   // 後端支援的功能（舊 Code.gs 沒有）
+const myRole = () => sess()?.role || "volunteer";
+const canMoney = () => ["admin","owner","finance"].includes(myRole());        // 總帳、別人經手的付款、改回別人收的款
+const canSettings = () => ["admin","owner","web"].includes(myRole());
+const canAccounts = () => ["admin","owner","web"].includes(myRole()) || (!FEAT.includes("roles") && myRole()==="admin");
+const canAssign = () => ["admin","owner"].includes(myRole());                  // 指定堂主、財務、網站管理員
+const paidByMe = r => !!r.paidBy && r.paidBy===sess()?.name;
+const canUnpay = r => canMoney() || paidByMe(r);
 
 /* ================= 狀態 ================= */
 let ROWS = [], F = {q:"", paid:"all", form:"all", item:"all"}, confirming = null;
@@ -560,7 +604,7 @@ function printURL(r){
 }
 // 付款方式：「現金」或「支票 #1052・張雅婷」
 // 後端（Code.gs）還沒更新時，資料裡沒有 payMethod：先不顯示付款方式、也不讓選支票，免得支票資料送出去被丟掉
-const payOK = () => ROWS.some(r=>"payMethod" in r);
+const payOK = () => FEAT.includes("payMethod") || ROWS.some(r=>"payMethod" in r);
 const payText = r => !("payMethod" in r) ? "" : r.payMethod==="check" ? `${t("支票","Check")} #${r.checkNo||""}${r.checkName?"・"+r.checkName:""}` : t("現金","Cash");
 const LOG_TEXT = l => EN() ? ({paid:`Marked paid (${money(l.amount)}${l.method==="check"?`, check #${l.checkNo} from ${l.checkName}`:l.method==="cash"?", cash":""})`, unpaid:"Changed back to unpaid", cancel:"Registration cancelled", restore:"Registration restored", seat:"Assigned waitlisted lamps", card:"Lamp card given", uncard:"Changed back to card not collected", edit:`Edited by devotee (now ${money(l.amount)})`}[l.action]||l.action) : ({paid:`標記已繳清（${money(l.amount)}${l.method==="check"?`，支票 #${l.checkNo}・${l.checkName}`:l.method==="cash"?"，現金":""}）`, unpaid:"改回未繳費", cancel:"取消報名", restore:"恢復報名", seat:"分配候補燈位", card:"發點燈卡", uncard:"改回未領點燈卡", edit:`信眾自己修改（應繳 ${money(l.amount)}）`}[l.action]||l.action);
 const hasWait = r => (r.lamps||[]).some(p=>Object.values(p.seats||{}).some(v=>!v));
@@ -605,14 +649,14 @@ function cardHTML(r, m){
   // 初九以後點燈的可以現場祭改發卡，大按鈕一直都在
   else if(paid && r.form==="lamp") action = r.cardAt || !cardTime(r) ? ""
       : `<button class="btn cardb" data-ask="card" data-ref="${esc(r.ref)}" type="button">${t("交點燈卡給信眾","Give lamp card to devotee")}</button>`;
-  else action = paid ? `<button class="linkbtn" data-ask="unpay" data-ref="${esc(r.ref)}" type="button">${t("改回未繳費","Change back to unpaid")}</button>`
+  else action = paid ? (canUnpay(r) ? `<button class="linkbtn" data-ask="unpay" data-ref="${esc(r.ref)}" type="button">${t("改回未繳費","Change back to unpaid")}</button>` : "")
                      : `<button class="btn okb" data-ask="pay" data-ref="${esc(r.ref)}" type="button">${t("收款：標記已繳清","Receive payment: mark paid")}</button>`;
   const tools = `<div class="tools">
       <a class="linkbtn" href="${printURL(r)}" target="_blank" rel="noopener">${t("列印報名表","Print form")}</a>
       ${!void_&&r.form==="lamp"&&hasWait(r)?`<button class="linkbtn" data-seat="${esc(r.ref)}" type="button">${t("分配候補燈位","Assign waitlisted lamps")}</button>`:""}
       ${!void_&&!paid&&!(confirming&&confirming.ref===r.ref)?`<button class="linkbtn" data-ask="void" data-ref="${esc(r.ref)}" type="button">${t("取消報名","Cancel registration")}</button>`:""}
       ${paid&&!void_&&r.form==="lamp"&&!r.cardAt&&!cardTime(r)&&!(confirming&&confirming.ref===r.ref)?`<button class="linkbtn" data-ask="card" data-ref="${esc(r.ref)}" type="button">${t("交點燈卡給信眾","Give lamp card to devotee")}</button>`:""}
-      ${paid&&!void_&&r.form==="lamp"&&!(confirming&&confirming.ref===r.ref)?(r.cardAt?`<button class="linkbtn" data-ask="uncard" data-ref="${esc(r.ref)}" type="button">${t("改回未領點燈卡","Change back to card not collected")}</button>`:`<button class="linkbtn" data-ask="unpay" data-ref="${esc(r.ref)}" type="button">${t("改回未繳費","Change back to unpaid")}</button>`):""}
+      ${paid&&!void_&&r.form==="lamp"&&!(confirming&&confirming.ref===r.ref)?(r.cardAt?`<button class="linkbtn" data-ask="uncard" data-ref="${esc(r.ref)}" type="button">${t("改回未領點燈卡","Change back to card not collected")}</button>`:canUnpay(r)?`<button class="linkbtn" data-ask="unpay" data-ref="${esc(r.ref)}" type="button">${t("改回未繳費","Change back to unpaid")}</button>`:""):""}
     </div>`;
   const status = void_ ? `<span class="status void">${t("已取消","Cancelled")}</span>` : `<span class="status ${paid?"paid":"unpaid"}">${paid?`${t("已繳清","Paid")} ${r.paidAt?fmtDate(r.paidAt):""}`:t("待繳費","Unpaid")}</span>`;
   return `<article class="card ${void_?"void":paid?"paid":"unpaid"}">
@@ -643,8 +687,8 @@ function render(){
   const unpaid = res.filter(([r])=>!r.paid);
   const unpaidAmt = money(unpaid.reduce((a,[r])=>a+(r.totals?.all||0),0));
   $("count").innerHTML = EN()
-    ? `<span><b>${res.length}</b> ${pl(res.length,"registration")}</span>${F.item!=="all"?`<span>${esc(lampDisp(F.item))}: <b>${itemUnits(res.map(x=>x[0]),F.item)}</b> ${UNIT(F.item,itemUnits(res.map(x=>x[0]),F.item))}</span>`:""}<span>Unpaid: <b>${unpaid.length}</b> · <b>${unpaidAmt}</b></span>`
-    : `<span>共 <b>${res.length}</b> 筆</span>${F.item!=="all"?`<span>${esc(F.item)} <b>${itemUnits(res.map(x=>x[0]),F.item)}</b> ${UNIT(F.item)}</span>`:""}<span>未繳費 <b>${unpaid.length}</b> 筆・<b>${unpaidAmt}</b></span>`;
+    ? `<span><b>${res.length}</b> ${pl(res.length,"registration")}</span>${F.item!=="all"?`<span>${esc(lampDisp(F.item))}: <b>${itemUnits(res.map(x=>x[0]),F.item)}</b> ${UNIT(F.item,itemUnits(res.map(x=>x[0]),F.item))}</span>`:""}<span>Unpaid: <b>${unpaid.length}</b>${canMoney()?` · <b>${unpaidAmt}</b>`:""}</span>`
+    : `<span>共 <b>${res.length}</b> 筆</span>${F.item!=="all"?`<span>${esc(F.item)} <b>${itemUnits(res.map(x=>x[0]),F.item)}</b> ${UNIT(F.item)}</span>`:""}<span>未繳費 <b>${unpaid.length}</b> 筆${canMoney()?`・<b>${unpaidAmt}</b>`:""}</span>`;
   renderTabs();
   $("list").innerHTML = res.length ? res.map(([r,m])=>cardHTML(r,m)).join("")
     : `<div class="empty"><b>${t("找不到符合的報名","No matching registrations")}</b>${F.q?t("請確認電話、編號或姓名是否輸入正確，或把上方篩選改成「全部」。","Please check the phone number, registration number or name, or set the filters above to \"All\"."):t("目前還沒有報名資料。","There are no registrations yet.")}</div>`;
@@ -690,7 +734,7 @@ $("list").addEventListener("click", async e=>{
     if(kind==="seat" && hasWait(r)) alert(t("目前還是沒有空的燈位，這幾盞仍是候補。","There are still no free lamp numbers. These lamps stay on the waitlist."));
   }catch(err){
     btn.disabled=false; btn.textContent=t("確定","Confirm");
-    const box=btn.closest(".confirm"); const msg = err.message==="check" ? t("請填支票人和支票號碼。","Please enter who wrote the check and the check number.") : err.message==="paid" ? t("已繳費的報名不能取消，請先改回未繳費。","A paid registration can't be cancelled. Change it back to unpaid first.") : err.message==="unpaid" ? t("還沒繳費，不能發點燈卡。請先收款。","Not paid yet, so the lamp card can't be given. Please receive payment first.") : t("網路有問題，還沒存好。請再按一次。","Network problem — not saved yet. Please press again.");
+    const box=btn.closest(".confirm"); const msg = err.message==="check" ? t("請填支票人和支票號碼。","Please enter who wrote the check and the check number.") : err.message==="not-mine" ? t("這筆不是您收的款，要請堂主或財務改回。","You didn't receive this payment. Please ask the temple head or finance to change it.") : err.message==="paid" ? t("已繳費的報名不能取消，請先改回未繳費。","A paid registration can't be cancelled. Change it back to unpaid first.") : err.message==="unpaid" ? t("還沒繳費，不能發點燈卡。請先收款。","Not paid yet, so the lamp card can't be given. Please receive payment first.") : t("網路有問題，還沒存好。請再按一次。","Network problem — not saved yet. Please press again.");
     if(box) box.querySelector(".cmsg").textContent=msg; else alert(msg);
   }
 });
@@ -698,14 +742,14 @@ $("list").addEventListener("click", async e=>{
 // 重畫前先把支票欄位打的字存起來
 function keepCheck(){ if(!confirming) return; if($("ckName")) confirming.checkName=$("ckName").value; if($("ckNo")) confirming.checkNo=$("ckNo").value; }
 async function enter(){
-  $("loginView").hidden=true; $("settingsView").hidden=true; $("reportView").hidden=true; $("mainView").hidden=false; $("logoutBtn").hidden=false; $("demoBar").hidden=!DEMO;
-  $("settingsBtn").hidden = false; $("reportBtn").hidden = false; $("whoAmI").textContent = sess()?.name||"";
+  $("loginView").hidden=true; $("settingsView").hidden=true; $("reportView").hidden=true; $("logView").hidden=true; $("mainView").hidden=false; $("logoutBtn").hidden=false; $("demoBar").hidden=!DEMO;
+  $("settingsBtn").hidden = false; $("reportBtn").hidden = false; $("logBtn").hidden = false; $("whoAmI").textContent = sess()?.name||"";
   await API.getSettings(); buildFormFilter();
   $("list").innerHTML=`<div class="empty">${t("載入中…","Loading…")}</div>`;
   // 掃收執聯上的 QR code 進來（/admin?q=報名編號）：登入後直接搜尋這一筆
   const q0=new URLSearchParams(location.search).get("q");
   if(q0 && !F.q){ F.q=q0; $("q").value=q0; $("clearQ").hidden=false; }
-  try{ ROWS = await API.list(); render(); }
+  try{ ROWS = await API.list(); $("whoAmI").textContent = sess()?.name||""; render(); }
   catch(e){ $("list").innerHTML=`<div class="empty"><b>${t("讀不到資料","Couldn't load data")}</b>${t("請確認網路，或重新登入。","Please check the network, or log in again.")}</div>`; }
   $("q").focus();
 }
@@ -713,7 +757,7 @@ let PICK=null;
 async function showLogin(){
   $("loginErr").textContent=""; $("whoStep").hidden=false; $("pinStep").hidden=true;
   let users=[]; try{ users=(await API.users()).filter(u=>u.active); }catch(e){ $("loginErr").textContent=t("讀不到義工名單，請確認網路。","Couldn't load the volunteer list. Please check the network."); }
-  $("whoList").innerHTML = users.map(u=>`<button type="button" data-uid="${esc(u.id)}" class="${u.role==="admin"?"adm":""}">${esc(u.name)}</button>`).join("");
+  $("whoList").innerHTML = users.map(u=>`<button type="button" data-uid="${esc(u.id)}" class="${u.role!=="volunteer"?"adm":""}">${esc(u.name)}</button>`).join("");
 }
 $("whoList").addEventListener("click", e=>{ const b=e.target.closest("[data-uid]"); if(!b) return; PICK={uid:b.dataset.uid, name:b.textContent};
   $("whoName").textContent=PICK.name; $("whoStep").hidden=true; $("pinStep").hidden=false; $("pw").value=""; $("loginErr").textContent=""; $("pw").focus(); });
@@ -777,10 +821,11 @@ $("itemsSave").addEventListener("click", async ()=>{
   catch(err){ m.textContent=t("儲存失敗，請重新登入後再試。","Couldn't save. Please log in again and try again."); m.className="pwmsg bad"; }
 });
 async function openSettings(){
-  const admin=sess()?.role==="admin";
-  $("adminOnly").hidden=!admin;
-  if(admin){ await API.getSettings(); DRAFT=JSON.parse(JSON.stringify(SETTINGS)); renderItems(); $("itemsMsg").textContent=""; await renderUsers(); }
-  $("mainView").hidden=true; $("reportView").hidden=true; $("settingsView").hidden=false; pwMsg("",true); $("usersMsg").textContent="";
+  const st=canSettings(), ac=canAccounts();
+  $("adminOnly").hidden=!(st||ac); $("setItemsBox").hidden=!st; $("setUsersBox").hidden=!ac;
+  if(st){ await API.getSettings(); DRAFT=JSON.parse(JSON.stringify(SETTINGS)); renderItems(); $("itemsMsg").textContent=""; }
+  if(ac){ NU_ROLE="volunteer"; renderRoleSeg($("nuRole"), NU_ROLE); await renderUsers(); }
+  $("mainView").hidden=true; $("reportView").hidden=true; $("logView").hidden=true; $("settingsView").hidden=false; pwMsg("",true); $("usersMsg").textContent="";
   ["myCur","myNew","myNew2","nuName","nuPin"].forEach(id=>$(id).value="");
 }
 $("settingsBtn").addEventListener("click", openSettings);
@@ -788,32 +833,41 @@ $("backBtn").addEventListener("click", ()=>{ $("settingsView").hidden=true; $("m
 const pinOK = p => /^\d{4,8}$/.test(p);
 const uMsg=(t,ok)=>{ $("usersMsg").textContent=t; $("usersMsg").className="pwmsg "+(ok?"ok":"bad"); };
 let U_OPEN=null, U_ROLE="volunteer", U_LIST=[];
-const ROLE_NAME = r => r==="admin" ? t("管理員","Admin") : t("義工","Volunteer");
-const U_ERR_EN = { self:"You can't disable or delete yourself.", "self-role":"You can't change your own role. Please ask another admin.", "last-admin":"This is the last admin, so it can't be disabled, deleted or changed to volunteer. Make someone else an admin first.",
+const ROLE_NAME = r => ({admin:t("管理員","Admin"), owner:t("堂主","Temple head"), finance:t("財務","Finance"), web:t("網站管理員","Site admin"), volunteer:t("義工","Volunteer")})[r] || t("義工","Volunteer");
+const ROLE_CLS = r => r==="volunteer" ? "" : r==="finance" ? "fin" : "adm";
+// 能指定的身分：堂主（或管理員）可以指定全部；網站管理員只能開義工帳號
+const assignable = cur => canAssign() ? ["volunteer","finance","web","owner", ...(myRole()==="admin"||cur==="admin"?["admin"]:[])] : ["volunteer"];
+function renderRoleSeg(el, cur){
+  const opts = assignable(cur);
+  if(opts.length<2){ el.innerHTML = `<span class="hint">${ROLE_NAME("volunteer")}${t("（其他身分要請堂主指定）"," (other roles are assigned by the temple head)")}</span>`; return; }
+  el.innerHTML = opts.map(v=>`<button type="button" data-role="${v}" aria-pressed="${cur===v}">${ROLE_NAME(v)}</button>`).join("");
+}
+const U_ERR_EN = { self:"You can't disable or delete yourself.", "self-role":"You can't change your own role. Please ask another admin.", "last-admin":"This is the last temple head / admin, so it can't be disabled, deleted or given another role. Make someone else the temple head first.", "role-auth":"Only the temple head can assign or change this role.",
   dup:"An account with this name already exists. Please add something to tell them apart.", used:"This person has handled registrations, so the account can't be deleted (records must show who handled them). If they no longer help, press \"Disable\".", pin:"The PIN must be 4–8 digits." };
-const U_ERR = { self:"不能停用或刪除自己。", "self-role":"不能改自己的身分，請另一位管理員幫您改。", "last-admin":"這是最後一位管理員，不能停用、刪除或改成義工。請先把另一個人設成管理員。",
+const U_ERR = { self:"不能停用或刪除自己。", "self-role":"不能改自己的身分，請另一位管理員幫您改。", "last-admin":"這是最後一位堂主／管理員，不能停用、刪除或改成其他身分。請先指定另一位堂主。", "role-auth":"這個身分要由堂主指定或修改。",
   dup:"已經有同名的帳號，請在名字後面加註區別。", used:"這位經手過報名，不能刪除（查帳時要找得到人）。不再幫忙請按「停用」。", pin:"PIN 碼要 4～8 位數字。" };
 const uErr = err => (EN()?U_ERR_EN:U_ERR)[err.message] || t("操作失敗，請重新登入後再試。","Something went wrong. Please log in again and try again.");
 async function renderUsers(){
   U_LIST=await API.users(); const me=sess();
   if(U_OPEN && !U_LIST.some(u=>u.id===U_OPEN)) U_OPEN=null;
   $("userRows").innerHTML=U_LIST.map(u=>{ const mine=u.id===me.uid, open=u.id===U_OPEN;
+    const locked = !mine && !canAssign() && u.role!=="volunteer";   // 網站管理員不能動堂主、財務等帳號
     return `<div class="urow ${u.active?"":"off"}">
-      <b>${esc(u.name)}</b><span class="rtag ${u.role==="admin"?"adm":""}">${ROLE_NAME(u.role)}</span>${u.active?"":`<span class="rtag">${t("已停用","Disabled")}</span>`}${u.active&&u.mustChange?`<span class="rtag">${t("待本人改 PIN","Must change PIN")}</span>`:""}
+      <b>${esc(u.name)}</b><span class="rtag ${ROLE_CLS(u.role)}">${ROLE_NAME(u.role)}</span>${u.active?"":`<span class="rtag">${t("已停用","Disabled")}</span>`}${u.active&&u.mustChange?`<span class="rtag">${t("待本人改 PIN","Must change PIN")}</span>`:""}
       ${mine?`<span class="hint">${t("（您自己）","(you)")}</span>`:""}
-      ${open?"":`<button class="btn ghost small" data-act="edit" data-id="${esc(u.id)}" type="button">${t("修改","Edit")}</button>`}
-      ${mine||open?"":`<button class="linkbtn" data-act="${u.active?"off":"on"}" data-id="${esc(u.id)}" type="button">${u.active?t("停用","Disable"):t("重新啟用","Re-enable")}</button>`}
+      ${open||locked?"":`<button class="btn ghost small" data-act="edit" data-id="${esc(u.id)}" type="button">${t("修改","Edit")}</button>`}
+      ${mine||open||locked?"":`<button class="linkbtn" data-act="${u.active?"off":"on"}" data-id="${esc(u.id)}" type="button">${u.active?t("停用","Disable"):t("重新啟用","Re-enable")}</button>`}
       ${open?`<div class="uedit">
         <label for="ueName">${t("姓名","Name")}</label><input id="ueName" value="${esc(u.name)}" autocomplete="off">
         ${mine?'<p class="hint">'+t("身分：","Role: ")+ROLE_NAME(u.role)+t("（自己的身分要請另一位管理員改）"," (only another admin can change your own role)")+'</p>'
-          :`<label>${t("身分","Role")}</label><div class="seg" id="ueRole" role="group" aria-label="${t("身分","Role")}"><button type="button" data-role="volunteer" aria-pressed="${U_ROLE==="volunteer"}">${t("義工","Volunteer")}</button><button type="button" data-role="admin" aria-pressed="${U_ROLE==="admin"}">${t("管理員","Admin")}</button></div>`}
+          :`<label>${t("身分","Role")}</label><div class="seg roleseg" id="ueRole" role="group" aria-label="${t("身分","Role")}"></div>`}
         <div class="row2"><button class="btn primary" data-act="save" data-id="${esc(u.id)}" type="button">${t("儲存","Save")}</button><button class="btn ghost" data-act="close" type="button">${t("取消","Cancel")}</button></div>
         ${mine?"":`<h4>${t("重設 PIN 碼","Reset PIN")}</h4><div class="reset"><input type="password" inputmode="numeric" placeholder="${t("新的 PIN 碼","New PIN")}" aria-label="${esc(u.name)} ${t("的新 PIN 碼","new PIN")}" data-pin="${esc(u.id)}"><button class="btn ghost small" data-act="reset" data-id="${esc(u.id)}" type="button">${t("重設 PIN","Reset PIN")}</button></div>
         <h4>${t("刪除帳號","Delete account")}</h4><p class="hint">${t("只有建錯、還沒經手過任何報名的帳號可以刪除。","Only an account created by mistake, which has never handled a registration, can be deleted.")}</p>
         <div><button class="btn del small" data-act="del" data-id="${esc(u.id)}" type="button">${t("刪除這個帳號","Delete this account")}</button></div>`}
       </div>`:""}
     </div>`; }).join("");
-  if(U_OPEN) $("ueName").focus();
+  if(U_OPEN){ if($("ueRole")) renderRoleSeg($("ueRole"), U_ROLE); $("ueName").focus(); }
 }
 $("userRows").addEventListener("click", async e=>{
   const rb=e.target.closest("[data-role]"); if(rb){ U_ROLE=rb.dataset.role; $("ueRole").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x===rb)); return; }
@@ -840,7 +894,7 @@ $("nuAdd").addEventListener("click", async ()=>{
   const name=$("nuName").value.trim(), pin=$("nuPin").value.trim();
   if(!name) return uMsg(t("請填姓名。","Please enter a name."),false); if(!pinOK(pin)) return uMsg(t("PIN 碼要 4～8 位數字。","The PIN must be 4–8 digits."),false);
   try{ await API.userOp("add",{name,role:NU_ROLE,pin}); uMsg(t(`已新增「${name}」。請把 PIN 碼告訴對方，第一次登入時會被要求改成自己的 PIN 碼。`,`Added "${name}". Please tell them the PIN. They will be asked to change it to their own PIN when they first log in.`),true); $("nuName").value=$("nuPin").value=""; renderUsers(); }
-  catch(err){ uMsg(err.message==="dup"?uErr(err):t("新增失敗，請重新登入後再試。","Couldn't add. Please log in again and try again."),false); }
+  catch(err){ uMsg(["dup","role-auth"].includes(err.message)?uErr(err):t("新增失敗，請重新登入後再試。","Couldn't add. Please log in again and try again."),false); }
 });
 $("mySave").addEventListener("click", async ()=>{
   const cur=$("myCur").value.trim(), a=$("myNew").value.trim(), b2=$("myNew2").value.trim();
@@ -865,8 +919,10 @@ const R = {kind:"lamp", scope:"", type:"all", paidOnly:false, date:"", sort:"sea
 const lampYears = () => [...new Set([curYear(), ...ROWS.filter(r=>r.form==="lamp").map(recYear)])].sort((a,b)=>b-a);
 // 有法會開放／暫停中，或已經有法會報名資料時，才顯示法會的三種報表
 const hasFahui = () => evList().length>0;
-const kindsShown = () => RKINDS.filter(([k])=>!["lotus","chaodu","meal"].includes(k) || hasFahui()).map(([k,a,b])=>EN()?[k,...RKINDS_EN[k]]:[k,a,b]);
-const kindTitle = k => EN() ? RKINDS_EN[k][0] : RKINDS.find(x=>x[0]===k)[1];
+// 看不到總帳的人（網站管理員、義工），「收款總表」換成「我收的款」
+const MY_MONEY = () => ["money", t("我收的款","My collections"), t("自己收的款，交接時對帳","Payments you received, for handover")];
+const kindsShown = () => RKINDS.filter(([k])=>!["lotus","chaodu","meal"].includes(k) || hasFahui()).map(([k,a,b])=>k==="money"&&!canMoney()?MY_MONEY():EN()?[k,...RKINDS_EN[k]]:[k,a,b]);
+const kindTitle = k => k==="money"&&!canMoney() ? MY_MONEY()[1] : EN() ? RKINDS_EN[k][0] : RKINDS.find(x=>x[0]===k)[1];
 const gText = g => EN() ? genderText(g) : g==="男"?"信士":g==="女"?"信女":"";
 const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 const mdText = s => { const [y,m,d]=s.split("-"); return `${+m}/${+d}`; };
@@ -976,6 +1032,8 @@ function itemLines(rs, isLamp){
           [lampDisp("供齋"),[meals.length+t(" 位",""),"num"],[t("隨喜","Any amount"),"num"],[money(mSum),"num"], mSum]];
 }
 function sheetMoney(rs){
+  const mineOnly = !canMoney();
+  if(mineOnly) rs = rs.filter(r=>r.paid && paidByMe(r));
   const sumAmt = a => a.reduce((s,r)=>s+(r.totals?.all||0),0);
   const paid = rs.filter(r=>r.paid), unpaid = rs.filter(r=>!r.paid);
   const dayPaid = R.date ? paid.filter(r=>r.paidAt && ymd(new Date(r.paidAt))===R.date) : paid;
@@ -1011,6 +1069,7 @@ function sheetMoney(rs){
   const iSec = `<div class="rsec"><h3>${t("報名項目","Items")}<small>${t("含未繳費","incl. unpaid")}</small></h3>${table([[t("項目","Item"),""],[t("數量","Qty"),"num"],[t("單價","Price"),"num"],[t("金額","Amount"),"num"]], iRows, `<tfoot><tr><td colspan="3">${t("應收合計","Total due")}</td><td class="num">${money(iTotal)}</td></tr></tfoot>`)}</div>`;
   const sum = EN() ? `<span>Registrations <b>${rs.length}</b></span><span>Due <b>${money(sumAmt(rs))}</b></span><span>Received <b>${money(sumAmt(paid))}</b> (${paid.length})</span><span>Outstanding <b class="unp">${money(sumAmt(unpaid))}</b> (${unpaid.length})</span>`
     : `<span>報名 <b>${rs.length}</b> 筆</span><span>應收 <b>${money(sumAmt(rs))}</b></span><span>已收 <b>${money(sumAmt(paid))}</b>（${paid.length} 筆）</span><span>未收 <b class="unp">${money(sumAmt(unpaid))}</b>（${unpaid.length} 筆）</span>`;
+  if(mineOnly) return {title:kindTitle("money"), sum: t(`<span>已收 <b>${money(sumAmt(paid))}</b>（${paid.length} 筆）</span>`,`<span>Received <b>${money(sumAmt(paid))}</b> (${paid.length})</span>`) + t(`<span>其中現金 <b>${money(cashSum)}</b>・支票 <b>${money(ckSum)}</b>（${cks.length} 張）</span>`,`<span>Cash <b>${money(cashSum)}</b> · Checks <b>${money(ckSum)}</b> (${cks.length})</span>`), body: bySec + ckSec + dSec};
   return {title:kindTitle("money"), sum: sum + t(`<span>其中現金 <b>${money(cashSum)}</b>・支票 <b>${money(ckSum)}</b>（${cks.length} 張）</span>`,`<span>Cash <b>${money(cashSum)}</b> · Checks <b>${money(ckSum)}</b> (${cks.length})</span>`), body: iSec + bySec + ckSec + dSec};
 }
 // 流年太歲表：十二生肖一覽＋已報名但犯太歲、還沒點太歲燈的人
@@ -1067,13 +1126,60 @@ function renderReport(){
     <div class="sh-foot">${t("列印時間","Printed")} ${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}・${esc(sess()?.name||"")}</div>`;
 }
 async function openReport(){
-  $("mainView").hidden=true; $("settingsView").hidden=true; $("reportView").hidden=false;
+  $("mainView").hidden=true; $("settingsView").hidden=true; $("logView").hidden=true; $("reportView").hidden=false;
   $("sheet").innerHTML=`<div class="empty">${t("載入中…","Loading…")}</div>`;
   try{ await API.getSettings(); ROWS = await API.list(); }catch(e){}
   renderReport(); window.scrollTo(0,0);
 }
 $("reportBtn").addEventListener("click", openReport);
 $("rBack").addEventListener("click", ()=>{ $("reportView").hidden=true; $("mainView").hidden=false; render(); });
+
+/* ================= 紀錄 ================= */
+// 報名處理紀錄：從每筆報名的處理紀錄整理出來（堂主、財務看全部；其他人只看自己經手的）。帳號與設定紀錄：後端「紀錄」分頁
+const LG = {tab:"reg", kind:"all", audit:null, err:false};
+const LOG_GROUP = {paid:"pay",unpaid:"pay",card:"card",uncard:"card",cancel:"cancel",restore:"cancel",edit:"edit",seat:"seat"};
+const logKinds = () => [["all",t("全部","All")],["pay",t("收款","Payments")],["card",t("點燈卡","Lamp cards")],["cancel",t("取消／恢復","Cancel / restore")],["edit",t("信眾修改","Devotee edits")]];
+const logTabs = () => [["reg",t("報名處理","Registrations")], ...(myRole()!=="volunteer"?[["audit",t("帳號與設定","Accounts & settings")]]:[])];
+const hm = iso => { const d=new Date(iso); return isNaN(d) ? "" : `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
+function regLog(){
+  const me=sess(), mine = l => l.byId ? l.byId===me.uid : l.by===me.name;
+  const out=[]; ROWS.forEach(r=>(r.payLog||[]).forEach(l=>out.push({...l, ref:r.ref, contact:r.contact?.name||""})));
+  return out.filter(l=>(canMoney()||mine(l)) && (LG.kind==="all"||LOG_GROUP[l.action]===LG.kind)).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+}
+function logRows(list, rowFn){
+  if(!list.length) return `<div class="empty">${t("目前沒有紀錄","No records yet")}</div>`;
+  let day=""; return list.slice(0,500).map(l=>{ const d=new Date(l.at), k=isNaN(d)?"":ymd(d);
+    const head = k!==day ? `<div class="logday">${k?`${d.getFullYear()}/${mdText(k)}`:"—"}</div>` : ""; day=k; return head+rowFn(l); }).join("");
+}
+function renderLog(){
+  if(!logTabs().some(([v])=>v===LG.tab)) LG.tab="reg";
+  $("logTabs").innerHTML = logTabs().map(([v,nm])=>`<button type="button" data-lt="${v}" aria-pressed="${LG.tab===v}">${esc(nm)}</button>`).join("");
+  $("logKindsWrap").hidden = LG.tab!=="reg";
+  $("logKinds").innerHTML = logKinds().map(([v,nm])=>`<button type="button" data-lk="${v}" aria-pressed="${LG.kind===v}">${esc(nm)}</button>`).join("");
+  $("logHint").textContent = LG.tab==="audit"
+    ? t("誰在什麼時候新增、修改、停用帳號，重設 PIN，或改了報名設定。紀錄不能刪改。","Who added, changed or disabled accounts, reset PINs, or changed registration settings, and when. Records can't be edited or deleted.")
+    : canMoney() ? t("所有人的收款、發點燈卡、取消、信眾修改，最新的在上面。紀錄不能刪改。按報名編號可以打開那一筆。","Everyone's payments, lamp cards, cancellations and devotee edits, newest first. Records can't be edited or deleted. Tap a registration number to open it.")
+    : t("您經手的收款、發點燈卡、取消，最新的在上面。按報名編號可以打開那一筆。","Payments, lamp cards and cancellations you handled, newest first. Tap a registration number to open it.");
+  if(LG.tab==="reg"){
+    $("logList").innerHTML = logRows(regLog(), l=>`<div class="logrow"><span class="tm">${hm(l.at)}</span><span class="who">${esc(l.by||(l.action==="edit"?t("信眾","Devotee"):"—"))}</span><span class="act">${esc(LOG_TEXT(l))}</span><span class="ref"><button type="button" data-open="${esc(l.ref)}">${esc(l.ref)}</button> ${esc(l.contact)}</span></div>`);
+  } else if(LG.err){ $("logList").innerHTML = `<div class="empty"><b>${t("讀不到紀錄","Couldn't load records")}</b>${t("請確認網路，或重新登入。","Please check the network, or log in again.")}</div>`; }
+  else if(!LG.audit){ $("logList").innerHTML = `<div class="empty">${t("載入中…","Loading…")}</div>`; }
+  else $("logList").innerHTML = logRows(LG.audit, l=>`<div class="logrow"><span class="tm">${hm(l.at)}</span><span class="who">${esc(l.by)}</span><span class="act"><b>${esc(l.action)}</b>${l.target?`「${esc(l.target)}」`:""}${l.detail?`<br><small>${esc(l.detail)}</small>`:""}</span></div>`);
+}
+async function loadAudit(){ LG.audit=null; LG.err=false; renderLog(); try{ LG.audit=await API.audit(); }catch(e){ LG.err=true; } if(!$("logView").hidden) renderLog(); }
+async function openLog(){
+  $("mainView").hidden=true; $("settingsView").hidden=true; $("reportView").hidden=true; $("logView").hidden=false; window.scrollTo(0,0);
+  renderLog(); try{ ROWS = await API.list(); }catch(e){} renderLog();
+  if(LG.tab==="audit") loadAudit();
+}
+$("logBtn").addEventListener("click", openLog);
+$("logBack").addEventListener("click", ()=>{ $("logView").hidden=true; $("mainView").hidden=false; render(); });
+$("logTabs").addEventListener("click", e=>{ const b=e.target.closest("[data-lt]"); if(!b) return; LG.tab=b.dataset.lt; if(LG.tab==="audit") loadAudit(); else renderLog(); });
+$("logKinds").addEventListener("click", e=>{ const b=e.target.closest("[data-lk]"); if(!b) return; LG.kind=b.dataset.lk; renderLog(); });
+$("logList").addEventListener("click", e=>{ const b=e.target.closest("[data-open]"); if(!b) return;
+  $("logView").hidden=true; $("mainView").hidden=false; F.form="all"; F.item="all"; F.paid="all";
+  document.querySelectorAll("#segPaid button").forEach(x=>x.setAttribute("aria-pressed", x.dataset.paid==="all"));
+  $("q").value=b.dataset.open; $("q").dispatchEvent(new Event("input")); window.scrollTo(0,0); });
 $("rPrint").addEventListener("click", ()=>window.print());
 $("rKinds").addEventListener("click", e=>{ const b=e.target.closest("[data-rk]"); if(!b) return; R.kind=b.dataset.rk; if(R.kind==="money") R.scope="all"; renderReport(); });
 $("rScope").addEventListener("click", e=>{ const b=e.target.closest("[data-rs]"); if(!b) return; R.scope=b.dataset.rs; renderReport(); });
@@ -1097,7 +1203,9 @@ function applyLang(){
   setBig(document.documentElement.classList.contains("big"));
   if(!$("mainView").hidden && ROWS.length) render(); else if(!$("mainView").hidden) renderTabs();
   if(!$("reportView").hidden) renderReport();
-  if(!$("settingsView").hidden && DRAFT && !$("adminOnly").hidden){ renderItems(); renderUsers(); }
+  if(!$("settingsView").hidden && DRAFT && canSettings()) renderItems();
+  if(!$("settingsView").hidden && canAccounts()){ renderRoleSeg($("nuRole"), NU_ROLE); renderUsers(); }
+  if(!$("logView").hidden) renderLog();
 }
 $("langBtn").addEventListener("click", ()=>{ LANG = EN() ? "zh" : "en"; try{ localStorage.setItem("tsuhui-admin-lang", LANG); }catch(e){} $("loginErr").textContent=""; applyLang(); });
 $("sizeBtn").addEventListener("click", ()=>setBig(!document.documentElement.classList.contains("big")));
