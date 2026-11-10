@@ -12,7 +12,7 @@ shell = r'''/* 自動產生，請勿直接修改：示範模式用的後端。
  * 改了 Code.gs 之後執行 python3 backend/build-demo.py 重新產生。 */
 window.DemoBackend = (function () {
   "use strict";
-  const KEY = "tsuhui-demo-v6";
+  const KEY = "tsuhui-demo-v7";
   let db = null;
   try { db = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
   if (!db || !db.sheets) db = { sheets: {}, order: [] };
@@ -114,7 +114,7 @@ window.DemoBackend = (function () {
     const sh = sheet_(SHEET.reg);
     for (let r = 2; r <= sh.getLastRow(); r++) { const d = JSON.parse(sh.getRange(r, C.json).getValue()); d.sample = true; sh.getRange(r, C.json).setValue(JSON.stringify(d)); }
     setPaid_({ id: "u-admin", name: "管理員" }, refs[0], true);
-    setPaid_({ id: "u-admin", name: "管理員" }, refs[1], true, { method: "check", checkName: "張雅婷", checkNo: "1052" });
+    setPaid_({ id: "u-admin", name: "管理員" }, refs[1], true, { method: "check", checkName: "張雅婷", checkNo: "1052", checkAmount: 480 });
     db.seeded = true;
   }
   if (!db.seeded) { seed(); persist(); }

@@ -3,7 +3,7 @@
  * 改了 Code.gs 之後執行 python3 backend/build-demo.py 重新產生。 */
 window.DemoBackend = (function () {
   "use strict";
-  const KEY = "tsuhui-demo-v6";
+  const KEY = "tsuhui-demo-v7";
   let db = null;
   try { db = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
   if (!db || !db.sheets) db = { sheets: {}, order: [] };
@@ -126,8 +126,8 @@ const MAX_FAILS = 8;          // PIN 或查詢連續打錯幾次就暫時鎖住
 const LOCK_MINUTES = 15;
 
 const SHEET = { reg: "報名", users: "帳號", settings: "設定", audit: "紀錄" };
-const REG_HEAD = ["報名編號", "報名時間", "表單", "場次", "聯絡人", "電話", "住址", "應繳", "已繳清", "收款時間", "經手人", "語言", "備註", "收款紀錄", "送出代碼", "完整資料", "已取消", "燈位", "點燈年度", "付款方式", "支票人", "支票號碼"];
-const C = { ref: 1, time: 2, form: 3, event: 4, name: 5, phone: 6, address: 7, total: 8, paid: 9, paidAt: 10, paidBy: 11, lang: 12, note: 13, log: 14, cid: 15, json: 16, cancelled: 17, seats: 18, year: 19, method: 20, checkName: 21, checkNo: 22 };
+const REG_HEAD = ["報名編號", "報名時間", "表單", "場次", "聯絡人", "電話", "住址", "應繳", "已繳清", "收款時間", "經手人", "語言", "備註", "收款紀錄", "送出代碼", "完整資料", "已取消", "燈位", "點燈年度", "付款方式", "支票人", "支票號碼", "支票金額", "支票付", "現金付", "支票備註"];
+const C = { ref: 1, time: 2, form: 3, event: 4, name: 5, phone: 6, address: 7, total: 8, paid: 9, paidAt: 10, paidBy: 11, lang: 12, note: 13, log: 14, cid: 15, json: 16, cancelled: 17, seats: 18, year: 19, method: 20, checkName: 21, checkNo: 22, checkAmt: 23, checkPart: 24, cashPart: 25, checkNote: 26 };
 const USER_HEAD = ["id", "姓名", "身分", "PIN（加密）", "啟用", "待改PIN"];
 const AUDIT_HEAD = ["時間", "經手人", "動作", "對象", "內容"];
 
@@ -186,6 +186,11 @@ function doGet(e) {
         if (!me) return out_({ ok: false, error: "auth" });
         return out_({ ok: true, me: pub_(me), features: ["payMethod", "roles"], rows: listRows_().map(d => viewFor_(me, d)) });
       }
+      case "findCheck": {  // 收支票時：這張支票是不是已經用在別的報名表
+        const me = checkLogin_(p.uid, p.pin);
+        if (!me) return out_({ ok: false, error: "auth" });
+        return out_({ ok: true, checks: findChecks_(p.no) });
+      }
       case "audit": {      // 帳號與設定的變動紀錄
         const me = checkLogin_(p.uid, p.pin);
         if (!me || me.role === "volunteer") return out_({ ok: false, error: "auth" });
@@ -213,6 +218,8 @@ function doPost(e) {
       case "setCancelled": return out_(setCancelled_(me, body.ref, !!body.cancelled));
       case "assignSeats":  return out_(assignWaitlist_(me, body.ref));
       case "setCard":      return out_(setCard_(me, body.ref, !!body.given));
+      case "setCheckNote": if (!canMoney_(me)) return out_({ ok: false, error: "auth" });
+                           return out_(setCheckNote_(me, body.no, body.name, body.note));
       case "saveSettings": if (!canSettings_(me)) return out_({ ok: false, error: "auth" });
                            return out_(saveSettings_(body.settings, me));
       case "userOp":       return out_(userOp_(me, body));
@@ -371,10 +378,17 @@ function readRecord_(r) {
   d.paidAt = r[C.paidAt - 1] ? new Date(r[C.paidAt - 1]).toISOString() : null;
   d.paidBy = r[C.paidBy - 1] || null;
   d.cancelled = r[C.cancelled - 1] === true;
-  // 付款方式：支票要記支票人和支票號碼；以前收的（沒記方式）都算現金
-  d.payMethod = d.paid ? (r[C.method - 1] === "支票" ? "check" : "cash") : null;
-  d.checkName = d.payMethod === "check" ? String(r[C.checkName - 1] || "") : null;
-  d.checkNo = d.payMethod === "check" ? String(r[C.checkNo - 1] || "") : null;
+  // 付款方式：現金、支票、支票＋現金。支票記支票人、號碼、整張支票的金額，和這筆用支票付了多少、現金付了多少
+  // 以前收的（沒記方式）都算現金；手動在試算表補「支票」但沒填金額的，當成整筆用支票付
+  const pm = String(r[C.method - 1] || ""), due = Number(r[C.total - 1]) || 0;
+  d.payMethod = d.paid ? (pm === "支票" ? "check" : pm === "支票＋現金" ? "mix" : "cash") : null;
+  const ck = d.payMethod === "check" || d.payMethod === "mix";
+  d.checkName = ck ? String(r[C.checkName - 1] || "") : null;
+  d.checkNo = ck ? String(r[C.checkNo - 1] || "") : null;
+  d.checkPart = ck ? (r[C.checkPart - 1] === "" ? due : Number(r[C.checkPart - 1]) || 0) : (d.paid ? 0 : null);
+  d.cashPart = d.paid ? (ck ? (r[C.cashPart - 1] === "" ? due - d.checkPart : Number(r[C.cashPart - 1]) || 0) : due) : null;
+  d.checkAmt = ck ? (Number(r[C.checkAmt - 1]) || null) : null;
+  d.checkNote = ck ? String(r[C.checkNote - 1] || "") : null;
   d.payLog = log;
   // 點燈卡：看處理紀錄裡最後一次「發點燈卡／改回未領」
   let card = null; log.forEach(l => { if (l.action === "card") card = l; else if (l.action === "uncard") card = null; });
@@ -393,7 +407,7 @@ function findRow_(ref) {
 }
 // 把修改後的報名內容寫回（繳費、取消、收款紀錄另外處理）
 function writeData_(f, d) {
-  const keep = {}; ["paid", "paidAt", "paidBy", "payLog", "cancelled", "payMethod", "checkName", "checkNo"].forEach(k => { keep[k] = d[k]; delete d[k]; });
+  const keep = {}; ["paid", "paidAt", "paidBy", "payLog", "cancelled", "payMethod", "checkName", "checkNo", "checkPart", "cashPart", "checkAmt", "checkNote"].forEach(k => { keep[k] = d[k]; delete d[k]; });
   f.sh.getRange(f.row, C.name, 1, 4).setValues([[d.contact.name || "", d.contact.phone || "", d.contact.address || "", d.totals.all]]);
   f.sh.getRange(f.row, C.note).setValue(d.note || "");
   f.sh.getRange(f.row, C.json).setValue(JSON.stringify(d));
@@ -416,6 +430,7 @@ function viewFor_(me, d) {
   if (canMoney_(me) || !d.paid || paidByMe_(me, d)) return d;
   const o = JSON.parse(JSON.stringify(d));
   delete o.paidBy; delete o.paidById; delete o.payMethod; delete o.checkName; delete o.checkNo;
+  delete o.checkPart; delete o.cashPart; delete o.checkAmt; delete o.checkNote;
   o.payLog = (o.payLog || []).map(x => (x.action === "paid" || x.action === "unpaid") && x.byId !== me.id && x.by !== me.name
     ? { action: x.action, at: x.at, amount: x.amount } : x);
   return o;
@@ -510,28 +525,64 @@ function update_(b) {
 }
 
 /* ================= 後台：收款、取消、分配燈位 ================= */
-// 收款：現金或支票。支票要填支票人和支票號碼（寫在「付款方式／支票人／支票號碼」三欄，也記進收款紀錄）
+// 收款：現金或支票。支票要填支票人、號碼、金額；一張支票可以付好幾張報名表（輸入同一個號碼＋支票人）。
+// 支票剩下的錢不夠付這一筆，其餘收現金（付款方式記「支票＋現金」）。寫在「付款方式」到「支票備註」七欄，也記進收款紀錄
+const ckKey_ = (no, name) => String(no || "").trim() + "|" + String(name || "").replace(/\s+/g, "").toLowerCase();
+function findChecks_(no, exceptRef) {
+  no = String(no || "").trim(); if (!no) return [];
+  const sh = sheet_(SHEET.reg), n = sh.getLastRow() - 1; if (n < 1) return [];
+  const map = {};
+  sh.getRange(2, 1, n, REG_HEAD.length).getValues().forEach(r => {
+    if (r[C.paid - 1] !== true || r[C.cancelled - 1] === true || String(r[C.checkNo - 1]).trim() !== no) return;
+    if (exceptRef && String(r[C.ref - 1]) === exceptRef) return;
+    const d = readRecord_(r); if (d.payMethod !== "check" && d.payMethod !== "mix") return;
+    const k = ckKey_(d.checkNo, d.checkName);
+    const c = map[k] = map[k] || { no: d.checkNo, name: d.checkName, amount: 0, used: 0, refs: [], note: "" };
+    c.used += d.checkPart || 0; c.amount = Math.max(c.amount, d.checkAmt || 0); c.refs.push({ ref: d.ref, part: d.checkPart }); if (d.checkNote) c.note = d.checkNote;
+  });
+  return Object.keys(map).map(k => { const c = map[k]; if (!c.amount) c.amount = c.used; c.left = Math.round((c.amount - c.used) * 100) / 100; return c; });
+}
 function setPaid_(me, ref, paid, pay) {
   const f = findRow_(ref);
   if (!f) return { ok: false, error: "not-found" };
   if (paid && f.rec.cancelled) return { ok: false, error: "cancelled" };
   if (!paid && f.rec.paid && !canMoney_(me) && !paidByMe_(me, f.rec)) return { ok: false, error: "not-mine" };   // 別人收的款，要堂主或財務才能改回
+  const now = new Date(), amount = f.rec.totals ? f.rec.totals.all : Number(f.sh.getRange(f.row, C.total).getValue()) || 0;
   const check = paid && pay && pay.method === "check";
-  const ckName = check ? String(pay.checkName || "").trim().slice(0, 60) : "";
-  const ckNo = check ? String(pay.checkNo || "").trim().slice(0, 30) : "";
-  if (check && (!ckName || !ckNo)) return { ok: false, error: "check" };
-  const now = new Date(), amount = f.rec.totals ? f.rec.totals.all : f.sh.getRange(f.row, C.total).getValue();
+  let ckName = "", ckNo = "", ckAmt = "", ckPart = "", cashPart = "", note = "";
+  if (check) {
+    ckName = String(pay.checkName || "").trim().slice(0, 60); ckNo = String(pay.checkNo || "").trim().slice(0, 30);
+    if (!ckName || !ckNo) return { ok: false, error: "check" };
+    const same = findChecks_(ckNo, f.rec.ref).find(c => ckKey_(c.no, c.name) === ckKey_(ckNo, ckName));
+    if (same) { ckName = same.name; ckAmt = same.amount; note = same.note; }
+    else { ckAmt = Math.round(Number(pay.checkAmount) * 100) / 100; if (!(ckAmt > 0)) return { ok: false, error: "check-amount" }; }
+    const left = same ? same.left : ckAmt;
+    if (!(left > 0)) return { ok: false, error: "check-used" };
+    ckPart = Math.min(left, amount); cashPart = Math.round((amount - ckPart) * 100) / 100;
+  }
+  const method = !paid ? "" : !check ? "現金" : cashPart > 0 ? "支票＋現金" : "支票";
   f.sh.getRange(f.row, C.paid, 1, 3).setValues([[paid, paid ? now : "", paid ? me.name : ""]]);
-  if (f.sh.getRange(1, C.method).getValue() !== REG_HEAD[C.method - 1])   // 舊的試算表：補上新欄位的標題
-    f.sh.getRange(1, C.method, 1, 3).setValues([REG_HEAD.slice(C.method - 1, C.method + 2)]).setFontWeight("bold");
+  if (f.sh.getRange(1, C.checkNote).getValue() !== REG_HEAD[C.checkNote - 1])   // 舊的試算表：補上新欄位的標題
+    f.sh.getRange(1, C.method, 1, 7).setValues([REG_HEAD.slice(C.method - 1, C.method + 6)]).setFontWeight("bold");
   f.sh.getRange(f.row, C.checkNo).setNumberFormat("@");
-  f.sh.getRange(f.row, C.method, 1, 3).setValues([[paid ? (check ? "支票" : "現金") : "", ckName, ckNo]]);
+  f.sh.getRange(f.row, C.method, 1, 7).setValues([[method, ckName, ckNo, ckAmt, ckPart, paid && !check ? amount : cashPart, note]]);
   const entry = { action: paid ? "paid" : "unpaid", by: me.name, byId: me.id, at: now.toISOString(), amount: amount };
-  if (paid) entry.method = check ? "check" : "cash";
-  if (check) { entry.checkName = ckName; entry.checkNo = ckNo; }
+  if (paid) entry.method = !check ? "cash" : cashPart > 0 ? "mix" : "check";
+  if (check) { entry.checkName = ckName; entry.checkNo = ckNo; entry.checkAmt = ckAmt; entry.checkPart = ckPart; entry.cashPart = cashPart; }
   addLog_(f, entry);
+  const rec = readRecord_(f.sh.getRange(f.row, 1, 1, REG_HEAD.length).getValues()[0]);
   return { ok: true, record: { paid: paid, paidAt: paid ? now.toISOString() : null, paidBy: paid ? me.name : null, paidById: paid ? me.id : null,
-    payMethod: paid ? (check ? "check" : "cash") : null, checkName: check ? ckName : null, checkNo: check ? ckNo : null, payLog: f.rec.payLog } };
+    payMethod: rec.payMethod, checkName: rec.checkName, checkNo: rec.checkNo, checkAmt: rec.checkAmt, checkPart: rec.checkPart, cashPart: rec.cashPart, checkNote: rec.checkNote, payLog: rec.payLog } };
+}
+// 支票多出來的錢：在支票明細註記用途（寫到這張支票付過的每一筆）
+function setCheckNote_(me, no, name, note) {
+  no = String(no || "").trim(); note = String(note || "").trim().slice(0, 100);
+  const sh = sheet_(SHEET.reg), n = sh.getLastRow() - 1; if (n < 1 || !no) return { ok: false, error: "not-found" };
+  const rows = sh.getRange(2, 1, n, REG_HEAD.length).getValues(); let hit = 0;
+  rows.forEach((r, i) => { if (String(r[C.checkNo - 1]).trim() === no && ckKey_(no, r[C.checkName - 1]) === ckKey_(no, name)) { sh.getRange(i + 2, C.checkNote).setValue(note); hit++; } });
+  if (!hit) return { ok: false, error: "not-found" };
+  audit_(me, "支票註記", "#" + no + " " + name, note || "（清除）");
+  return { ok: true };
 }
 // 發點燈卡：只有已繳清的點燈報名可以標記；紀錄在處理紀錄裡
 function setCard_(me, ref, given) {
@@ -778,7 +829,7 @@ function out_(obj) {
     const sh = sheet_(SHEET.reg);
     for (let r = 2; r <= sh.getLastRow(); r++) { const d = JSON.parse(sh.getRange(r, C.json).getValue()); d.sample = true; sh.getRange(r, C.json).setValue(JSON.stringify(d)); }
     setPaid_({ id: "u-admin", name: "管理員" }, refs[0], true);
-    setPaid_({ id: "u-admin", name: "管理員" }, refs[1], true, { method: "check", checkName: "張雅婷", checkNo: "1052" });
+    setPaid_({ id: "u-admin", name: "管理員" }, refs[1], true, { method: "check", checkName: "張雅婷", checkNo: "1052", checkAmount: 480 });
     db.seeded = true;
   }
   if (!db.seeded) { seed(); persist(); }

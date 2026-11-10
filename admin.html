@@ -120,6 +120,8 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 2px}
 .confirm span{flex:1 1 12em;font-weight:500}
 .confirm .paym{flex:1 1 100%}
 .ckrow{flex:1 1 100%;display:flex;gap:8px;flex-wrap:wrap}
+.ckplan{flex:1 1 100%;font-size:.92rem}.ckplan div{margin:2px 0}
+.cknote{font-size:.85rem}
 .ckrow label{flex:1 1 9em;display:flex;flex-direction:column;font-size:.85rem;font-weight:700;gap:3px}
 .ckrow input{font-size:1rem;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);width:100%}
 .linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;cursor:pointer;padding:4px;font-size:.85rem}
@@ -477,6 +479,8 @@ const API = {
   async list(){ const d=okOrThrow(await apiGet({action:"list", ...auth()})); FEAT=d.features||[];
     if(d.me){ const s0=sess(); if(s0 && (s0.role!==d.me.role || s0.name!==d.me.name)) setSess({...s0, role:d.me.role, name:d.me.name}); }
     return d.rows; },
+  async findCheck(no){ return okOrThrow(await apiGet({action:"findCheck", ...auth(), no})).checks; },
+  async setCheckNote(no, name, note){ return okOrThrow(await apiPost({action:"setCheckNote", ...auth(), no, name, note})); },
   async audit(){ return okOrThrow(await apiGet({action:"audit", ...auth()})).rows; },
   // 收款、取消、分配燈位：後端會記錄經手人和時間
   async setPaid(ref, paid, pay){ return okOrThrow(await apiPost({action:"setPaid", ...auth(), ref, paid, ...(pay||{})})).record; },
@@ -605,8 +609,11 @@ function printURL(r){
 // 付款方式：「現金」或「支票 #1052・張雅婷」
 // 後端（Code.gs）還沒更新時，資料裡沒有 payMethod：先不顯示付款方式、也不讓選支票，免得支票資料送出去被丟掉
 const payOK = () => FEAT.includes("payMethod") || ROWS.some(r=>"payMethod" in r);
-const payText = r => !("payMethod" in r) ? "" : r.payMethod==="check" ? `${t("支票","Check")} #${r.checkNo||""}${r.checkName?"・"+r.checkName:""}` : t("現金","Cash");
-const LOG_TEXT = l => EN() ? ({paid:`Marked paid (${money(l.amount)}${l.method==="check"?`, check #${l.checkNo} from ${l.checkName}`:l.method==="cash"?", cash":""})`, unpaid:"Changed back to unpaid", cancel:"Registration cancelled", restore:"Registration restored", seat:"Assigned waitlisted lamps", card:"Lamp card given", uncard:"Changed back to card not collected", edit:`Edited by devotee (now ${money(l.amount)})`}[l.action]||l.action) : ({paid:`標記已繳清（${money(l.amount)}${l.method==="check"?`，支票 #${l.checkNo}・${l.checkName}`:l.method==="cash"?"，現金":""}）`, unpaid:"改回未繳費", cancel:"取消報名", restore:"恢復報名", seat:"分配候補燈位", card:"發點燈卡", uncard:"改回未領點燈卡", edit:`信眾自己修改（應繳 ${money(l.amount)}）`}[l.action]||l.action);
+const isCheck = r => r.payMethod==="check" || r.payMethod==="mix";
+const payText = r => !("payMethod" in r) ? "" : r.payMethod==="mix" ? `${t("支票","Check")} #${r.checkNo||""}${r.checkName?"・"+r.checkName:""} ${money(r.checkPart)}＋${t("現金","cash")} ${money(r.cashPart)}`
+  : r.payMethod==="check" ? `${t("支票","Check")} #${r.checkNo||""}${r.checkName?"・"+r.checkName:""}` : t("現金","Cash");
+const ckSame = (a,b) => String(a||"").replace(/\s+/g,"").toLowerCase()===String(b||"").replace(/\s+/g,"").toLowerCase();
+const LOG_TEXT = l => EN() ? ({paid:`Marked paid (${money(l.amount)}${l.method==="check"?`, check #${l.checkNo} from ${l.checkName}`:l.method==="mix"?`, check #${l.checkNo} from ${l.checkName} ${money(l.checkPart)} + cash ${money(l.cashPart)}`:l.method==="cash"?", cash":""})`, unpaid:"Changed back to unpaid", cancel:"Registration cancelled", restore:"Registration restored", seat:"Assigned waitlisted lamps", card:"Lamp card given", uncard:"Changed back to card not collected", edit:`Edited by devotee (now ${money(l.amount)})`}[l.action]||l.action) : ({paid:`標記已繳清（${money(l.amount)}${l.method==="check"?`，支票 #${l.checkNo}・${l.checkName}`:l.method==="mix"?`，支票 #${l.checkNo}・${l.checkName} ${money(l.checkPart)}＋現金 ${money(l.cashPart)}`:l.method==="cash"?"，現金":""}）`, unpaid:"改回未繳費", cancel:"取消報名", restore:"恢復報名", seat:"分配候補燈位", card:"發點燈卡", uncard:"改回未領點燈卡", edit:`信眾自己修改（應繳 ${money(l.amount)}）`}[l.action]||l.action);
 const hasWait = r => (r.lamps||[]).some(p=>Object.values(p.seats||{}).some(v=>!v));
 function cardHTML(r, m){
   const q=F.q, paid=!!r.paid, void_=!!r.cancelled;
@@ -626,20 +633,20 @@ function cardHTML(r, m){
     const k=confirming.kind;
     const who = esc(sess()?.name||"");
     const ck = k==="pay" && confirming.method==="check";
-    const msg = EN() ? (k==="pay" ? (ck ? `Received a check for ${money(total)}? Enter who wrote it and the check number. It will be recorded as handled by ${who}.` : `Have you received ${money(total)} in cash? It will be recorded as handled by ${who}.`)
+    const msg = EN() ? (k==="pay" ? (ck ? `Received a check? Enter who wrote it, the check number and the amount on the check. It will be recorded as handled by ${who}.` : `Have you received ${money(total)} in cash? It will be recorded as handled by ${who}.`)
       : k==="unpay" ? `Change ${esc(r.ref)} back to unpaid?`
       : k==="card" ? `Have you given the lamp card to the devotee? It will be recorded as handled by ${who}.`
       : k==="uncard" ? `Change ${esc(r.ref)} back to "card not collected"?`
       : k==="void" ? `Cancel ${esc(r.ref)}? Its lamp numbers will be released for others.`
       : `Restore ${esc(r.ref)}? Lamp numbers will be assigned again (the same ones if still free).`)
-      : k==="pay" ? (ck ? `收到支票 ${money(total)}？請填支票人和支票號碼。會記錄為「${who}」經手。` : `確定已收到現金 ${money(total)}？會記錄為「${who}」經手。`)
+      : k==="pay" ? (ck ? `收到支票？請填支票人、支票號碼和支票上的金額。會記錄為「${who}」經手。` : `確定已收到現金 ${money(total)}？會記錄為「${who}」經手。`)
       : k==="unpay" ? `確定要把 ${esc(r.ref)} 改回「未繳費」？`
       : k==="card" ? `確定已把點燈卡交給信眾？會記錄為「${esc(sess()?.name||"")}」經手。`
       : k==="uncard" ? `確定要把 ${esc(r.ref)} 改回「未領點燈卡」？`
       : k==="void" ? `確定要取消 ${esc(r.ref)}？燈位會放出來給別人用。`
       : `確定要恢復 ${esc(r.ref)}？會重新分配燈位（原位還空著就用原位）。`;
     const payPick = k!=="pay" || !payOK() ? "" : `<div class="seg paym" role="group" aria-label="${t("付款方式","Payment method")}"><button type="button" data-pm="cash" aria-pressed="${!ck}">${t("現金","Cash")}</button><button type="button" data-pm="check" aria-pressed="${ck}">${t("支票","Check")}</button></div>
-      ${ck?`<div class="ckrow"><label>${t("支票人","Check from")}<input id="ckName" value="${esc(confirming.checkName??r.contact.name??"")}" autocomplete="off"></label><label>${t("支票號碼","Check no.")}<input id="ckNo" value="${esc(confirming.checkNo||"")}" inputmode="numeric" autocomplete="off"></label></div>`:""}`;
+      ${ck?`<div class="ckrow"><label>${t("支票人","Check from")}<input id="ckName" value="${esc(confirming.checkName??r.contact.name??"")}" autocomplete="off"></label><label>${t("支票號碼","Check no.")}<input id="ckNo" value="${esc(confirming.checkNo||"")}" inputmode="numeric" autocomplete="off"></label><label id="ckAmtWrap">${t("支票金額","Check amount")}<input id="ckAmt" value="${esc(confirming.checkAmount??total??"")}" inputmode="decimal" autocomplete="off"></label></div><div class="ckplan" id="ckPlan">${ckPlanHTML(r)}</div>`:""}`;
     action = `<div class="confirm">${payPick}<span class="cmsg">${msg}</span>
       <button class="btn ${k==="pay"||k==="card"?"okb":"primary"} small" data-do="${k}" data-ref="${esc(r.ref)}" type="button">${t("確定","Confirm")}</button>
       <button class="btn ghost small" data-do="back" type="button">${t("返回","Back")}</button></div>`;
@@ -722,8 +729,10 @@ $("list").addEventListener("click", async e=>{
   const btn=seat||d, ref=seat?seat.dataset.seat:d.dataset.ref, kind=seat?"seat":d.dataset.do;
   let pay=null;
   if(kind==="pay"){ keepCheck(); pay={method:confirming.method||"cash"};
-    if(pay.method==="check"){ pay.checkName=(confirming.checkName||"").trim(); pay.checkNo=(confirming.checkNo||"").trim();
-      if(!pay.checkName||!pay.checkNo){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("請填支票人和支票號碼。","Please enter who wrote the check and the check number.")}</b>`; (pay.checkName?$("ckNo"):$("ckName")).focus(); return; } } }
+    if(pay.method==="check"){ pay.checkName=(confirming.checkName||"").trim(); pay.checkNo=(confirming.checkNo||"").trim(); pay.checkAmount=Number(String(confirming.checkAmount||"").replace(/[$,\s]/g,""));
+      const bad = !pay.checkName ? $("ckName") : !pay.checkNo ? $("ckNo") : !ckMatch() && !(pay.checkAmount>0) ? $("ckAmt") : null;
+      if(bad){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("請填支票人、支票號碼和支票金額。","Please enter who wrote the check, the check number and the amount.")}</b>`; bad.focus(); return; }
+      const m=ckMatch(); if(m && m.left<=0){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("這張支票已經用完了。","This check has been fully used.")}</b>`; return; } } }
   btn.disabled=true; btn.textContent=t("處理中…","Working…");
   try{
     const rec = kind==="pay"||kind==="unpay" ? await API.setPaid(ref, kind==="pay", pay)
@@ -734,13 +743,36 @@ $("list").addEventListener("click", async e=>{
     if(kind==="seat" && hasWait(r)) alert(t("目前還是沒有空的燈位，這幾盞仍是候補。","There are still no free lamp numbers. These lamps stay on the waitlist."));
   }catch(err){
     btn.disabled=false; btn.textContent=t("確定","Confirm");
-    const box=btn.closest(".confirm"); const msg = err.message==="check" ? t("請填支票人和支票號碼。","Please enter who wrote the check and the check number.") : err.message==="not-mine" ? t("這筆不是您收的款，要請堂主或財務改回。","You didn't receive this payment. Please ask the temple head or finance to change it.") : err.message==="paid" ? t("已繳費的報名不能取消，請先改回未繳費。","A paid registration can't be cancelled. Change it back to unpaid first.") : err.message==="unpaid" ? t("還沒繳費，不能發點燈卡。請先收款。","Not paid yet, so the lamp card can't be given. Please receive payment first.") : t("網路有問題，還沒存好。請再按一次。","Network problem — not saved yet. Please press again.");
+    const box=btn.closest(".confirm"); const msg = err.message==="check"||err.message==="check-amount" ? t("請填支票人、支票號碼和支票金額。","Please enter who wrote the check, the check number and the amount.") : err.message==="check-used" ? t("這張支票已經用完了。","This check has been fully used.") : err.message==="not-mine" ? t("這筆不是您收的款，要請堂主或財務改回。","You didn't receive this payment. Please ask the temple head or finance to change it.") : err.message==="paid" ? t("已繳費的報名不能取消，請先改回未繳費。","A paid registration can't be cancelled. Change it back to unpaid first.") : err.message==="unpaid" ? t("還沒繳費，不能發點燈卡。請先收款。","Not paid yet, so the lamp card can't be given. Please receive payment first.") : t("網路有問題，還沒存好。請再按一次。","Network problem — not saved yet. Please press again.");
     if(box) box.querySelector(".cmsg").textContent=msg; else alert(msg);
   }
 });
 
 // 重畫前先把支票欄位打的字存起來
-function keepCheck(){ if(!confirming) return; if($("ckName")) confirming.checkName=$("ckName").value; if($("ckNo")) confirming.checkNo=$("ckNo").value; }
+function keepCheck(){ if(!confirming) return; if($("ckName")) confirming.checkName=$("ckName").value; if($("ckNo")) confirming.checkNo=$("ckNo").value; if($("ckAmt")) confirming.checkAmount=$("ckAmt").value; }
+// 支票：輸入號碼後查這張支票是不是已經用在別的報名表（同號碼＋同支票人＝同一張）
+const ckMatch = () => (confirming?.found||[]).find(c=>ckSame(c.name, confirming.checkName));
+function ckPlanHTML(r){
+  const due = r.totals?.all||0, m = ckMatch();
+  const amt = m ? m.amount : Number(String(confirming.checkAmount||"").replace(/[$,\s]/g,""));
+  const left = m ? m.left : amt;
+  let html = "";
+  if(m) html += `<div>${t(`這張支票已經記過：${esc(m.name)} ${money(m.amount)}，已付 ${m.refs.map(x=>`${esc(x.ref)}（${money(x.part)}）`).join("、")}，還剩 <b>${money(m.left)}</b>。這筆也用這張支票付。`,`This check is already recorded: ${esc(m.name)} ${money(m.amount)}, used for ${m.refs.map(x=>`${esc(x.ref)} (${money(x.part)})`).join(", ")}, <b>${money(m.left)}</b> left. This registration will use it too.`)}</div>`;
+  else if((confirming.found||[]).length) html += `<div class="hint">${t("這個號碼有別人的支票，支票人不同，會當成另一張支票。","A check with this number from someone else exists; this will be recorded as a different check.")}</div>`;
+  if(!(left>0)) return html + (m ? `<div><b class="unp">${t("這張支票已經用完了。","This check has been fully used.")}</b></div>` : "");
+  if(left < due) html += `<div><b class="unp">${t(`支票只夠付 ${money(left)}，還差 ${money(due-left)}，請另外收現金 ${money(due-left)}。`,`The check covers only ${money(left)}. Please collect the remaining ${money(due-left)} in cash.`)}</b></div>`;
+  else if(left > due) html += `<div>${t(`支票比這筆多 ${money(left-due)}。如果這張支票也要付其他報名表，到那一筆收款時輸入同一個支票號碼；多出來的也可以在收款總表註記用途。`,`The check is ${money(left-due)} more than this registration. If it also pays for another registration, enter the same check number there; otherwise note the purpose in the payment summary.`)}</div>`;
+  return html;
+}
+let ckTimer=null;
+$("list").addEventListener("input", e=>{
+  if(!confirming || !["ckName","ckNo","ckAmt"].includes(e.target.id)) return;
+  keepCheck(); const r=ROWS.find(x=>x.ref===confirming.ref); if(!r) return;
+  const upd=()=>{ if($("ckPlan")) $("ckPlan").innerHTML=ckPlanHTML(r); if($("ckAmtWrap")) $("ckAmtWrap").hidden=!!ckMatch(); };
+  if(e.target.id==="ckNo"){ clearTimeout(ckTimer); const no=confirming.checkNo.trim(); confirming.found=[];
+    if(no) ckTimer=setTimeout(async()=>{ try{ const f=await API.findCheck(no); if(confirming && confirming.checkNo.trim()===no){ confirming.found=f; upd(); } }catch(err){} }, 400); }
+  upd();
+});
 async function enter(){
   $("loginView").hidden=true; $("settingsView").hidden=true; $("reportView").hidden=true; $("logView").hidden=true; $("mainView").hidden=false; $("logoutBtn").hidden=false; $("demoBar").hidden=!DEMO;
   $("settingsBtn").hidden = false; $("reportBtn").hidden = false; $("logBtn").hidden = false; $("whoAmI").textContent = sess()?.name||"";
@@ -1047,26 +1079,43 @@ function sheetMoney(rs){
   const dayPaid = R.date ? paid.filter(r=>r.paidAt && ymd(new Date(r.paidAt))===R.date) : paid;
   // 經手人
   // 經手人：現金、支票分開算，交接時現金和支票各點各的
-  const isCk = r => r.payMethod==="check", amt = r => r.totals?.all||0;
-  const by = {}; dayPaid.forEach(r=>{ const k=r.paidBy||t("（沒有記錄）","(not recorded)"); const v=(by[k]=by[k]||{n:0,cash:0,ck:0,nck:0}); v.n++; if(isCk(r)){ v.ck+=amt(r); v.nck++; } else v.cash+=amt(r); });
+  // 每筆：現金付多少、支票付多少（「支票＋現金」兩邊都有）
+  const isCk = isCheck, amt = r => r.totals?.all||0;
+  const cashOf = r => r.cashPart!=null ? r.cashPart : (isCk(r) ? 0 : amt(r)), ckOf = r => r.checkPart!=null ? r.checkPart : (isCk(r) ? amt(r) : 0);
+  // 支票：同號碼＋同支票人＝同一張；金額記整張支票的，所以一張支票付好幾筆時要合起來看
+  const ckKey = r => `${String(r.checkNo||"").trim()}|${String(r.checkName||"").replace(/\s+/g,"").toLowerCase()}`;
+  const CK = {}; paid.filter(isCk).forEach(r=>{ const k=ckKey(r); const c=(CK[k]=CK[k]||{no:r.checkNo,name:r.checkName,amount:0,used:0,rs:[],note:""});
+    c.rs.push(r); c.used+=ckOf(r); c.amount=Math.max(c.amount, r.checkAmt||0); if(r.checkNote) c.note=r.checkNote; });
+  const checks = Object.values(CK).map(c=>{ c.rs.sort((a,b)=>String(a.paidAt).localeCompare(String(b.paidAt))); if(!c.amount) c.amount=c.used; c.left=Math.round((c.amount-c.used)*100)/100; c.first=c.rs[0]; return c; })
+    .filter(c=>!R.date || (c.first.paidAt && ymd(new Date(c.first.paidAt))===R.date)).sort((a,b)=>String(a.first.paidAt).localeCompare(String(b.first.paidAt)));
+  const by = {}; const vol = r => r.paidBy||t("（沒有記錄）","(not recorded)");
+  dayPaid.forEach(r=>{ const v=(by[vol(r)]=by[vol(r)]||{n:0,cash:0,ck:0,nck:0}); v.n++; v.cash+=cashOf(r); });
+  checks.forEach(c=>{ const v=(by[vol(c.first)]=by[vol(c.first)]||{n:0,cash:0,ck:0,nck:0}); v.ck+=c.amount; v.nck++; });   // 支票算在收下那張支票的人
   const ckCell = (a,n) => n ? `${money(a)}<small>${t(`（${n} 張）`,` (${n})`)}</small>` : "—";
   const byRows = Object.entries(by).sort((a,b)=>(b[1].cash+b[1].ck)-(a[1].cash+a[1].ck)).map(([k,v])=>[[esc(k),"nm"],[v.n+t(" 筆",""),"num"],[money(v.cash),"num"],[ckCell(v.ck,v.nck),"num"],[money(v.cash+v.ck),"num"]]);
-  const cks = dayPaid.filter(isCk), cashSum = sumAmt(dayPaid.filter(r=>!isCk(r))), ckSum = sumAmt(cks);
-  const byFoot = byRows.length ? `<tfoot><tr><td>${t("合計","Total")}</td><td class="num">${dayPaid.length}${t(" 筆","")}</td><td class="num">${money(cashSum)}</td><td class="num">${ckCell(ckSum,cks.length)}</td><td class="num">${money(sumAmt(dayPaid))}</td></tr></tfoot>` : "";
+  const cashSum = dayPaid.reduce((s,r)=>s+cashOf(r),0), ckSum = checks.reduce((s,c)=>s+c.amount,0), cks = checks;
+  const unused = checks.reduce((s,c)=>s+Math.max(0,c.left),0);
+  // 實際收到的錢（現金＋整張支票）；支票多開的部分另外標出來，所以可能比「已收」多
+  const recvTxt = t(`<span>實際收到：現金 <b>${money(cashSum)}</b>＋支票 <b>${money(ckSum)}</b>（${cks.length} 張）＝<b>${money(cashSum+ckSum)}</b></span>${unused?`<span>其中支票多開 <b>${money(unused)}</b>（沒用在報名表上）</span>`:""}`,
+    `<span>Actually received: cash <b>${money(cashSum)}</b> + checks <b>${money(ckSum)}</b> (${cks.length}) = <b>${money(cashSum+ckSum)}</b></span>${unused?`<span>incl. <b>${money(unused)}</b> of checks not applied to registrations</span>`:""}`);
+  const byFoot = byRows.length ? `<tfoot><tr><td>${t("合計","Total")}</td><td class="num">${dayPaid.length}${t(" 筆","")}</td><td class="num">${money(cashSum)}</td><td class="num">${ckCell(ckSum,cks.length)}</td><td class="num">${money(cashSum+ckSum)}</td></tr></tfoot>` : "";
   const bySec = `<div class="rsec"><h3>${R.date?t(`${mdText(R.date)} 各經手人收款`,`Received by each volunteer on ${mdText(R.date)}`):t("各經手人收款","Received by each volunteer")}<small>${t("交接時現金和支票請分開核對","Count cash and checks separately at handover")}</small></h3>${table([[t("經手人","Handled by"),""],[t("筆數","Count"),"num"],[t("現金","Cash"),"num"],[t("支票","Checks"),"num"],[t("合計","Total"),"num"]], byRows, byFoot)}</div>`;
   // 支票明細：存支票時對照用
-  const ckRows = cks.slice().sort((a,b)=>String(a.paidAt).localeCompare(String(b.paidAt))).map((r,i)=>[[i+1,"num"],[esc(r.checkNo||""),"mono"],[esc(r.checkName||""),"nm"],[money(amt(r)),"num"],[esc(r.ref),"mono"],[r.paidAt?fmtDate(r.paidAt):"","nw"],[esc(r.paidBy||""),"nw"]]);
-  const ckSec = cks.length ? `<div class="rsec"><h3>${R.date?t(`${mdText(R.date)} 支票明細`,`Checks received on ${mdText(R.date)}`):t("支票明細","Checks received")}<small>${t(`共 ${cks.length} 張・${money(ckSum)}，存支票時請對照`,`${cks.length} ${pl(cks.length,"check")} · ${money(ckSum)} — use this when depositing`)}</small></h3>${table(["",[t("支票號碼","Check no."),""],[t("支票人","From"),""],[t("金額","Amount"),"num"],t("報名編號","Reg. no."),t("收款日","Received"),t("經手","Handled by")], ckRows, `<tfoot><tr><td></td><td colspan="2">${t("合計","Total")}</td><td class="num">${money(ckSum)}</td><td colspan="3"></td></tr></tfoot>`)}</div>` : "";
+  const leftCell = c => c.left===0 ? "—" : c.left<0 ? `<span class="unp">${t("超用","Over")} ${money(-c.left)}</span>`
+    : `<b>${money(c.left)}</b>${c.note?`<br><small>${esc(c.note)}</small>`:""}${canMoney()?`<br><button class="linkbtn cknote" data-cknote="${esc(c.no)}" data-ckname="${esc(c.name)}" data-ckcur="${esc(c.note)}" type="button">${c.note?t("改註記","Edit note"):t("註記用途","Note purpose")}</button>`:""}`;
+  const ckRows = checks.map((c,i)=>[[i+1,"num"],[esc(c.no||""),"mono"],[esc(c.name||""),"nm"],[money(c.amount),"num"],
+    [c.rs.map(r=>`${esc(r.ref)} ${money(ckOf(r))}${r.payMethod==="mix"?`<small>${t("＋現金","+cash")}</small>`:""}`).join("<br>"),"mono"], [leftCell(c),"num"], [c.first.paidAt?fmtDate(c.first.paidAt):"","nw"], [esc(c.first.paidBy||""),"nw"]]);
+  const ckSec = cks.length ? `<div class="rsec"><h3>${R.date?t(`${mdText(R.date)} 支票明細`,`Checks received on ${mdText(R.date)}`):t("支票明細","Checks received")}<small>${t(`共 ${cks.length} 張・${money(ckSum)}，存支票時請對照。「沒用到」是支票比付的報名表多出來的錢`,`${cks.length} ${pl(cks.length,"check")} · ${money(ckSum)} — use this when depositing. "Unused" is the part of a check not applied to any registration`)}</small></h3>${table(["",[t("支票號碼","Check no."),""],[t("支票人","From"),""],[t("支票金額","Amount"),"num"],t("付了哪幾筆","Registrations paid"),[t("沒用到","Unused"),"num"],t("收款日","Received"),t("經手","Handled by")], ckRows, `<tfoot><tr><td></td><td colspan="2">${t("合計","Total")}</td><td class="num">${money(ckSum)}</td><td colspan="4"></td></tr></tfoot>`)}</div>` : "";
   // 明細
   const multi = R.scope==="all";
   const list = R.date ? dayPaid : rs;
   const head = ["",[t("報名編號","Reg. no."),""], ...(multi?[t("項目","Form")]:[]), t("聯絡人","Contact"),t("電話","Phone"),[t("應繳","Due"),"num"],t("繳費","Payment"),t("經手","Handled by")];
   const dRows = list.map((r,i)=>[[i+1,"num"],[esc(r.ref),"mono"], ...(multi?[esc(r.form==="lamp"?t("點燈","Lamps"):formName(r))]:[]), [esc(r.contact.name),"nm"],[esc(r.contact.phone),"nw"],[money(r.totals?.all),"num"],
-     r.paid?[`${t("已繳","Paid")} ${r.paidAt?fmtDate(r.paidAt):""}${isCk(r)?`<br><small>${t("支票","Check")} #${esc(r.checkNo||"")}</small>`:""}`,"nw"]:[`<span class="unp">${t("未繳","Unpaid")}</span>`,"c"], [esc(r.paid?(r.paidBy||""):""),"nw"]]);
+     r.paid?[`${t("已繳","Paid")} ${r.paidAt?fmtDate(r.paidAt):""}${r.payMethod==="mix"?`<br><small>${t("支票","Check")} #${esc(r.checkNo||"")} ${money(r.checkPart)}＋${t("現金","cash")} ${money(r.cashPart)}</small>`:isCk(r)?`<br><small>${t("支票","Check")} #${esc(r.checkNo||"")}</small>`:""}`,"nw"]:[`<span class="unp">${t("未繳","Unpaid")}</span>`,"c"], [esc(r.paid?(r.paidBy||""):""),"nw"]]);
   const dFoot = list.length ? `<tfoot><tr><td></td><td colspan="${multi?4:3}">${t(`合計 ${list.length} 筆`,`Total: ${list.length}`)}</td><td class="num">${money(sumAmt(list))}</td><td colspan="2"></td></tr></tfoot>` : "";
   const dSec = `<div class="rsec"><h3>${R.date?t(`${mdText(R.date)} 收款明細`,`Payments on ${mdText(R.date)}`):t("報名明細","Registrations")}<small>${t("依報名先後","In signup order")}</small></h3>${table(head, dRows, dFoot)}</div>`;
   if(R.date){
-    return {title:`${kindTitle("money")}・${mdText(R.date)}`, sum:t(`<span>${mdText(R.date)} 收款 <b>${dayPaid.length}</b> 筆</span><span>共 <b>${money(sumAmt(dayPaid))}</b></span>`,`<span>Received on ${mdText(R.date)}: <b>${dayPaid.length}</b></span><span>Total <b>${money(sumAmt(dayPaid))}</b></span>`) + t(`<span>現金 <b>${money(cashSum)}</b></span><span>支票 <b>${money(ckSum)}</b>（${cks.length} 張）</span>`,`<span>Cash <b>${money(cashSum)}</b></span><span>Checks <b>${money(ckSum)}</b> (${cks.length})</span>`), body: bySec + ckSec + dSec};
+    return {title:`${kindTitle("money")}・${mdText(R.date)}`, sum:t(`<span>${mdText(R.date)} 收款 <b>${dayPaid.length}</b> 筆</span><span>共 <b>${money(sumAmt(dayPaid))}</b></span>`,`<span>Received on ${mdText(R.date)}: <b>${dayPaid.length}</b></span><span>Total <b>${money(sumAmt(dayPaid))}</b></span>`) + recvTxt, body: bySec + ckSec + dSec};
   }
   // 項目明細：全部時分「點燈」和各場法會
   const groups = R.scope==="all"
@@ -1077,8 +1126,8 @@ function sheetMoney(rs){
   const iSec = `<div class="rsec"><h3>${t("報名項目","Items")}<small>${t("含未繳費","incl. unpaid")}</small></h3>${table([[t("項目","Item"),""],[t("數量","Qty"),"num"],[t("單價","Price"),"num"],[t("金額","Amount"),"num"]], iRows, `<tfoot><tr><td colspan="3">${t("應收合計","Total due")}</td><td class="num">${money(iTotal)}</td></tr></tfoot>`)}</div>`;
   const sum = EN() ? `<span>Registrations <b>${rs.length}</b></span><span>Due <b>${money(sumAmt(rs))}</b></span><span>Received <b>${money(sumAmt(paid))}</b> (${paid.length})</span><span>Outstanding <b class="unp">${money(sumAmt(unpaid))}</b> (${unpaid.length})</span>`
     : `<span>報名 <b>${rs.length}</b> 筆</span><span>應收 <b>${money(sumAmt(rs))}</b></span><span>已收 <b>${money(sumAmt(paid))}</b>（${paid.length} 筆）</span><span>未收 <b class="unp">${money(sumAmt(unpaid))}</b>（${unpaid.length} 筆）</span>`;
-  if(mineOnly) return {title:kindTitle("money"), sum: t(`<span>已收 <b>${money(sumAmt(paid))}</b>（${paid.length} 筆）</span>`,`<span>Received <b>${money(sumAmt(paid))}</b> (${paid.length})</span>`) + t(`<span>其中現金 <b>${money(cashSum)}</b>・支票 <b>${money(ckSum)}</b>（${cks.length} 張）</span>`,`<span>Cash <b>${money(cashSum)}</b> · Checks <b>${money(ckSum)}</b> (${cks.length})</span>`), body: bySec + ckSec + dSec};
-  return {title:kindTitle("money"), sum: sum + t(`<span>其中現金 <b>${money(cashSum)}</b>・支票 <b>${money(ckSum)}</b>（${cks.length} 張）</span>`,`<span>Cash <b>${money(cashSum)}</b> · Checks <b>${money(ckSum)}</b> (${cks.length})</span>`), body: iSec + bySec + ckSec + dSec};
+  if(mineOnly) return {title:kindTitle("money"), sum: t(`<span>已收 <b>${money(sumAmt(paid))}</b>（${paid.length} 筆）</span>`,`<span>Received <b>${money(sumAmt(paid))}</b> (${paid.length})</span>`) + recvTxt, body: bySec + ckSec + dSec};
+  return {title:kindTitle("money"), sum: sum + recvTxt, body: iSec + bySec + ckSec + dSec};
 }
 // 流年太歲表：十二生肖一覽＋已報名但犯太歲、還沒點太歲燈的人
 function sheetTaisui(){
@@ -1189,6 +1238,14 @@ $("logList").addEventListener("click", e=>{ const b=e.target.closest("[data-open
   document.querySelectorAll("#segPaid button").forEach(x=>x.setAttribute("aria-pressed", x.dataset.paid==="all"));
   $("q").value=b.dataset.open; $("q").dispatchEvent(new Event("input")); window.scrollTo(0,0); });
 $("rPrint").addEventListener("click", ()=>window.print());
+// 支票多出來的錢：註記用途（堂主、副堂主、財務）
+$("sheet").addEventListener("click", async e=>{
+  const b=e.target.closest("[data-cknote]"); if(!b) return;
+  const v=prompt(t(`支票 #${b.dataset.cknote}（${b.dataset.ckname}）多出來的錢是什麼用途？\n例如：香油錢、下次法會預繳。留空就是清除註記。`,`What is the extra amount on check #${b.dataset.cknote} (${b.dataset.ckname}) for?\nFor example: donation. Leave blank to clear.`), b.dataset.ckcur||"");
+  if(v===null) return;
+  try{ await API.setCheckNote(b.dataset.cknote, b.dataset.ckname, v.trim()); ROWS=await API.list(); renderReport(); }
+  catch(err){ alert(t("儲存失敗，請重新登入後再試。","Couldn't save. Please log in again and try again.")); }
+});
 $("rKinds").addEventListener("click", e=>{ const b=e.target.closest("[data-rk]"); if(!b) return; R.kind=b.dataset.rk; if(R.kind==="money") R.scope="all"; renderReport(); });
 $("rScope").addEventListener("click", e=>{ const b=e.target.closest("[data-rs]"); if(!b) return; R.scope=b.dataset.rs; renderReport(); });
 $("rType").addEventListener("click", e=>{ const b=e.target.closest("[data-rt]"); if(!b) return; R.type=b.dataset.rt; renderReport(); });
