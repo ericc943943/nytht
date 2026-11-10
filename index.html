@@ -1256,7 +1256,7 @@ function recordToState(r){ normRec(r);
 // 送出或查到的報名表留在這台手機／電腦上，方便之後再打開
 const SLIPS="tsuhui-slips2";
 function getSlips(){ try{ return JSON.parse(localStorage.getItem(SLIPS)||"[]").filter(x=>x&&x.rec) }catch(e){ return [] } }
-function keepSlip(rec){ try{ const old=getSlips().find(x=>x.ref===rec.ref); if(!rec.code && old && old.rec && old.rec.code) rec.code=old.rec.code;   // 核對碼只在這台裝置上留著
+function keepSlip(rec){ try{ rec=Object.assign({}, rec); delete rec.code;   // 核對碼不存在裝置上（堂裡的共用平板也一樣），只在送出當下顯示
   const a=getSlips().filter(x=>x.ref!==rec.ref); a.unshift({ref:rec.ref, at:rec.submittedAt, phone:rec.contact.phone, rec}); localStorage.setItem(SLIPS, JSON.stringify(a.slice(0,10))); }catch(e){} }
 function renderMySlips(){
   const a=getSlips(); $("mySlips").hidden=!a.length; if(!a.length) return;
