@@ -239,6 +239,9 @@ textarea{min-height:5rem;resize:vertical}
 .f-total{display:grid!important;grid-template-columns:1fr auto 1fr;align-items:center;column-gap:16px}
 .f-total .tot-l{justify-self:end}
 .f-total .stamp{justify-self:start}
+.stub-code{justify-self:end;font-weight:400;font-size:.85rem;color:#4A453E;white-space:nowrap}
+.stub-code b{font-size:1.15rem;letter-spacing:.12em;color:#23201C;border:1.5px solid #23201C;border-radius:4px;padding:0 5px}
+.stub-code.nocode{font-size:.72rem;white-space:normal;text-align:right;max-width:9em}
 .sign{display:flex;flex-wrap:wrap;column-gap:22px}
 .f-temple{display:flex;align-items:center;gap:14px;margin-top:10px}
 .f-temple .f-qr{margin-left:auto}   /* QR Code 放右下角 */
@@ -1029,7 +1032,7 @@ function formHTML(r){
       <div class="f-right"><div class="f-hr"><div class="f-ref stub-ref">${esc(r.ref)}</div><span class="lbl">${isLamp?t(`${recYear(r)} 點燈收執聯`,`${recYear(r)} Lamp Receipt`):t("收執聯","Receipt")}<br>${t("憑此編號領取點燈卡","Show this No. to collect your lamp cards")}</span></div></div>
     </div>
     <div class="stub-list">${stubList}</div>
-    <div class="f-total"><span class="tot-l">${t("應繳金額","Amount due")}</span><span class="amt">${money(r.totals&&r.totals.all)}</span><i></i></div>
+    <div class="f-total"><span class="tot-l">${t("應繳金額","Amount due")}</span><span class="amt">${money(r.totals&&r.totals.all)}</span>${codeHTML(r)}</div>
     <div class="stub-foot"><div class="stub-foot-l">
     <div class="f-temple"><div class="sign"><span>實收 $＿＿＿＿ □現金 □支票#＿＿＿</span><span>經手人簽名＿＿＿＿＿＿</span><span>日期＿＿＿＿＿</span></div></div>
     <p class="f-note">${isLamp&&cardDayText(recYear(r))?`<b class="cardday">${t(`領取點燈卡：${cardDayText(recYear(r))}，憑本聯領取。`,`Collect your lamp cards ${cardDayText(recYear(r))} with this receipt.`)}</b><br>`:""}${t("請妥善保存本聯。燈號可用報名編號上網查詢。","Please keep this receipt. You can look up your lamp numbers online with your registration number.")} ${t("紐約花蓮慈惠堂","New York Hua Lian Tsu Hui Temple")}　${CONFIG.phone}</p>
@@ -1037,6 +1040,10 @@ function formHTML(r){
   </section></div>`;
   return `<article class="paper">${top}${stub}</article>`;
 }
+// 核對碼：送出當下才拿得到，印在收執聯上（之後用編號＋電話重印就沒有，避免別人查到）
+const codeHTML = r => r.code
+  ? `<span class="stub-code">${t("核對碼","Code")} <b>${esc(r.code)}</b></span>`
+  : `<span class="stub-code nocode">${t("核對碼見第一次列印的收執聯","Code: see your first printed receipt")}</span>`;
 function qrSVG(text){ try{ if(typeof qrcode==="function"){ const q=qrcode(0,"M"); q.addData(text); q.make(); return q.createSvgTag({cellSize:4,margin:2,scalable:true}); } }catch(e){} return ""; }
 
 let CUR=null, CUR_MODE="new", LOOKUP_PHONE="";
@@ -1219,6 +1226,7 @@ function showRecord(r, mode){
     : r.paid ? t("這筆報名已經繳費，謝謝您。燈號請看下方報名表。","This registration has been paid — thank you. Your lamp numbers are on the form below.")
     : CUR_MODE==="edited" ? t("已經儲存修改。請帶這張報名表到慈惠堂繳費（現金或支票）。","Your changes have been saved. Please bring this form to the temple and pay by cash or check.")
     : CUR_MODE==="new" ? t("報名已送出。請把這張報名表印出來或截圖，帶到慈惠堂繳費（現金或支票）。","Your registration has been submitted. Please print this form or take a screenshot, and bring it to the temple to pay by cash or check.")
+      + (r.code ? t("收執聯上的核對碼只會出現這一次，請列印或截圖保存。"," The code on the receipt is shown only this once — please print it or take a screenshot.") : "")
     : t("這是您的報名表。繳費前如果有資料要改，可以按下方「修改報名」。","Here is your registration form. If anything needs to change before you pay, press \"Make changes\" below.");
   if(wl && !r.cancelled) m += t("　標示「候補」的燈目前已額滿，堂裡會另外安排，再與您聯絡。"," Lamps marked \"Waitlist\" are currently full; the temple will arrange a spot and contact you.");
   msg.textContent = m; msg.classList.toggle("warn", !!r.cancelled);
@@ -1248,7 +1256,8 @@ function recordToState(r){ normRec(r);
 // 送出或查到的報名表留在這台手機／電腦上，方便之後再打開
 const SLIPS="tsuhui-slips2";
 function getSlips(){ try{ return JSON.parse(localStorage.getItem(SLIPS)||"[]").filter(x=>x&&x.rec) }catch(e){ return [] } }
-function keepSlip(rec){ try{ const a=getSlips().filter(x=>x.ref!==rec.ref); a.unshift({ref:rec.ref, at:rec.submittedAt, phone:rec.contact.phone, rec}); localStorage.setItem(SLIPS, JSON.stringify(a.slice(0,10))); }catch(e){} }
+function keepSlip(rec){ try{ const old=getSlips().find(x=>x.ref===rec.ref); if(!rec.code && old && old.rec && old.rec.code) rec.code=old.rec.code;   // 核對碼只在這台裝置上留著
+  const a=getSlips().filter(x=>x.ref!==rec.ref); a.unshift({ref:rec.ref, at:rec.submittedAt, phone:rec.contact.phone, rec}); localStorage.setItem(SLIPS, JSON.stringify(a.slice(0,10))); }catch(e){} }
 function renderMySlips(){
   const a=getSlips(); $("mySlips").hidden=!a.length; if(!a.length) return;
   $("mySlips").innerHTML=`<h2>${t("我的報名表","My registration forms")}</h2>`+a.map(x=>

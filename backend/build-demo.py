@@ -12,7 +12,7 @@ shell = r'''/* 自動產生，請勿直接修改：示範模式用的後端。
  * 改了 Code.gs 之後執行 python3 backend/build-demo.py 重新產生。 */
 window.DemoBackend = (function () {
   "use strict";
-  const KEY = "tsuhui-demo-v8";
+  const KEY = "tsuhui-demo-v9";
   let db = null;
   try { db = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
   if (!db || !db.sheets) db = { sheets: {}, order: [] };
@@ -51,6 +51,9 @@ window.DemoBackend = (function () {
   const cacheStore = {};
   const CacheService = { getScriptCache: () => ({
     get: k => (k in cacheStore ? cacheStore[k] : null), put: (k, v) => { cacheStore[k] = v; }, remove: k => { delete cacheStore[k]; } }) };
+  // 指令碼屬性：存在示範資料裡（重新整理後還在）
+  const PropertiesService = { getScriptProperties: () => ({
+    getProperty: k => ((db.props || {})[k] ?? null), setProperty: (k, v) => { (db.props = db.props || {})[k] = String(v); }, deleteProperty: k => { if (db.props) delete db.props[k]; } }) };
   const LockService = { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) };
   const Session = { getScriptTimeZone: () => "America/New_York" };
   const Logger = { log() {} };
@@ -120,7 +123,9 @@ window.DemoBackend = (function () {
     const sh = sheet_(SHEET.reg);
     for (let r = 2; r <= sh.getLastRow(); r++) { const d = JSON.parse(sh.getRange(r, C.json).getValue()); d.sample = true; sh.getRange(r, C.json).setValue(JSON.stringify(d)); }
     setPaid_({ id: "u-admin", name: "管理員" }, refs[0], true);
-    setPaid_({ id: "u-admin", name: "管理員" }, refs[1], true, { method: "check", checkName: "CHANG YA TING", checkNo: "1052", checkAmount: 480 });
+    setPaid_({ id: "u-admin", name: "管理員" }, refs[1], true, { method: "check", checkName: "CHANG YA TING", checkNo: "1052", checkAmount: 600 });
+    // 示範版的核對碼固定：王秀英 1111、張雅婷 2222、黃志明 3333、黃美華 4444（張雅婷那張支票還有 $120 餘額，可以試核對碼）
+    for (let r = 2; r <= sh.getLastRow(); r++) sh.getRange(r, C.code).setValue(String(r - 1).repeat(4));
     db.seeded = true;
   }
   if (!db.seeded) { seed(); persist(); }

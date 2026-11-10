@@ -41,10 +41,11 @@ const DEFAULT_SETTINGS = {
 const FIRST_ADMIN = { name: "管理員", pin: "8888" };   // 第一次登入會被要求改 PIN
 const MAX_FAILS = 8;          // PIN 或查詢連續打錯幾次就暫時鎖住
 const LOCK_MINUTES = 15;
+const CODE_TRIES = 3;         // 核對碼打錯幾次，這張支票就只能由堂主、副堂主或財務處理
 
 const SHEET = { reg: "報名", users: "帳號", settings: "設定", audit: "紀錄" };
-const REG_HEAD = ["報名編號", "報名時間", "表單", "場次", "聯絡人", "電話", "住址", "應繳", "已繳清", "收款時間", "經手人", "語言", "備註", "收款紀錄", "送出代碼", "完整資料", "已取消", "燈位", "點燈年度", "付款方式", "支票戶名", "支票號碼", "支票金額", "支票付", "現金付", "支票備註"];
-const C = { ref: 1, time: 2, form: 3, event: 4, name: 5, phone: 6, address: 7, total: 8, paid: 9, paidAt: 10, paidBy: 11, lang: 12, note: 13, log: 14, cid: 15, json: 16, cancelled: 17, seats: 18, year: 19, method: 20, checkName: 21, checkNo: 22, checkAmt: 23, checkPart: 24, cashPart: 25, checkNote: 26 };
+const REG_HEAD = ["報名編號", "報名時間", "表單", "場次", "聯絡人", "電話", "住址", "應繳", "已繳清", "收款時間", "經手人", "語言", "備註", "收款紀錄", "送出代碼", "完整資料", "已取消", "燈位", "點燈年度", "付款方式", "支票戶名", "支票號碼", "支票金額", "支票付", "現金付", "支票備註", "核對碼"];
+const C = { ref: 1, time: 2, form: 3, event: 4, name: 5, phone: 6, address: 7, total: 8, paid: 9, paidAt: 10, paidBy: 11, lang: 12, note: 13, log: 14, cid: 15, json: 16, cancelled: 17, seats: 18, year: 19, method: 20, checkName: 21, checkNo: 22, checkAmt: 23, checkPart: 24, cashPart: 25, checkNote: 26, code: 27 };
 const USER_HEAD = ["id", "姓名", "身分", "PIN（加密）", "啟用", "待改PIN"];
 const AUDIT_HEAD = ["時間", "經手人", "動作", "對象", "內容"];
 
@@ -106,7 +107,7 @@ function doGet(e) {
       case "findCheck": {  // 收支票時：這張支票是不是已經用在別的報名表
         const me = checkLogin_(p.uid, p.pin);
         if (!me) return out_({ ok: false, error: "auth" });
-        return out_({ ok: true, checks: checksFor_(me, p.no, p.name, p.except) });
+        return out_({ ok: true, checks: checksFor_(me, p.no, p.name, p.except, p.code, p.ref) });
       }
       case "audit": {      // 帳號與設定的變動紀錄
         const me = checkLogin_(p.uid, p.pin);
@@ -161,8 +162,8 @@ function submit_(d) {
   if (d.clientId && last > 1) {
     const ids = sh.getRange(2, C.cid, last - 1, 1).getValues();
     for (let i = 0; i < ids.length; i++) if (ids[i][0] === d.clientId) {
-      const rec = readRecord_(sh.getRange(i + 2, 1, 1, REG_HEAD.length).getValues()[0]);
-      return { ok: true, ref: rec.ref, record: publicRecord_(rec), duplicate: true };
+      const row = sh.getRange(i + 2, 1, 1, REG_HEAD.length).getValues()[0], rec = readRecord_(row);
+      return { ok: true, ref: rec.ref, record: Object.assign(publicRecord_(rec), { code: pad4_(row[C.code - 1]) }), duplicate: true };
     }
   }
   // 報名編號由這裡決定：L（點燈）／F（法會）＋ yymmdd ＋ - ＋當天流水號，例：L261031-001
@@ -185,7 +186,12 @@ function submit_(d) {
   const evName = d.form === "lamp" ? "點燈" : ((st.events.find(x => x.id === d.eventId) || {}).name || d.formTitle || "法會");
   sh.appendRow([ref, new Date(), d.form === "lamp" ? "點燈" : "法會", evName, d.contact.name || "", d.contact.phone || "", d.contact.address || "",
                 d.totals.all, false, "", "", d.lang === "en" ? "英文" : "中文", d.note || "", "[]", d.clientId || "", JSON.stringify(d), false, seatText_(d), d.lampYear || ""]);
-  return { ok: true, ref: ref, record: publicRecord_(d) };
+  // 核對碼：隨機 4 位數，只在這裡回給報名頁一次（印在收執聯上）。後台、查詢、重印都不給
+  const code = ("000" + Math.floor(Math.random() * 10000)).slice(-4), row = sh.getLastRow();
+  if (sh.getRange(1, C.code).getValue() !== REG_HEAD[C.code - 1]) sh.getRange(1, C.code).setValue(REG_HEAD[C.code - 1]).setFontWeight("bold");
+  sh.getRange(row, C.code).setNumberFormat("@");
+  sh.getRange(row, C.code).setValue(code);
+  return { ok: true, ref: ref, record: Object.assign(publicRecord_(d), { code: code }) };
 }
 
 // 只留下報名需要的欄位（金額、燈位、繳費狀態一律由後端決定）
@@ -345,6 +351,7 @@ function paidByMe_(me, d) {
 }
 // 後台清單：看不到總帳的人（網站管理員、義工），別人收的款不給經手人和付款細節
 function viewFor_(me, d) {
+  d = Object.assign({}, d); delete d.clientId;   // 送出代碼不給後台（拿它重送會回核對碼）
   if (canMoney_(me) || !d.paid || paidByMe_(me, d)) return d;
   const o = JSON.parse(JSON.stringify(d));
   delete o.paidBy; delete o.paidById; delete o.payMethod; delete o.checkName; delete o.checkNo;
@@ -458,6 +465,7 @@ function findChecks_(no, exceptRef) {
     const c = map[k] = map[k] || { no: d.checkNo, name: d.checkName, amount: 0, used: 0, refs: [], note: "" };
     c.used += d.checkPart || 0; c.amount = Math.max(c.amount, d.checkAmt || 0); c.refs.push({ ref: d.ref, part: d.checkPart }); if (d.checkNote) c.note = d.checkNote;
     c.recs = (c.recs || []).concat([d]);
+    c.codes = (c.codes || []).concat(r[C.code - 1] === "" ? [] : [pad4_(r[C.code - 1])]);
   });
   return Object.keys(map).map(k => { const c = map[k]; if (!c.amount) c.amount = c.used; c.left = Math.round((c.amount - c.used) * 100) / 100; return c; });
 }
@@ -475,16 +483,36 @@ function ckSimilar_(a, b) {
   for (let i = 1; i <= a.length; i++) { let prev = d[0]; d[0] = i; for (let j = 1; j <= b.length; j++) { const t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = t; } }
   return d[b.length] <= 2;
 }
+const pad4_ = x => { const v = String(x == null ? "" : x).replace(/\D/g, ""); return v ? ("0000" + v).slice(-4) : ""; };
+// 核對碼：信眾收執聯上的 4 位數。別人收的支票，義工輸入這張支票付過的任何一筆報名的核對碼就能用餘額。
+// 打錯（換一組碼才算一次）CODE_TRIES 次就鎖住；錯誤記進「紀錄」（只記正在收款的報名編號，不記支票資料）
+// 回傳 ok／none（沒輸入）／nocode（這張支票付的報名都沒有核對碼）／bad:剩幾次／locked
+function codeTry_(me, c, code, target) {
+  if (!(c.codes || []).length) return "nocode";
+  const P = PropertiesService.getScriptProperties(), k = "ckfail-" + ckKey_(c.no, c.name);
+  let st = {}; try { st = JSON.parse(P.getProperty(k) || "{}"); } catch (e) {}
+  const n = st.n || 0;
+  if (n >= CODE_TRIES) return "locked";
+  code = String(code || "").replace(/\D/g, "");
+  if (code.length !== 4) return "none";
+  if (c.codes.includes(code)) { if (n) P.deleteProperty(k); return "ok"; }
+  if (st.last !== code) { st.n = n + 1; st.last = code; P.setProperty(k, JSON.stringify(st)); audit_(me, "核對碼錯誤", target || "", "第 " + st.n + " 次"); }
+  return (st.n || n) >= CODE_TRIES ? "locked" : "bad:" + (CODE_TRIES - (st.n || n));
+}
 // 收款畫面查支票：堂主、副堂主、財務看得到全部；義工、網站管理員只看得到自己今天收的支票。
-// 別人收的支票：號碼＋戶名都對上才說「已登記，要請財務處理」，不給金額和餘額；戶名很像只提醒核對拼法
-function checksFor_(me, no, name, exceptRef) {
+// 別人收的支票：號碼＋戶名都對上，要輸入收執聯上的核對碼才給金額和餘額；戶名很像只提醒核對拼法
+function checksFor_(me, no, name, exceptRef, code, ref) {
   const list = findChecks_(no, exceptRef);
   const strip = c => ({ no: c.no, name: c.name, amount: c.amount, left: c.left, note: c.note, refs: c.refs, mine: true });
   if (canMoney_(me)) return list.map(strip);
   const out = [];
   list.forEach(c => {
     if (checkIsMine_(me, c)) out.push(strip(c));
-    else if (name && ckKey_(c.no, c.name) === ckKey_(no, name)) out.push({ no: c.no, name: c.name, other: true });
+    else if (name && ckKey_(c.no, c.name) === ckKey_(no, name)) {
+      const r = codeTry_(me, c, code, ref);
+      if (r === "ok") out.push(Object.assign(strip(c), { byCode: true }));
+      else out.push({ no: c.no, name: c.name, other: true, code: r.split(":")[0], tries: r.indexOf("bad:") === 0 ? Number(r.slice(4)) : null });
+    }
     else if (name && ckSimilar_(c.name, name)) out.push({ similar: true });
   });
   return out;
@@ -504,12 +532,17 @@ function setPaid_(me, ref, paid, pay, edit) {
   if (!paid && f.rec.paid && !canMoney_(me) && !paidByMe_(me, f.rec)) return { ok: false, error: "not-mine" };   // 別人收的款，要堂主或財務才能改回
   const now = new Date(), amount = f.rec.totals ? f.rec.totals.all : Number(f.sh.getRange(f.row, C.total).getValue()) || 0;
   const check = paid && pay && pay.method === "check";
-  let ckName = "", ckNo = "", ckAmt = "", ckPart = "", cashPart = "", note = "";
+  let ckName = "", ckNo = "", ckAmt = "", ckPart = "", cashPart = "", note = "", byCode = false;
   if (check) {
     ckName = String(pay.checkName || "").trim().slice(0, 60); ckNo = String(pay.checkNo || "").trim().slice(0, 30);
     if (!ckName || !ckNo) return { ok: false, error: "check" };
     const same = findChecks_(ckNo, f.rec.ref).find(c => ckKey_(c.no, c.name) === ckKey_(ckNo, ckName));
-    if (same && !canMoney_(me) && !checkIsMine_(me, same)) return { ok: false, error: "check-finance" };   // 別人收的舊支票餘額：要堂主、副堂主或財務處理
+    // 別人收的舊支票餘額：要輸入收執聯上的核對碼，或請堂主、副堂主、財務處理
+    if (same && !canMoney_(me) && !checkIsMine_(me, same)) {
+      const r = codeTry_(me, same, pay.code, f.rec.ref);
+      if (r !== "ok") return { ok: false, error: r === "locked" ? "code-locked" : r.indexOf("bad") === 0 ? "code-bad" : "check-finance" };
+      byCode = true;
+    }
     if (same) { ckName = same.name; ckAmt = same.amount; note = same.note; }
     else { ckAmt = Math.round(Number(pay.checkAmount) * 100) / 100; if (!(ckAmt > 0)) return { ok: false, error: "check-amount" }; }
     const left = same ? same.left : ckAmt;
@@ -529,6 +562,7 @@ function setPaid_(me, ref, paid, pay, edit) {
   if (edit) entry.from = payDesc_(f.rec);
   if (paid) entry.method = !check ? "cash" : cashPart > 0 ? "mix" : "check";
   if (check) { entry.checkName = ckName; entry.checkNo = ckNo; entry.checkAmt = ckAmt; entry.checkPart = ckPart; entry.cashPart = cashPart; }
+  if (byCode) entry.byCode = true;   // 憑信眾的核對碼用別人收的支票餘額
   addLog_(f, entry);
   // 收款時義工記下支票多出來的錢的用途（寫到這張支票付過的每一筆）
   const extra = check ? String(pay.checkNote || "").trim().slice(0, 100) : "";
