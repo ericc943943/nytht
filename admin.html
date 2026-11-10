@@ -122,6 +122,7 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 2px}
 .ckrow{flex:1 1 100%;display:flex;gap:8px;flex-wrap:wrap}
 .ckrow input:disabled{background:var(--paper);color:var(--muted);border-style:dashed}
 .ckplan{flex:1 1 100%;font-size:.92rem}
+.cksugg{flex:1 1 100%;font-size:.92rem}.cksugg:empty{display:none}.cksugg div{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;margin:2px 0}
 .ckextra{flex:1 1 100%;display:flex;flex-direction:column;font-size:.85rem;font-weight:700;gap:3px}
 .ckextra label{display:flex;flex-direction:column;gap:3px}
 .ckextra .ckdone{flex-direction:row;align-items:flex-start;gap:8px;font-weight:500}
@@ -491,6 +492,7 @@ const API = {
     if(d.me){ const s0=sess(); if(s0 && (s0.role!==d.me.role || s0.name!==d.me.name)) setSess({...s0, role:d.me.role, name:d.me.name}); }
     return d.rows; },
   async findCheck(no, except){ return okOrThrow(await apiGet({action:"findCheck", ...auth(), no, except:except||""})).checks; },
+  async relChecks(ref){ return okOrThrow(await apiGet({action:"relChecks", ...auth(), ref})).checks; },
   async editPay(ref, pay){ return okOrThrow(await apiPost({action:"editPay", ...auth(), ref, ...(pay||{})})).record; },
   async setCheckNote(no, name, note){ return okOrThrow(await apiPost({action:"setCheckNote", ...auth(), no, name, note})); },
   async audit(){ return okOrThrow(await apiGet({action:"audit", ...auth()})).rows; },
@@ -660,7 +662,7 @@ function cardHTML(r, m){
       : k==="void" ? `確定要取消 ${esc(r.ref)}？燈位會放出來給別人用。`
       : `確定要恢復 ${esc(r.ref)}？會重新分配燈位（原位還空著就用原位）。`;
     const payPick = !isPay || !payOK() ? "" : `<div class="seg paym" role="group" aria-label="${t("付款方式","Payment method")}"><button type="button" data-pm="cash" aria-pressed="${!ck}">${t("現金","Cash")}</button><button type="button" data-pm="check" aria-pressed="${ck}">${t("支票","Check")}</button></div>
-      ${ck?`<div class="ckrow"><label>${t("支票戶名","Name on check")}<input id="ckName" value="${esc(confirming.checkName??"")}" placeholder="${t("例：CHEN DA WEN","e.g. CHEN DA WEN")}" autocomplete="off"></label><label>${t("支票號碼","Check no.")}<input id="ckNo" value="${esc(confirming.checkNo||"")}" inputmode="numeric" autocomplete="off"></label><label id="ckAmtWrap">${t("支票金額","Check amount")}<input id="ckAmt" value="${esc(confirming.checkAmount??total??"")}" inputmode="decimal" autocomplete="off"></label><label>${t("使用金額","Amount used")}<input id="ckUse" value="${esc(confirming.useTouched?confirming.checkUse:ckUseDefault(r))}" inputmode="decimal" autocomplete="off"></label></div><div class="ckplan" id="ckPlan">${ckPlanHTML(r)}</div><div class="ckextra" id="ckExtraWrap" ${ckExtraShow(r)?"":"hidden"}><label class="ckdone"><input type="checkbox" id="ckDone" ${confirming.ckDone?"checked":""}> ${t("不會再用這張支票，記下餘額用途","Check won't be used again — record what the balance is for")}</label><label id="ckExtraIn" ${confirming.ckDone?"":"hidden"}>${t("用途","Purpose")}<input id="ckExtra" value="${esc(confirming.checkNote??ckMatch()?.note??"")}" placeholder="${t("例：香油錢","e.g. donation")}" autocomplete="off"></label></div>`:""}`;
+      ${ck?`<div class="cksugg" id="ckSuggest">${sugHTML()}</div><div class="ckrow"><label>${t("支票戶名","Name on check")}<input id="ckName" value="${esc(confirming.checkName??"")}" placeholder="${t("例：CHEN DA WEN","e.g. CHEN DA WEN")}" autocomplete="off"></label><label>${t("支票號碼","Check no.")}<input id="ckNo" value="${esc(confirming.checkNo||"")}" inputmode="numeric" autocomplete="off"></label><label id="ckAmtWrap">${t("支票金額","Check amount")}<input id="ckAmt" value="${esc(confirming.checkAmount??total??"")}" inputmode="decimal" autocomplete="off"></label><label>${t("使用金額","Amount used")}<input id="ckUse" value="${esc(confirming.useTouched?confirming.checkUse:ckUseDefault(r))}" inputmode="decimal" autocomplete="off"></label></div><div class="ckplan" id="ckPlan">${ckPlanHTML(r)}</div><div class="ckextra" id="ckExtraWrap" ${ckExtraShow(r)?"":"hidden"}><label class="ckdone"><input type="checkbox" id="ckDone" ${confirming.ckDone?"checked":""}> ${t("不會再用這張支票，記下餘額用途","Check won't be used again — record what the balance is for")}</label><label id="ckExtraIn" ${confirming.ckDone?"":"hidden"}>${t("用途","Purpose")}<input id="ckExtra" value="${esc(confirming.checkNote??ckMatch()?.note??"")}" placeholder="${t("例：香油錢","e.g. donation")}" autocomplete="off"></label></div>`:""}`;
     action = `<div class="confirm">${payPick}<span class="cmsg">${msg}</span>
       <button class="btn ${isPay||k==="card"?"okb":"primary"} small" data-do="${k}" data-ref="${esc(r.ref)}" type="button">${t("確定","Confirm")}</button>
       <button class="btn ghost small" data-do="back" type="button">${t("返回","Back")}</button></div>`;
@@ -745,7 +747,12 @@ $("list").addEventListener("click", async e=>{
   const not=e.target.closest("[data-cknot]");
   if(not && confirming){ confirming.notSame=[...(confirming.notSame||[]), not.dataset.cknot]; ckSync(ROWS.find(x=>x.ref===confirming.ref)); return; }
   const pm=e.target.closest("[data-pm]");
-  if(pm && confirming){ keepCheck(); confirming.method=pm.dataset.pm; render(); if(pm.dataset.pm==="check") $("ckNo")?.focus(); return; }
+  if(pm && confirming){ keepCheck(); confirming.method=pm.dataset.pm;
+    if(pm.dataset.pm==="check" && confirming.checkAmount==null){ const rr=ROWS.find(x=>x.ref===confirming.ref); confirming.checkAmount=String(rr?.totals?.all||""); }
+    render(); if(pm.dataset.pm==="check"){ $("ckNo")?.focus(); loadSuggest(ROWS.find(x=>x.ref===confirming.ref)); } return; }
+  const sug=e.target.closest("[data-cksug]");
+  if(sug && confirming){ const c=(confirming.sugg||[]).find(x=>x.no+"|"+x.name===sug.dataset.cksug); if(!c) return;
+    $("ckName").value=c.name; $("ckNo").value=c.no; confirming.found=[c]; keepCheck(); ckSync(ROWS.find(x=>x.ref===confirming.ref)); if($("ckSuggest")) $("ckSuggest").innerHTML=sugHTML(); return; }
   const seat=e.target.closest("[data-seat]");
   const d=e.target.closest("[data-do]");
   if(!seat && !d) return;
@@ -768,7 +775,9 @@ $("list").addEventListener("click", async e=>{
       : kind==="void"||kind==="restore" ? await API.setCancelled(ref, kind==="void")
       : kind==="card"||kind==="uncard" ? await API.setCard(ref, kind==="card")
       : await API.assignSeats(ref);
-    const r=ROWS.find(x=>x.ref===ref); Object.assign(r, rec); confirming=null; render();
+    const r=ROWS.find(x=>x.ref===ref); Object.assign(r, rec);
+    if((kind==="pay"||kind==="editpay") && pay && pay.method==="check") sessChecks({no:pay.checkNo, name:r.checkName||pay.checkName});
+    confirming=null; render();
     if(kind==="seat" && hasWait(r)) alert(t("目前還是沒有空的燈位，這幾盞仍是候補。","There are still no free lamp numbers. These lamps stay on the waitlist."));
   }catch(err){
     btn.disabled=false; btn.textContent=t("確定","Confirm");
@@ -795,6 +804,36 @@ function ckSimilar(a,b){ a=ckNorm(a); b=ckNorm(b); if(!a||!b) return false; if(a
   for(let i=1;i<=a.length;i++){ let prev=d[0]; d[0]=i; for(let j=1;j<=b.length;j++){ const tmp=d[j]; d[j]=Math.min(d[j]+1,d[j-1]+1,prev+(a[i-1]===b[j-1]?0:1)); prev=tmp; } }
   return d[b.length]<=2; }
 const ckPending = () => !ckMatch() && (confirming?.found||[]).some(c=>ckSimilar(c.name, confirming.checkName) && !(confirming.notSame||[]).includes(c.name));
+// 支票建議：這次登入收過、還有餘額的支票，加上有追加關係的報名表用過的支票。只提示，按「用這張」才套用
+function sessChecks(add){
+  const K="tsuhui-ck", me=sess()?.uid||"";
+  let v; try{ v=JSON.parse(sessionStorage.getItem(K)||"null"); }catch(e){ v=null; }
+  if(add===null){ try{ sessionStorage.removeItem(K); }catch(e){} return []; }
+  if(!v || v.uid!==me) v={uid:me, list:[]};
+  if(add && add.no && !v.list.some(x=>x.no===add.no && ckSame(x.name, add.name))) v.list.unshift({no:add.no, name:add.name});
+  if(add){ try{ sessionStorage.setItem(K, JSON.stringify(v)); }catch(e){} }
+  return v.list;
+}
+async function loadSuggest(r){
+  if(!r || !confirming) return;
+  const want=[];   // [{no,name,why}]
+  sessChecks().forEach(c=>want.push({...c, why:"sess"}));
+  const out=[];
+  // 有追加關係的報名表：後端查（義工看不到別人收款的支票資料）
+  if(r.addTo || (ADDONS[r.ref]||[]).length || ROWS.some(x=>x.addTo && x.addTo===r.addTo && x.ref!==r.ref)){
+    try{ (await API.relChecks(r.ref)).forEach(c=>out.push({...c, why:"rel"})); }catch(e){} }
+  for(const w of want){
+    if(out.some(x=>x.no===w.no && ckSame(x.name,w.name))) continue;   // 已經在相關報名表的建議裡
+    try{ const f=(await API.findCheck(w.no, confirming?.kind==="editpay"?confirming.ref:"")).find(c=>ckSame(c.name,w.name));
+      if(f && f.left>0 && !f.note) out.push({...f, why:w.why}); }catch(e){}
+  }
+  if(!confirming || confirming.ref!==r.ref) return;
+  confirming.sugg=out; if($("ckSuggest")) $("ckSuggest").innerHTML=sugHTML();
+}
+function sugHTML(){
+  if(!confirming || ckMatch()) return "";
+  return (confirming.sugg||[]).map(c=>`<div>${c.why==="rel"?t("相關報名表的支票：","Check used for a related registration: "):t("剛才的支票：","Recent check: ")}<b>#${esc(c.no)} ${esc(c.name)}</b>，${t("餘額","balance")} ${money(c.left)} <button class="btn ghost small" type="button" data-cksug="${esc(c.no+"|"+c.name)}">${t("用這張","Use this")}</button></div>`).join("");
+}
 // 支票的說明文字：盡量短，一件事一行
 function ckPlanHTML(r){
   const due = r.totals?.all||0, m = ckMatch(), no = esc((confirming.checkNo||"").trim());
@@ -822,6 +861,7 @@ function ckSync(r){
   else if(a.disabled){ a.disabled=false; a.value=confirming.amtTyped ?? (r.totals?.all||""); }
   keepCheck(); const u=$("ckUse"); if(u && !confirming.useTouched){ u.value=ckUseDefault(r); confirming.checkUse=u.value; }
   if($("ckPlan")) $("ckPlan").innerHTML=ckPlanHTML(r);
+  if($("ckSuggest")) $("ckSuggest").innerHTML=sugHTML();
   const w=$("ckExtraWrap"); if(w){ w.hidden=!ckExtraShow(r); const m=ckMatch(), x=$("ckExtra"); if(m && m.note && x && !x.value) { x.value=m.note; confirming.checkNote=m.note; } }
   if($("ckExtraIn")) $("ckExtraIn").hidden=!confirming.ckDone;
 }
@@ -862,7 +902,7 @@ $("loginBtn").addEventListener("click", async ()=>{
   const pin=$("pw").value.trim(); if(!pin){ $("loginErr").textContent=t("請輸入 PIN 碼。","Please enter your PIN."); return; }
   let u=null; try{ u=await API.login(PICK.uid, pin); }catch(e){ $("loginErr").textContent = e.message==="locked" ? t("PIN 碼打錯太多次，請 15 分鐘後再試，或請管理員幫您重設 PIN 碼。","Too many wrong PINs. Please try again in 15 minutes, or ask an admin to reset your PIN.") : t("網路有問題，請稍後再試。","Network problem. Please try again later."); return; }
   if(!u){ $("loginErr").textContent=t("PIN 碼不正確，請再試一次。","Wrong PIN. Please try again."); $("pw").value=""; return; }
-  setSess({uid:u.id, pin, role:u.role, name:u.name});
+  setSess({uid:u.id, pin, role:u.role, name:u.name}); sessChecks(null);
   if(u.mustChange){ $("pinStep").hidden=true; $("forceStep").hidden=false; $("forceName").textContent=u.name; $("loginErr").textContent=""; $("fpNew").focus(); return; }
   enter();
 });
@@ -874,7 +914,7 @@ $("fpSave").addEventListener("click", async ()=>{
   catch(err){ $("loginErr").textContent = err.message==="same" ? t("請換一組和管理員設定的不一樣的 PIN 碼。","Please choose a PIN different from the one the admin set.") : t("更改失敗，請稍後再試。","Couldn't change it. Please try again later."); }
 });
 $("pw").addEventListener("keydown", e=>{ if(e.key==="Enter") $("loginBtn").click(); });
-$("logoutBtn").addEventListener("click", ()=>{ setSess(null); location.reload(); });
+$("logoutBtn").addEventListener("click", ()=>{ setSess(null); sessChecks(null); location.reload(); });
 const pwMsg=(t,ok)=>{ $("pwMsg").textContent=t; $("pwMsg").className="pwmsg "+(ok?"ok":"bad"); };
 let DRAFT=null;
 const ST_LABEL=()=>[["open",t("開放報名","Open")],["paused",t("暫停","Paused")],["hidden",t("不顯示","Hidden")]];

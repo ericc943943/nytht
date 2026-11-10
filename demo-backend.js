@@ -191,6 +191,11 @@ function doGet(e) {
         if (!me) return out_({ ok: false, error: "auth" });
         return out_({ ok: true, checks: findChecks_(p.no, p.except) });
       }
+      case "relChecks": {  // 有追加關係的報名表用過、還有餘額的支票（收款時提示）
+        const me = checkLogin_(p.uid, p.pin);
+        if (!me) return out_({ ok: false, error: "auth" });
+        return out_({ ok: true, checks: relChecks_(String(p.ref || "").trim().toUpperCase()) });
+      }
       case "audit": {      // 帳號與設定的變動紀錄
         const me = checkLogin_(p.uid, p.pin);
         if (!me || me.role === "volunteer") return out_({ ok: false, error: "auth" });
@@ -547,6 +552,19 @@ function findChecks_(no, exceptRef) {
 function payDesc_(d) {
   if (d.payMethod === "check" || d.payMethod === "mix") return "支票 #" + d.checkNo + " " + d.checkName + " $" + d.checkPart + (d.payMethod === "mix" ? "＋現金 $" + d.cashPart : "");
   return "現金";
+}
+function relChecks_(ref) {
+  const sh = sheet_(SHEET.reg), n = sh.getLastRow() - 1; if (n < 1 || !ref) return [];
+  const all = sh.getRange(2, 1, n, REG_HEAD.length).getValues().map(readRecord_);
+  const me = all.find(d => d.ref === ref); if (!me) return [];
+  const rel = all.filter(d => d.ref !== ref && (d.ref === me.addTo || d.addTo === ref || (me.addTo && d.addTo === me.addTo)));
+  const out = [];
+  rel.forEach(d => { if ((d.payMethod === "check" || d.payMethod === "mix") && d.checkNo && !d.cancelled) {
+    if (out.some(c => ckKey_(c.no, c.name) === ckKey_(d.checkNo, d.checkName))) return;
+    const c = findChecks_(d.checkNo, ref).find(x => ckKey_(x.no, x.name) === ckKey_(d.checkNo, d.checkName));
+    if (c && c.left > 0 && !c.note) out.push(c);
+  } });
+  return out;
 }
 // edit＝修改收款：已繳清的報名只改付款方式和支票資料，收款日期和經手人不變
 function setPaid_(me, ref, paid, pay, edit) {
