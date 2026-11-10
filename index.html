@@ -361,9 +361,9 @@ html.pmeasure.pdfmode .pdfmodal:not([hidden]){display:grid!important}
 }
 footer span{white-space:nowrap}
 .kiosklink{color:var(--muted);font-size:.78rem}
-.kioskbar{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:4px 12px;margin:0 0 14px;padding:10px 14px;border-radius:10px;background:#23201C;color:#fff;text-align:center}
-.kioskbar b{font-size:1.15rem;letter-spacing:.06em}
-.kioskbar span{font-size:.9rem;opacity:.85}
+.kioskbar{display:flex;flex-wrap:wrap;justify-content:center;gap:0 .5em;width:fit-content;max-width:100%;margin:2px auto 10px;padding:3px 12px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:.82rem;text-align:center}
+.kioskbar b{font-weight:700}
+.kioskbar span::before{content:"・";margin-right:.2em}
 @media print{.kioskbar{display:none!important}}
 footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem;text-align:center}
 @media (prefers-reduced-motion:no-preference){ .panel{animation:fade .25s ease} @keyframes fade{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}} }
