@@ -573,6 +573,13 @@ function setPaid_(me, ref, paid, pay) {
   if (paid) entry.method = !check ? "cash" : cashPart > 0 ? "mix" : "check";
   if (check) { entry.checkName = ckName; entry.checkNo = ckNo; entry.checkAmt = ckAmt; entry.checkPart = ckPart; entry.cashPart = cashPart; }
   addLog_(f, entry);
+  // 收款時義工記下支票多出來的錢的用途（寫到這張支票付過的每一筆）
+  const extra = check ? String(pay.checkNote || "").trim().slice(0, 100) : "";
+  if (extra && extra !== note) {
+    const all = f.sh.getRange(2, 1, f.sh.getLastRow() - 1, REG_HEAD.length).getValues();
+    all.forEach((r, i) => { if (String(r[C.checkNo - 1]).trim() === ckNo && ckKey_(ckNo, r[C.checkName - 1]) === ckKey_(ckNo, ckName)) f.sh.getRange(i + 2, C.checkNote).setValue(extra); });
+    audit_(me, "支票註記", "#" + ckNo + " " + ckName, extra);
+  }
   const rec = readRecord_(f.sh.getRange(f.row, 1, 1, REG_HEAD.length).getValues()[0]);
   return { ok: true, record: { paid: paid, paidAt: paid ? now.toISOString() : null, paidBy: paid ? me.name : null, paidById: paid ? me.id : null,
     payMethod: rec.payMethod, checkName: rec.checkName, checkNo: rec.checkNo, checkAmt: rec.checkAmt, checkPart: rec.checkPart, cashPart: rec.cashPart, checkNote: rec.checkNote, payLog: rec.payLog } };
