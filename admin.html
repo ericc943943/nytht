@@ -1373,7 +1373,7 @@ $("rBack").addEventListener("click", ()=>{ $("reportView").hidden=true; $("mainV
 const LG = {tab:"reg", kind:"all", audit:null, err:false};
 const LOG_GROUP = {paid:"pay",unpaid:"pay",editpay:"pay",card:"card",uncard:"card",cancel:"cancel",restore:"cancel",edit:"edit",seat:"seat"};
 const logKinds = () => [["all",t("全部","All")],["pay",t("收款","Payments")],["card",t("點燈卡","Lamp cards")],["cancel",t("取消／恢復","Cancel / restore")],["edit",t("信眾修改","Devotee edits")]];
-const logTabs = () => [["reg",t("報名處理","Registrations")], ...(myRole()!=="volunteer"?[["audit",t("帳號與設定","Accounts & settings")]]:[])];
+const logTabs = () => [["reg",t("報名處理","Registrations")], ...(myRole()!=="volunteer"?[["audit",canMoney()?t("帳號、設定、支票","Accounts, settings, checks"):t("帳號與設定","Accounts & settings")]]:[])];
 const hm = iso => { const d=new Date(iso); return isNaN(d) ? "" : `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
 function regLog(){
   const me=sess(), mine = l => l.byId ? l.byId===me.uid : l.by===me.name;

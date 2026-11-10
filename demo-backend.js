@@ -198,7 +198,7 @@ function doGet(e) {
       case "audit": {      // 帳號與設定的變動紀錄
         const me = checkLogin_(p.uid, p.pin);
         if (!me || me.role === "volunteer") return out_({ ok: false, error: "auth" });
-        return out_({ ok: true, rows: readAudit_() });
+        return out_({ ok: true, rows: readAudit_(me) });
       }
       case "lookup": return out_(lookup_(p.ref, p.phone));    // 信眾用編號＋電話查自己的報名
       case "findRefs": return out_(findRefs_(p.phone, p.name)); // 忘記報名編號：電話＋聯絡人姓名找回編號
@@ -453,12 +453,15 @@ function audit_(me, action, target, detail) {
   if (!sh) { sh = ss.insertSheet(SHEET.audit); sh.getRange(1, 1, 1, AUDIT_HEAD.length).setValues([AUDIT_HEAD]).setFontWeight("bold"); sh.setFrozenRows(1); }
   sh.appendRow([new Date(), me.name, action, target || "", detail || ""]);
 }
-function readAudit_() {
+// 支票相關的紀錄（有支票戶名、號碼）只給堂主、副堂主、財務看
+const MONEY_AUDIT_ = ["支票註記", "核對碼錯誤"];
+function readAudit_(me) {
   const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET.audit);
   if (!sh || sh.getLastRow() < 2) return [];
   const n = sh.getLastRow() - 1, from = Math.max(2, sh.getLastRow() - 499);
   return sh.getRange(from, 1, sh.getLastRow() - from + 1, AUDIT_HEAD.length).getValues().map(r => ({
-    at: r[0] instanceof Date ? r[0].toISOString() : String(r[0]), by: String(r[1]), action: String(r[2]), target: String(r[3]), detail: String(r[4]) })).reverse();
+    at: r[0] instanceof Date ? r[0].toISOString() : String(r[0]), by: String(r[1]), action: String(r[2]), target: String(r[3]), detail: String(r[4]) }))
+    .filter(x => !me || canMoney_(me) || !MONEY_AUDIT_.includes(x.action)).reverse();
 }
 // 給信眾看的資料：不含收款紀錄和內部欄位
 function publicRecord_(d) {
@@ -655,7 +658,7 @@ function setPaid_(me, ref, paid, pay, edit) {
   if (extra && extra !== note) {
     const all = f.sh.getRange(2, 1, f.sh.getLastRow() - 1, REG_HEAD.length).getValues();
     all.forEach((r, i) => { if (String(r[C.checkNo - 1]).trim() === ckNo && ckKey_(ckNo, r[C.checkName - 1]) === ckKey_(ckNo, ckName)) f.sh.getRange(i + 2, C.checkNote).setValue(extra); });
-    audit_(me, "支票註記", "#" + ckNo + " " + ckName, extra);
+    audit_(me, "支票註記", "#" + ckNo + " " + ckName, note ? note + " → " + extra : extra);
   }
   let rec = readRecord_(f.sh.getRange(f.row, 1, 1, REG_HEAD.length).getValues()[0]);
   if (edit) {   // 處理紀錄補上「改成什麼」
@@ -669,10 +672,10 @@ function setPaid_(me, ref, paid, pay, edit) {
 function setCheckNote_(me, no, name, note) {
   no = String(no || "").trim(); note = String(note || "").trim().slice(0, 100);
   const sh = sheet_(SHEET.reg), n = sh.getLastRow() - 1; if (n < 1 || !no) return { ok: false, error: "not-found" };
-  const rows = sh.getRange(2, 1, n, REG_HEAD.length).getValues(); let hit = 0;
-  rows.forEach((r, i) => { if (String(r[C.checkNo - 1]).trim() === no && ckKey_(no, r[C.checkName - 1]) === ckKey_(no, name)) { sh.getRange(i + 2, C.checkNote).setValue(note); hit++; } });
+  const rows = sh.getRange(2, 1, n, REG_HEAD.length).getValues(); let hit = 0, old = "";
+  rows.forEach((r, i) => { if (String(r[C.checkNo - 1]).trim() === no && ckKey_(no, r[C.checkName - 1]) === ckKey_(no, name)) { old = old || String(r[C.checkNote - 1] || ""); sh.getRange(i + 2, C.checkNote).setValue(note); hit++; } });
   if (!hit) return { ok: false, error: "not-found" };
-  audit_(me, "支票註記", "#" + no + " " + name, note || "（清除）");
+  if (old !== note) audit_(me, "支票註記", "#" + no + " " + name, !note ? "刪除「" + old + "」" : old ? old + " → " + note : note);
   return { ok: true };
 }
 // 發點燈卡：只有已繳清的點燈報名可以標記；紀錄在處理紀錄裡
