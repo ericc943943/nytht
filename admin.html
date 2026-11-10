@@ -69,6 +69,8 @@ input[type=password],input[type=search],select{width:100%;min-height:3rem;paddin
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
 .bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);padding:8px 0 12px;display:grid;gap:10px;border-bottom:1px solid var(--line)}
 .searchbox{position:relative;flex:1}
+.cknedit{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}.cknin{font-size:.95rem;padding:4px 8px;border:1.5px solid var(--line);border-radius:6px;width:10em}
+@media print{.cknote,.cknedit button{display:none!important}}
 .searchrow{display:flex;gap:8px;align-items:stretch}
 .scanbtn{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:4.2rem;border:2px solid var(--ink);border-radius:10px;background:var(--surface);color:var(--ink);font-weight:700;font-size:.85rem;cursor:pointer}
 .scanbtn svg{width:26px;height:26px}
@@ -1413,14 +1415,21 @@ $("logList").addEventListener("click", e=>{ const b=e.target.closest("[data-open
   document.querySelectorAll("#segPaid button").forEach(x=>x.setAttribute("aria-pressed", x.dataset.paid==="all"));
   $("q").value=b.dataset.open; $("q").dispatchEvent(new Event("input")); window.scrollTo(0,0); });
 $("rPrint").addEventListener("click", ()=>window.print());
-// 支票多出來的錢：註記用途（堂主、副堂主、財務）
+// 支票多出來的錢：註記用途（堂主、副堂主、財務）。在報表上直接改：沒註記過按「儲存」，改舊的按「更新」，也可以「刪除」
 $("sheet").addEventListener("click", async e=>{
-  const b=e.target.closest("[data-cknote]"); if(!b) return;
-  const v=prompt(t(`支票 #${b.dataset.cknote} 的餘額用途？\n例如：香油錢。留空會清除。`,`What is the balance of check #${b.dataset.cknote} for?\nFor example: donation. Leave blank to clear.`), b.dataset.ckcur||"");
-  if(v===null) return;
-  try{ await API.setCheckNote(b.dataset.cknote, b.dataset.ckname, v.trim()); ROWS=await API.list(); renderReport(); }
+  const b=e.target.closest("[data-cknote]");
+  if(b){ const cur=b.dataset.ckcur||"", box=document.createElement("span"); box.className="cknedit"; box.dataset.no=b.dataset.cknote; box.dataset.name=b.dataset.ckname;
+    box.innerHTML=`<input class="cknin" value="${esc(cur)}" placeholder="${t("例：香油錢","e.g. donation")}" maxlength="100"> <button class="linkbtn" type="button" data-cksave>${cur?t("更新","Update"):t("儲存","Save")}</button> ${cur?`<button class="linkbtn" type="button" data-ckdel>${t("刪除","Delete")}</button> `:""}<button class="linkbtn" type="button" data-ckcancel>${t("取消","Cancel")}</button>`;
+    b.replaceWith(box); box.querySelector("input").focus(); return; }
+  const box=e.target.closest(".cknedit"); if(!box) return;
+  if(e.target.closest("[data-ckcancel]")){ renderReport(); return; }
+  const del=!!e.target.closest("[data-ckdel]"); if(!del && !e.target.closest("[data-cksave]")) return;
+  const v=del?"":box.querySelector("input").value.trim();
+  if(!del && !v){ box.querySelector("input").focus(); return; }
+  try{ await API.setCheckNote(box.dataset.no, box.dataset.name, v); ROWS=await API.list(); renderReport(); }
   catch(err){ alert(t("儲存失敗，請重新登入後再試。","Couldn't save. Please log in again and try again.")); }
 });
+$("sheet").addEventListener("keydown", e=>{ if(e.key!=="Enter" || !e.target.classList.contains("cknin")) return; e.preventDefault(); e.target.closest(".cknedit").querySelector("[data-cksave]").click(); });
 $("rKinds").addEventListener("click", e=>{ const b=e.target.closest("[data-rk]"); if(!b) return; R.kind=b.dataset.rk; if(R.kind==="money") R.scope="all"; renderReport(); });
 $("rScope").addEventListener("click", e=>{ const b=e.target.closest("[data-rs]"); if(!b) return; R.scope=b.dataset.rs; renderReport(); });
 $("rType").addEventListener("click", e=>{ const b=e.target.closest("[data-rt]"); if(!b) return; R.type=b.dataset.rt; renderReport(); });
