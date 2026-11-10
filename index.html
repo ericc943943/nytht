@@ -533,7 +533,7 @@ const CONFIG = {
     "2027-autumn-lidou": "Autumn Blessing Ceremony (Li Dou)",
   },
   prices: { chaodu: 160, lamp: 60 },
-  siteUrl: "https://nytht.vercel.app",   // 收據上的 QR code 會連到這個網站的後台
+  siteUrl: "https://nytht.vercel.app",   // 報名表上半的 QR code 連到後台（留在堂裡、義工掃）；收執聯的連到信眾查詢頁
   submitUrl: "https://script.google.com/macros/s/AKfycbyP3IO6tRvLWP8jGegpVef47EHHSx5TBbNuW1Z_18VirJZc9lMVHbHMGWt5PiAyhVQ/exec",   // Google Apps Script 網址（正式版）；改成 "" 會變回示範模式
 };
 
@@ -1031,7 +1031,8 @@ function formHTML(r){
         : (r.lamps||[]).map(p=>`<span class="sp"><b>${esc(p.name)}</b> ${t(`${nLamps(p)}盞`,`× ${nLamps(p)}`)}</span>`).join("")
           + `<span class="sp sptotal">${t(`共 ${totalLamps} 盞`,`${totalLamps} lamps in total`)}</span>`)
     : chargeLinesOf(r).map(([a,b])=>`<span class="sp">${a}　${money(b)}</span>`).join("");
-  const adminLink = `${CONFIG.siteUrl}/admin?q=${encodeURIComponent(r.ref)}`;
+  // 收執聯在信眾手上：QR code 連到查詢頁（帶好報名編號，信眾再輸入電話），不帶到後台
+  const lookupLink = `${CONFIG.siteUrl}/?lookup=${encodeURIComponent(r.ref)}${EN()?"&lang=en":""}`;
   const stub = `<div class="stubwrap"><div class="cut">✂ ${t("沿虛線剪下，下半部為收執聯","Cut here — the bottom part is your receipt")}</div>
   <section class="stub">
     <div class="f-head f-band"><img class="f-logo" src="${logo}" alt="紐約花蓮慈惠堂">
@@ -1042,8 +1043,8 @@ function formHTML(r){
     <div class="f-total"><span class="tot-l">${t("應繳金額","Amount due")}</span><span class="amt">${money(r.totals&&r.totals.all)}</span>${codeHTML(r)}</div>
     <div class="stub-foot"><div class="stub-foot-l">
     <div class="f-temple"><div class="sign"><span>實收 $＿＿＿＿ □現金 □支票#＿＿＿</span><span>經手人簽名＿＿＿＿＿＿</span><span>日期＿＿＿＿＿</span></div></div>
-    <p class="f-note">${isLamp&&cardDayText(recYear(r))?`<b class="cardday">${t(`領取點燈卡：${cardDayText(recYear(r))}，憑本聯領取。`,`Collect your lamp cards ${cardDayText(recYear(r))} with this receipt.`)}</b><br>`:""}${t("請妥善保存本聯。燈號可用報名編號上網查詢。","Please keep this receipt. You can look up your lamp numbers online with your registration number.")} ${t("紐約花蓮慈惠堂","New York Hua Lian Tsu Hui Temple")}　${CONFIG.phone}</p>
-    </div><div class="f-qr stub-qr" aria-hidden="true">${qrSVG(adminLink)}</div></div>
+    <p class="f-note">${isLamp&&cardDayText(recYear(r))?`<b class="cardday">${t(`領取點燈卡：${cardDayText(recYear(r))}，憑本聯領取。`,`Collect your lamp cards ${cardDayText(recYear(r))} with this receipt.`)}</b><br>`:""}${t(`請妥善保存本聯。燈號查詢：${siteHost()}`,`Please keep this receipt. Lamp numbers: ${siteHost()}`)} ${t("紐約花蓮慈惠堂","New York Hua Lian Tsu Hui Temple")}　${CONFIG.phone}</p>
+    </div><div class="f-qr stub-qr" aria-hidden="true">${qrSVG(lookupLink)}</div></div>
   </section></div>`;
   return `<article class="paper">${top}${stub}</article>`;
 }
@@ -1051,6 +1052,7 @@ function formHTML(r){
 const codeHTML = r => r.code
   ? `<span class="stub-code">${t("核對碼","Code")} <b>${esc(r.code)}</b></span>`
   : `<span class="stub-code nocode">${t("核對碼見第一次列印的收執聯","Code: see your first printed receipt")}</span>`;
+const siteHost = () => CONFIG.siteUrl.replace(/^https?:\/\//,"").replace(/\/$/,"");
 function qrSVG(text){ try{ if(typeof qrcode==="function"){ const q=qrcode(0,"M"); q.addData(text); q.make(); return q.createSvgTag({cellSize:4,margin:2,scalable:true}); } }catch(e){} return ""; }
 
 let CUR=null, CUR_MODE="new", LOOKUP_PHONE="";
@@ -1376,7 +1378,7 @@ loadSettings().then(async ()=>{ renderStatic(); renderEvents(); renderLampBtn();
     if(j && j.ok && q.get("auto")) setTimeout(()=>printPDF(), 300);
     if(!j || !j.ok){ show("lookup"); $("lkRef").value=q.get("print"); $("lkErr").textContent=ERR_MSG(j&&j.error); }
     return; }
-  if(q.has("lookup")){ show("lookup"); return; }
+  if(q.has("lookup")){ show("lookup"); if(q.get("lookup")){ $("lkRef").value=q.get("lookup").toUpperCase(); $("lkPhone").focus(); } return; }
   // 帶 #lamp 或 #fahui-場次 進來，項目有開放就直接開啟表單
   const h=location.hash.slice(1); if(h && isOpen(h) && $("home").hidden===false){ const [f,ev]=keyToForm(h); S=load(h)||freshState(f,ev); show("form"); render(); }
 });
