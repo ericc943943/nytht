@@ -491,8 +491,7 @@ const API = {
   async list(){ const d=okOrThrow(await apiGet({action:"list", ...auth()})); FEAT=d.features||[];
     if(d.me){ const s0=sess(); if(s0 && (s0.role!==d.me.role || s0.name!==d.me.name)) setSess({...s0, role:d.me.role, name:d.me.name}); }
     return d.rows; },
-  async findCheck(no, except){ return okOrThrow(await apiGet({action:"findCheck", ...auth(), no, except:except||""})).checks; },
-  async relChecks(ref){ return okOrThrow(await apiGet({action:"relChecks", ...auth(), ref})).checks; },
+  async findCheck(no, except, name){ return okOrThrow(await apiGet({action:"findCheck", ...auth(), no, name:name||"", except:except||""})).checks; },
   async editPay(ref, pay){ return okOrThrow(await apiPost({action:"editPay", ...auth(), ref, ...(pay||{})})).record; },
   async setCheckNote(no, name, note){ return okOrThrow(await apiPost({action:"setCheckNote", ...auth(), no, name, note})); },
   async audit(){ return okOrThrow(await apiGet({action:"audit", ...auth()})).rows; },
@@ -766,7 +765,7 @@ $("list").addEventListener("click", async e=>{
       const rr=ROWS.find(x=>x.ref===ref), use=ckUse(rr), lf=ckLeft(), du=rr.totals?.all||0;
       if(!(use>0) || use>lf || use>du){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("請確認使用金額。","Please check the amount used.")}</b>`; $("ckUse").focus(); return; }
       pay.checkPart=use; if(ckExtraShow(rr) && confirming.ckDone && (confirming.checkNote||"").trim()) pay.checkNote=confirming.checkNote.trim();
-      if(ckPending()){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("請先確認是不是同一張支票。","Please confirm whether it's the same check first.")}</b>`; return; }
+      if(ckPending()){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${ckOther()?t("這張支票的餘額要請堂主、副堂主或財務處理。","Please ask the temple head, deputy or finance to use this check's balance."):t("請先確認是不是同一張支票。","Please confirm whether it's the same check first.")}</b>`; return; }
       const m=ckMatch(); if(m && m.left<=0){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("這張支票已經用完了。","This check has been fully used.")}</b>`; return; } } }
   btn.disabled=true; btn.textContent=t("處理中…","Working…");
   try{
@@ -781,7 +780,7 @@ $("list").addEventListener("click", async e=>{
     if(kind==="seat" && hasWait(r)) alert(t("目前還是沒有空的燈位，這幾盞仍是候補。","There are still no free lamp numbers. These lamps stay on the waitlist."));
   }catch(err){
     btn.disabled=false; btn.textContent=t("確定","Confirm");
-    const box=btn.closest(".confirm"); const msg = err.message==="check"||err.message==="check-amount" ? t("請填支票戶名、支票號碼和支票金額。","Please enter the name on the check, the check number and the amount.") : err.message==="check-used" ? t("這張支票已經用完了。","This check has been fully used.") : err.message==="not-mine" ? t("這筆不是您收的款，要請堂主或財務改回。","You didn't receive this payment. Please ask the temple head or finance to change it.") : err.message==="paid" ? t("已繳費的報名不能取消，請先改回未繳費。","A paid registration can't be cancelled. Change it back to unpaid first.") : err.message==="unpaid" ? t("還沒繳費，不能發點燈卡。請先收款。","Not paid yet, so the lamp card can't be given. Please receive payment first.") : t("網路有問題，還沒存好。請再按一次。","Network problem — not saved yet. Please press again.");
+    const box=btn.closest(".confirm"); const msg = err.message==="check-finance" ? t("這張支票之前已登記，餘額要請堂主、副堂主或財務處理。","This check was recorded before. Please ask the temple head, deputy or finance to use its balance.") : err.message==="check"||err.message==="check-amount" ? t("請填支票戶名、支票號碼和支票金額。","Please enter the name on the check, the check number and the amount.") : err.message==="check-used" ? t("這張支票已經用完了。","This check has been fully used.") : err.message==="not-mine" ? t("這筆不是您收的款，要請堂主或財務改回。","You didn't receive this payment. Please ask the temple head or finance to change it.") : err.message==="paid" ? t("已繳費的報名不能取消，請先改回未繳費。","A paid registration can't be cancelled. Change it back to unpaid first.") : err.message==="unpaid" ? t("還沒繳費，不能發點燈卡。請先收款。","Not paid yet, so the lamp card can't be given. Please receive payment first.") : t("網路有問題，還沒存好。請再按一次。","Network problem — not saved yet. Please press again.");
     if(box) box.querySelector(".cmsg").textContent=msg; else alert(msg);
   }
 });
@@ -796,15 +795,18 @@ const ckUse = r => confirming.useTouched ? num(confirming.checkUse) : num(ckUseD
 // 這筆付完後支票還有剩，就讓義工記下多出來的錢的用途
 const ckExtraShow = r => { const l=ckLeft(), u=ckUse(r); return !ckPending() && l>0 && u>0 && u<=l && l-u>0; };
 // 支票：輸入號碼後查這張支票是不是已經用在別的報名表（同號碼＋同戶名＝同一張）
-const ckMatch = () => (confirming?.found||[]).find(c=>ckSame(c.name, confirming.checkName));
+// found：後端回的支票。mine＝看得到金額（自己今天收的，或管帳的人）；other＝別人收的同一張（要財務處理）；similar＝別人收的、戶名很像
+const ckMatch = () => (confirming?.found||[]).find(c=>c.mine && ckSame(c.name, confirming.checkName));
+const ckOther = () => (confirming?.found||[]).find(c=>c.other && ckSame(c.name, confirming.checkName));
+const ckSimOther = () => (confirming?.found||[]).some(c=>c.similar) && !(confirming.notSame||[]).includes("*");
 // 戶名很像（大小寫、空格、標點不算；差一兩個字母，或一個包含另一個）→ 提醒是不是同一張
 const ckNorm = x => String(x||"").toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]/g,"");
 function ckSimilar(a,b){ a=ckNorm(a); b=ckNorm(b); if(!a||!b) return false; if(a===b||a.includes(b)||b.includes(a)) return true;
   if(Math.abs(a.length-b.length)>2) return false; const d=[...Array(b.length+1).keys()];
   for(let i=1;i<=a.length;i++){ let prev=d[0]; d[0]=i; for(let j=1;j<=b.length;j++){ const tmp=d[j]; d[j]=Math.min(d[j]+1,d[j-1]+1,prev+(a[i-1]===b[j-1]?0:1)); prev=tmp; } }
   return d[b.length]<=2; }
-const ckPending = () => !ckMatch() && (confirming?.found||[]).some(c=>ckSimilar(c.name, confirming.checkName) && !(confirming.notSame||[]).includes(c.name));
-// 支票建議：這次登入收過、還有餘額的支票，加上有追加關係的報名表用過的支票。只提示，按「用這張」才套用
+const ckPending = () => !ckMatch() && (!!ckOther() || ckSimOther() || (confirming?.found||[]).some(c=>c.mine && ckSimilar(c.name, confirming.checkName) && !(confirming.notSame||[]).includes(c.name)));
+// 支票建議：這次登入自己收過、還有餘額的支票。只提示，按「用這張」才套用
 function sessChecks(add){
   const K="tsuhui-ck", me=sess()?.uid||"";
   let v; try{ v=JSON.parse(sessionStorage.getItem(K)||"null"); }catch(e){ v=null; }
@@ -819,12 +821,8 @@ async function loadSuggest(r){
   const want=[];   // [{no,name,why}]
   sessChecks().forEach(c=>want.push({...c, why:"sess"}));
   const out=[];
-  // 有追加關係的報名表：後端查（義工看不到別人收款的支票資料）
-  if(r.addTo || (ADDONS[r.ref]||[]).length || ROWS.some(x=>x.addTo && x.addTo===r.addTo && x.ref!==r.ref)){
-    try{ (await API.relChecks(r.ref)).forEach(c=>out.push({...c, why:"rel"})); }catch(e){} }
   for(const w of want){
-    if(out.some(x=>x.no===w.no && ckSame(x.name,w.name))) continue;   // 已經在相關報名表的建議裡
-    try{ const f=(await API.findCheck(w.no, confirming?.kind==="editpay"?confirming.ref:"")).find(c=>ckSame(c.name,w.name));
+    try{ const f=(await API.findCheck(w.no, confirming?.kind==="editpay"?confirming.ref:"", w.name)).find(c=>c.mine && ckSame(c.name,w.name));
       if(f && f.left>0 && !f.note) out.push({...f, why:w.why}); }catch(e){}
   }
   if(!confirming || confirming.ref!==r.ref) return;
@@ -832,7 +830,7 @@ async function loadSuggest(r){
 }
 function sugHTML(){
   if(!confirming || ckMatch()) return "";
-  return (confirming.sugg||[]).map(c=>`<div>${c.why==="rel"?t("相關報名表的支票：","Check used for a related registration: "):t("剛才的支票：","Recent check: ")}<b>#${esc(c.no)} ${esc(c.name)}</b>，${t("餘額","balance")} ${money(c.left)} <button class="btn ghost small" type="button" data-cksug="${esc(c.no+"|"+c.name)}">${t("用這張","Use this")}</button></div>`).join("");
+  return (confirming.sugg||[]).map(c=>`<div>${t("剛才的支票：","Recent check: ")}<b>#${esc(c.no)} ${esc(c.name)}</b>，${t("餘額","balance")} ${money(c.left)} <button class="btn ghost small" type="button" data-cksug="${esc(c.no+"|"+c.name)}">${t("用這張","Use this")}</button></div>`).join("");
 }
 // 支票的說明文字：盡量短，一件事一行
 function ckPlanHTML(r){
@@ -841,7 +839,10 @@ function ckPlanHTML(r){
   const same = c => `<button class="btn ghost small" type="button" data-cksame="${esc(c.name)}">${t("是同一張","Same check")}</button>`;
   let html = "";
   if(m) html += `<div>${t(`#${no} 已登記：${money(m.amount)}，已用 ${money(m.amount-m.left)}，餘額 <b>${money(m.left)}</b>`,`#${no} on file: ${money(m.amount)}, ${money(m.amount-m.left)} used, balance <b>${money(m.left)}</b>`)}${m.note?`<b class="unp">${t(`（多的已記為「${esc(m.note)}」）`,` (extra recorded as "${esc(m.note)}")`)}</b>`:""}</div>`;
+  else if(ckOther()) html += `<div><b class="unp">${t("這張支票之前已登記，餘額要請堂主、副堂主或財務處理。","This check was recorded before. Please ask the temple head, deputy or finance to use its balance.")}</b></div>`;
   else (confirming.found||[]).forEach(c=>{
+    if(c.other) return;
+    if(c.similar){ if(!(confirming.notSame||[]).includes("*")) html += `<div><b class="unp">${t("戶名跟已登記的支票很像，請核對拼法。如果是同一張，餘額要請財務處理。","The name is similar to a recorded check — please check the spelling. If it's the same check, ask finance to use its balance.")}</b> <button class="btn ghost small" type="button" data-cknot="*">${t("是另一張支票","It's a different check")}</button></div>`; return; }
     const typed=(confirming.checkName||"").trim(), dismissed=(confirming.notSame||[]).includes(c.name);
     if(!typed) html += `<div>${t(`#${no} 已登記：${esc(c.name)}，餘額 ${money(c.left)}`,`#${no} on file: ${esc(c.name)}, ${money(c.left)} left`)} ${same(c)}</div>`;
     else if(ckSimilar(c.name, typed) && !dismissed) html += `<div><b class="unp">${t(`戶名很像 ${esc(c.name)}，同一張嗎？`,`Similar to ${esc(c.name)} — same check?`)}</b> ${same(c)} <button class="btn ghost small" type="button" data-cknot="${esc(c.name)}">${t("不是","No")}</button></div>`;
@@ -873,8 +874,9 @@ $("list").addEventListener("input", e=>{
   if(e.target.id==="ckUse") confirming.useTouched = e.target.value.trim()!=="";
   keepCheck(); const r=ROWS.find(x=>x.ref===confirming.ref); if(!r) return;
   const upd=()=>ckSync(r);
-  if(e.target.id==="ckNo"){ clearTimeout(ckTimer); const no=confirming.checkNo.trim(); confirming.found=[];
-    if(no) ckTimer=setTimeout(async()=>{ try{ const f=await API.findCheck(no, confirming.kind==="editpay"?confirming.ref:""); if(confirming && confirming.checkNo.trim()===no){ confirming.found=f; upd(); } }catch(err){} }, 400); }
+  if(e.target.id==="ckNo"||e.target.id==="ckName"){ clearTimeout(ckTimer); const no=confirming.checkNo.trim(), nm=(confirming.checkName||"").trim();
+    if(e.target.id==="ckNo") confirming.found=[];
+    if(no) ckTimer=setTimeout(async()=>{ try{ const f=await API.findCheck(no, confirming.kind==="editpay"?confirming.ref:"", nm); if(confirming && confirming.checkNo.trim()===no && (confirming.checkName||"").trim()===nm){ confirming.found=f; upd(); } }catch(err){} }, 400); }
   upd();
 });
 async function enter(){

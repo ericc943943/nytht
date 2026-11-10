@@ -189,12 +189,7 @@ function doGet(e) {
       case "findCheck": {  // 收支票時：這張支票是不是已經用在別的報名表
         const me = checkLogin_(p.uid, p.pin);
         if (!me) return out_({ ok: false, error: "auth" });
-        return out_({ ok: true, checks: findChecks_(p.no, p.except) });
-      }
-      case "relChecks": {  // 有追加關係的報名表用過、還有餘額的支票（收款時提示）
-        const me = checkLogin_(p.uid, p.pin);
-        if (!me) return out_({ ok: false, error: "auth" });
-        return out_({ ok: true, checks: relChecks_(String(p.ref || "").trim().toUpperCase()) });
+        return out_({ ok: true, checks: checksFor_(me, p.no, p.name, p.except) });
       }
       case "audit": {      // 帳號與設定的變動紀錄
         const me = checkLogin_(p.uid, p.pin);
@@ -545,26 +540,42 @@ function findChecks_(no, exceptRef) {
     const k = ckKey_(d.checkNo, d.checkName);
     const c = map[k] = map[k] || { no: d.checkNo, name: d.checkName, amount: 0, used: 0, refs: [], note: "" };
     c.used += d.checkPart || 0; c.amount = Math.max(c.amount, d.checkAmt || 0); c.refs.push({ ref: d.ref, part: d.checkPart }); if (d.checkNote) c.note = d.checkNote;
+    c.recs = (c.recs || []).concat([d]);
   });
   return Object.keys(map).map(k => { const c = map[k]; if (!c.amount) c.amount = c.used; c.left = Math.round((c.amount - c.used) * 100) / 100; return c; });
+}
+// 這張支票是不是我今天自己收的（每一筆都是我經手、第一筆是今天）：義工只能用自己剛收的支票餘額
+function checkIsMine_(me, c) {
+  const recs = c.recs || []; if (!recs.length) return false;
+  if (!recs.every(d => paidByMe_(me, d))) return false;
+  const first = recs.map(d => d.paidAt).filter(Boolean).sort()[0];
+  return !!first && Utilities.formatDate(new Date(first), Session.getScriptTimeZone() || "America/New_York", "yyyyMMdd") === Utilities.formatDate(new Date(), Session.getScriptTimeZone() || "America/New_York", "yyyyMMdd");
+}
+const ckLoose_ = x => String(x || "").toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]/g, "");
+function ckSimilar_(a, b) {
+  a = ckLoose_(a); b = ckLoose_(b); if (!a || !b) return false; if (a === b || a.indexOf(b) >= 0 || b.indexOf(a) >= 0) return true;
+  if (Math.abs(a.length - b.length) > 2) return false; const d = []; for (let j = 0; j <= b.length; j++) d[j] = j;
+  for (let i = 1; i <= a.length; i++) { let prev = d[0]; d[0] = i; for (let j = 1; j <= b.length; j++) { const t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = t; } }
+  return d[b.length] <= 2;
+}
+// 收款畫面查支票：堂主、副堂主、財務看得到全部；義工、網站管理員只看得到自己今天收的支票。
+// 別人收的支票：號碼＋戶名都對上才說「已登記，要請財務處理」，不給金額和餘額；戶名很像只提醒核對拼法
+function checksFor_(me, no, name, exceptRef) {
+  const list = findChecks_(no, exceptRef);
+  const strip = c => ({ no: c.no, name: c.name, amount: c.amount, left: c.left, note: c.note, refs: c.refs, mine: true });
+  if (canMoney_(me)) return list.map(strip);
+  const out = [];
+  list.forEach(c => {
+    if (checkIsMine_(me, c)) out.push(strip(c));
+    else if (name && ckKey_(c.no, c.name) === ckKey_(no, name)) out.push({ no: c.no, name: c.name, other: true });
+    else if (name && ckSimilar_(c.name, name)) out.push({ similar: true });
+  });
+  return out;
 }
 // 付款方式的文字（寫在處理紀錄「修改收款」用）
 function payDesc_(d) {
   if (d.payMethod === "check" || d.payMethod === "mix") return "支票 #" + d.checkNo + " " + d.checkName + " $" + d.checkPart + (d.payMethod === "mix" ? "＋現金 $" + d.cashPart : "");
   return "現金";
-}
-function relChecks_(ref) {
-  const sh = sheet_(SHEET.reg), n = sh.getLastRow() - 1; if (n < 1 || !ref) return [];
-  const all = sh.getRange(2, 1, n, REG_HEAD.length).getValues().map(readRecord_);
-  const me = all.find(d => d.ref === ref); if (!me) return [];
-  const rel = all.filter(d => d.ref !== ref && (d.ref === me.addTo || d.addTo === ref || (me.addTo && d.addTo === me.addTo)));
-  const out = [];
-  rel.forEach(d => { if ((d.payMethod === "check" || d.payMethod === "mix") && d.checkNo && !d.cancelled) {
-    if (out.some(c => ckKey_(c.no, c.name) === ckKey_(d.checkNo, d.checkName))) return;
-    const c = findChecks_(d.checkNo, ref).find(x => ckKey_(x.no, x.name) === ckKey_(d.checkNo, d.checkName));
-    if (c && c.left > 0 && !c.note) out.push(c);
-  } });
-  return out;
 }
 // edit＝修改收款：已繳清的報名只改付款方式和支票資料，收款日期和經手人不變
 function setPaid_(me, ref, paid, pay, edit) {
@@ -581,6 +592,7 @@ function setPaid_(me, ref, paid, pay, edit) {
     ckName = String(pay.checkName || "").trim().slice(0, 60); ckNo = String(pay.checkNo || "").trim().slice(0, 30);
     if (!ckName || !ckNo) return { ok: false, error: "check" };
     const same = findChecks_(ckNo, f.rec.ref).find(c => ckKey_(c.no, c.name) === ckKey_(ckNo, ckName));
+    if (same && !canMoney_(me) && !checkIsMine_(me, same)) return { ok: false, error: "check-finance" };   // 別人收的舊支票餘額：要堂主、副堂主或財務處理
     if (same) { ckName = same.name; ckAmt = same.amount; note = same.note; }
     else { ckAmt = Math.round(Number(pay.checkAmount) * 100) / 100; if (!(ckAmt > 0)) return { ok: false, error: "check-amount" }; }
     const left = same ? same.left : ckAmt;
