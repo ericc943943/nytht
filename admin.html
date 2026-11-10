@@ -202,7 +202,8 @@ details.log li{margin:2px 0}
 .tools{display:flex;flex-wrap:wrap;gap:4px 14px;width:100%}
 
 /* 報表 */
-.rpt-ctl{max-width:820px;margin:16px auto 0;display:grid;gap:12px}
+.rpt-ctl{max-width:820px;margin:16px auto 0;display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+.rpt-ctl .seg button{white-space:normal;line-height:1.25}   /* 英文的長選項在手機上換行，不撐破畫面 */
 .rpt-ctl h2{font-size:1.4rem;color:#356D82}
 .rpt-ctl .hint{color:var(--muted);font-size:.88rem;margin:0}
 .rlabel{font-weight:700;font-size:.95rem;margin-top:4px}
