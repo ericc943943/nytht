@@ -43,7 +43,7 @@ const MAX_FAILS = 8;          // PIN 或查詢連續打錯幾次就暫時鎖住
 const LOCK_MINUTES = 15;
 
 const SHEET = { reg: "報名", users: "帳號", settings: "設定", audit: "紀錄" };
-const REG_HEAD = ["報名編號", "報名時間", "表單", "場次", "聯絡人", "電話", "住址", "應繳", "已繳清", "收款時間", "經手人", "語言", "備註", "收款紀錄", "送出代碼", "完整資料", "已取消", "燈位", "點燈年度", "付款方式", "支票人", "支票號碼", "支票金額", "支票付", "現金付", "支票備註"];
+const REG_HEAD = ["報名編號", "報名時間", "表單", "場次", "聯絡人", "電話", "住址", "應繳", "已繳清", "收款時間", "經手人", "語言", "備註", "收款紀錄", "送出代碼", "完整資料", "已取消", "燈位", "點燈年度", "付款方式", "支票戶名", "支票號碼", "支票金額", "支票付", "現金付", "支票備註"];
 const C = { ref: 1, time: 2, form: 3, event: 4, name: 5, phone: 6, address: 7, total: 8, paid: 9, paidAt: 10, paidBy: 11, lang: 12, note: 13, log: 14, cid: 15, json: 16, cancelled: 17, seats: 18, year: 19, method: 20, checkName: 21, checkNo: 22, checkAmt: 23, checkPart: 24, cashPart: 25, checkNote: 26 };
 const USER_HEAD = ["id", "姓名", "身分", "PIN（加密）", "啟用", "待改PIN"];
 const AUDIT_HEAD = ["時間", "經手人", "動作", "對象", "內容"];
@@ -295,7 +295,7 @@ function readRecord_(r) {
   d.paidAt = r[C.paidAt - 1] ? new Date(r[C.paidAt - 1]).toISOString() : null;
   d.paidBy = r[C.paidBy - 1] || null;
   d.cancelled = r[C.cancelled - 1] === true;
-  // 付款方式：現金、支票、支票＋現金。支票記支票人、號碼、整張支票的金額，和這筆用支票付了多少、現金付了多少
+  // 付款方式：現金、支票、支票＋現金。支票記支票戶名、號碼、整張支票的金額，和這筆用支票付了多少、現金付了多少
   // 以前收的（沒記方式）都算現金；手動在試算表補「支票」但沒填金額的，當成整筆用支票付
   const pm = String(r[C.method - 1] || ""), due = Number(r[C.total - 1]) || 0;
   d.payMethod = d.paid ? (pm === "支票" ? "check" : pm === "支票＋現金" ? "mix" : "cash") : null;
@@ -442,7 +442,7 @@ function update_(b) {
 }
 
 /* ================= 後台：收款、取消、分配燈位 ================= */
-// 收款：現金或支票。支票要填支票人、號碼、金額；一張支票可以付好幾張報名表（輸入同一個號碼＋支票人）。
+// 收款：現金或支票。支票要填支票戶名、號碼、金額；一張支票可以付好幾張報名表（輸入同一個號碼＋戶名）。
 // 支票剩下的錢不夠付這一筆，其餘收現金（付款方式記「支票＋現金」）。寫在「付款方式」到「支票備註」七欄，也記進收款紀錄
 const ckKey_ = (no, name) => String(no || "").trim() + "|" + String(name || "").replace(/\s+/g, "").toLowerCase();
 function findChecks_(no, exceptRef) {
@@ -479,7 +479,7 @@ function setPaid_(me, ref, paid, pay) {
   }
   const method = !paid ? "" : !check ? "現金" : cashPart > 0 ? "支票＋現金" : "支票";
   f.sh.getRange(f.row, C.paid, 1, 3).setValues([[paid, paid ? now : "", paid ? me.name : ""]]);
-  if (f.sh.getRange(1, C.checkNote).getValue() !== REG_HEAD[C.checkNote - 1])   // 舊的試算表：補上新欄位的標題
+  if (f.sh.getRange(1, C.checkNote).getValue() !== REG_HEAD[C.checkNote - 1] || f.sh.getRange(1, C.checkName).getValue() !== REG_HEAD[C.checkName - 1])   // 舊的試算表：補上（或改）新欄位的標題
     f.sh.getRange(1, C.method, 1, 7).setValues([REG_HEAD.slice(C.method - 1, C.method + 6)]).setFontWeight("bold");
   f.sh.getRange(f.row, C.checkNo).setNumberFormat("@");
   f.sh.getRange(f.row, C.method, 1, 7).setValues([[method, ckName, ckNo, ckAmt, ckPart, paid && !check ? amount : cashPart, note]]);

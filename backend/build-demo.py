@@ -114,7 +114,7 @@ window.DemoBackend = (function () {
     const sh = sheet_(SHEET.reg);
     for (let r = 2; r <= sh.getLastRow(); r++) { const d = JSON.parse(sh.getRange(r, C.json).getValue()); d.sample = true; sh.getRange(r, C.json).setValue(JSON.stringify(d)); }
     setPaid_({ id: "u-admin", name: "管理員" }, refs[0], true);
-    setPaid_({ id: "u-admin", name: "管理員" }, refs[1], true, { method: "check", checkName: "張雅婷", checkNo: "1052", checkAmount: 480 });
+    setPaid_({ id: "u-admin", name: "管理員" }, refs[1], true, { method: "check", checkName: "CHANG YA TING", checkNo: "1052", checkAmount: 480 });
     db.seeded = true;
   }
   if (!db.seeded) { seed(); persist(); }

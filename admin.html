@@ -638,20 +638,20 @@ function cardHTML(r, m){
     const k=confirming.kind;
     const who = esc(sess()?.name||"");
     const ck = k==="pay" && confirming.method==="check";
-    const msg = EN() ? (k==="pay" ? (ck ? `Received a check? Enter who wrote it, the check number and the amount on the check. It will be recorded as handled by ${who}.` : `Have you received ${money(total)} in cash? It will be recorded as handled by ${who}.`)
+    const msg = EN() ? (k==="pay" ? (ck ? `Received a check? Copy from the check: the name printed on it, the check number and the amount. It will be recorded as handled by ${who}.` : `Have you received ${money(total)} in cash? It will be recorded as handled by ${who}.`)
       : k==="unpay" ? `Change ${esc(r.ref)} back to unpaid?`
       : k==="card" ? `Have you given the lamp card to the devotee? It will be recorded as handled by ${who}.`
       : k==="uncard" ? `Change ${esc(r.ref)} back to "card not collected"?`
       : k==="void" ? `Cancel ${esc(r.ref)}? Its lamp numbers will be released for others.`
       : `Restore ${esc(r.ref)}? Lamp numbers will be assigned again (the same ones if still free).`)
-      : k==="pay" ? (ck ? `收到支票？請填支票人、支票號碼和支票上的金額。會記錄為「${who}」經手。` : `確定已收到現金 ${money(total)}？會記錄為「${who}」經手。`)
+      : k==="pay" ? (ck ? `收到支票？請照支票上印的填：支票戶名、支票號碼、金額。會記錄為「${who}」經手。` : `確定已收到現金 ${money(total)}？會記錄為「${who}」經手。`)
       : k==="unpay" ? `確定要把 ${esc(r.ref)} 改回「未繳費」？`
       : k==="card" ? `確定已把點燈卡交給信眾？會記錄為「${esc(sess()?.name||"")}」經手。`
       : k==="uncard" ? `確定要把 ${esc(r.ref)} 改回「未領點燈卡」？`
       : k==="void" ? `確定要取消 ${esc(r.ref)}？燈位會放出來給別人用。`
       : `確定要恢復 ${esc(r.ref)}？會重新分配燈位（原位還空著就用原位）。`;
     const payPick = k!=="pay" || !payOK() ? "" : `<div class="seg paym" role="group" aria-label="${t("付款方式","Payment method")}"><button type="button" data-pm="cash" aria-pressed="${!ck}">${t("現金","Cash")}</button><button type="button" data-pm="check" aria-pressed="${ck}">${t("支票","Check")}</button></div>
-      ${ck?`<div class="ckrow"><label>${t("支票人","Check from")}<input id="ckName" value="${esc(confirming.checkName??r.contact.name??"")}" autocomplete="off"></label><label>${t("支票號碼","Check no.")}<input id="ckNo" value="${esc(confirming.checkNo||"")}" inputmode="numeric" autocomplete="off"></label><label id="ckAmtWrap">${t("支票金額","Check amount")}<input id="ckAmt" value="${esc(confirming.checkAmount??total??"")}" inputmode="decimal" autocomplete="off"></label></div><div class="ckplan" id="ckPlan">${ckPlanHTML(r)}</div>`:""}`;
+      ${ck?`<div class="ckrow"><label>${t("支票戶名","Name on check")}<input id="ckName" value="${esc(confirming.checkName??"")}" placeholder="${t("例：CHEN DA WEN","e.g. CHEN DA WEN")}" autocomplete="off"></label><label>${t("支票號碼","Check no.")}<input id="ckNo" value="${esc(confirming.checkNo||"")}" inputmode="numeric" autocomplete="off"></label><label id="ckAmtWrap">${t("支票金額","Check amount")}<input id="ckAmt" value="${esc(confirming.checkAmount??total??"")}" inputmode="decimal" autocomplete="off"></label></div><div class="ckplan" id="ckPlan">${ckPlanHTML(r)}</div>`:""}`;
     action = `<div class="confirm">${payPick}<span class="cmsg">${msg}</span>
       <button class="btn ${k==="pay"||k==="card"?"okb":"primary"} small" data-do="${k}" data-ref="${esc(r.ref)}" type="button">${t("確定","Confirm")}</button>
       <button class="btn ghost small" data-do="back" type="button">${t("返回","Back")}</button></div>`;
@@ -725,6 +725,8 @@ $("tabs").addEventListener("click", e=>{ const b=e.target.closest("[data-tab]");
 $("subtabs").addEventListener("click", e=>{ const b=e.target.closest("[data-item]"); if(!b) return; F.item=b.dataset.item; confirming=null; render(); });
 $("list").addEventListener("click", async e=>{
   const ask=e.target.closest("[data-ask]"); if(ask){ confirming={ref:ask.dataset.ref, kind:ask.dataset.ask, method:"cash"}; render(); return; }
+  const same=e.target.closest("[data-cksame]");
+  if(same && confirming){ $("ckName").value=same.dataset.cksame; keepCheck(); const r=ROWS.find(x=>x.ref===confirming.ref); $("ckPlan").innerHTML=ckPlanHTML(r); $("ckAmtWrap").hidden=!!ckMatch(); return; }
   const pm=e.target.closest("[data-pm]");
   if(pm && confirming){ keepCheck(); confirming.method=pm.dataset.pm; render(); if(pm.dataset.pm==="check") $("ckNo")?.focus(); return; }
   const seat=e.target.closest("[data-seat]");
@@ -736,7 +738,7 @@ $("list").addEventListener("click", async e=>{
   if(kind==="pay"){ keepCheck(); pay={method:confirming.method||"cash"};
     if(pay.method==="check"){ pay.checkName=(confirming.checkName||"").trim(); pay.checkNo=(confirming.checkNo||"").trim(); pay.checkAmount=Number(String(confirming.checkAmount||"").replace(/[$,\s]/g,""));
       const bad = !pay.checkName ? $("ckName") : !pay.checkNo ? $("ckNo") : !ckMatch() && !(pay.checkAmount>0) ? $("ckAmt") : null;
-      if(bad){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("請填支票人、支票號碼和支票金額。","Please enter who wrote the check, the check number and the amount.")}</b>`; bad.focus(); return; }
+      if(bad){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("請填支票戶名、支票號碼和支票金額。","Please enter the name on the check, the check number and the amount.")}</b>`; bad.focus(); return; }
       const m=ckMatch(); if(m && m.left<=0){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("這張支票已經用完了。","This check has been fully used.")}</b>`; return; } } }
   btn.disabled=true; btn.textContent=t("處理中…","Working…");
   try{
@@ -748,14 +750,14 @@ $("list").addEventListener("click", async e=>{
     if(kind==="seat" && hasWait(r)) alert(t("目前還是沒有空的燈位，這幾盞仍是候補。","There are still no free lamp numbers. These lamps stay on the waitlist."));
   }catch(err){
     btn.disabled=false; btn.textContent=t("確定","Confirm");
-    const box=btn.closest(".confirm"); const msg = err.message==="check"||err.message==="check-amount" ? t("請填支票人、支票號碼和支票金額。","Please enter who wrote the check, the check number and the amount.") : err.message==="check-used" ? t("這張支票已經用完了。","This check has been fully used.") : err.message==="not-mine" ? t("這筆不是您收的款，要請堂主或財務改回。","You didn't receive this payment. Please ask the temple head or finance to change it.") : err.message==="paid" ? t("已繳費的報名不能取消，請先改回未繳費。","A paid registration can't be cancelled. Change it back to unpaid first.") : err.message==="unpaid" ? t("還沒繳費，不能發點燈卡。請先收款。","Not paid yet, so the lamp card can't be given. Please receive payment first.") : t("網路有問題，還沒存好。請再按一次。","Network problem — not saved yet. Please press again.");
+    const box=btn.closest(".confirm"); const msg = err.message==="check"||err.message==="check-amount" ? t("請填支票戶名、支票號碼和支票金額。","Please enter the name on the check, the check number and the amount.") : err.message==="check-used" ? t("這張支票已經用完了。","This check has been fully used.") : err.message==="not-mine" ? t("這筆不是您收的款，要請堂主或財務改回。","You didn't receive this payment. Please ask the temple head or finance to change it.") : err.message==="paid" ? t("已繳費的報名不能取消，請先改回未繳費。","A paid registration can't be cancelled. Change it back to unpaid first.") : err.message==="unpaid" ? t("還沒繳費，不能發點燈卡。請先收款。","Not paid yet, so the lamp card can't be given. Please receive payment first.") : t("網路有問題，還沒存好。請再按一次。","Network problem — not saved yet. Please press again.");
     if(box) box.querySelector(".cmsg").textContent=msg; else alert(msg);
   }
 });
 
 // 重畫前先把支票欄位打的字存起來
 function keepCheck(){ if(!confirming) return; if($("ckName")) confirming.checkName=$("ckName").value; if($("ckNo")) confirming.checkNo=$("ckNo").value; if($("ckAmt")) confirming.checkAmount=$("ckAmt").value; }
-// 支票：輸入號碼後查這張支票是不是已經用在別的報名表（同號碼＋同支票人＝同一張）
+// 支票：輸入號碼後查這張支票是不是已經用在別的報名表（同號碼＋同戶名＝同一張）
 const ckMatch = () => (confirming?.found||[]).find(c=>ckSame(c.name, confirming.checkName));
 function ckPlanHTML(r){
   const due = r.totals?.all||0, m = ckMatch();
@@ -763,7 +765,7 @@ function ckPlanHTML(r){
   const left = m ? m.left : amt;
   let html = "";
   if(m) html += `<div>${t(`這張支票已經記過：${esc(m.name)} ${money(m.amount)}，已付 ${m.refs.map(x=>`${esc(x.ref)}（${money(x.part)}）`).join("、")}，還剩 <b>${money(m.left)}</b>。這筆也用這張支票付。`,`This check is already recorded: ${esc(m.name)} ${money(m.amount)}, used for ${m.refs.map(x=>`${esc(x.ref)} (${money(x.part)})`).join(", ")}, <b>${money(m.left)}</b> left. This registration will use it too.`)}</div>`;
-  else if((confirming.found||[]).length) html += `<div class="hint">${t("這個號碼有別人的支票，支票人不同，會當成另一張支票。","A check with this number from someone else exists; this will be recorded as a different check.")}</div>`;
+  else if((confirming.found||[]).length) html += (confirming.found).map(c=>`<div>${t(`這個號碼已經記過一張支票：<b>${esc(c.name)}</b> ${money(c.amount)}，還剩 ${money(c.left)}。`,`A check with this number is already recorded: <b>${esc(c.name)}</b> ${money(c.amount)}, ${money(c.left)} left.`)} <button class="btn ghost small" type="button" data-cksame="${esc(c.name)}">${t("是同一張","Same check")}</button></div>`).join("") + `<div class="hint">${t("不是同一張的話，照這張支票的戶名填，會當成另一張支票。","If it's a different check, enter the name on this check and it will be recorded separately.")}</div>`;
   if(!(left>0)) return html + (m ? `<div><b class="unp">${t("這張支票已經用完了。","This check has been fully used.")}</b></div>` : "");
   if(left < due) html += `<div><b class="unp">${t(`支票只夠付 ${money(left)}，還差 ${money(due-left)}，請另外收現金 ${money(due-left)}。`,`The check covers only ${money(left)}. Please collect the remaining ${money(due-left)} in cash.`)}</b></div>`;
   else if(left > due) html += `<div>${t(`支票比這筆多 ${money(left-due)}。如果這張支票也要付其他報名表，到那一筆收款時輸入同一個支票號碼；多出來的也可以在收款總表註記用途。`,`The check is ${money(left-due)} more than this registration. If it also pays for another registration, enter the same check number there; otherwise note the purpose in the payment summary.`)}</div>`;
@@ -1087,7 +1089,7 @@ function sheetMoney(rs){
   // 每筆：現金付多少、支票付多少（「支票＋現金」兩邊都有）
   const isCk = isCheck, amt = r => r.totals?.all||0;
   const cashOf = r => r.cashPart!=null ? r.cashPart : (isCk(r) ? 0 : amt(r)), ckOf = r => r.checkPart!=null ? r.checkPart : (isCk(r) ? amt(r) : 0);
-  // 支票：同號碼＋同支票人＝同一張；金額記整張支票的，所以一張支票付好幾筆時要合起來看
+  // 支票：同號碼＋同戶名＝同一張；金額記整張支票的，所以一張支票付好幾筆時要合起來看
   const ckKey = r => `${String(r.checkNo||"").trim()}|${String(r.checkName||"").replace(/\s+/g,"").toLowerCase()}`;
   const CK = {}; paid.filter(isCk).forEach(r=>{ const k=ckKey(r); const c=(CK[k]=CK[k]||{no:r.checkNo,name:r.checkName,amount:0,used:0,rs:[],note:""});
     c.rs.push(r); c.used+=ckOf(r); c.amount=Math.max(c.amount, r.checkAmt||0); if(r.checkNote) c.note=r.checkNote; });
@@ -1114,7 +1116,7 @@ function sheetMoney(rs){
   const ckRows = [];
   checks.forEach((c,ci)=>{
     const f=c.first;
-    ckRows.push({cls:"pmt", grp:`<div class="pm"><span>${t("收款","Payment")} #${ci+1}</span><span><small>${t("日期","Date")}</small> ${f.paidAt?fmtDate(f.paidAt):"—"}</span><span><small>${t("付款人","From")}</small> ${esc(c.name||"")}</span><span><small>${t("付款方式","Method")}</small> ${t("支票","Check")} #${esc(c.no||"")}</span><span><small>${t("收款金額","Amount")}</small> ${money(c.amount)}</span><span><small>${t("經手","By")}</small> ${esc(f.paidBy||"—")}</span></div>`});
+    ckRows.push({cls:"pmt", grp:`<div class="pm"><span>${t("收款","Payment")} #${ci+1}</span><span><small>${t("日期","Date")}</small> ${f.paidAt?fmtDate(f.paidAt):"—"}</span><span><small>${t("支票戶名","Name on check")}</small> ${esc(c.name||"")}</span><span><small>${t("付款方式","Method")}</small> ${t("支票","Check")} #${esc(c.no||"")}</span><span><small>${t("收款金額","Amount")}</small> ${money(c.amount)}</span><span><small>${t("經手","By")}</small> ${esc(f.paidBy||"—")}</span></div>`});
     c.rs.forEach(r=>ckRows.push([[esc(r.ref),"mono"],[esc(r.contact?.name||""),"nm"],[r.submittedAt?fmtDate(r.submittedAt).split(" ")[0]:"","nw"],[money(amt(r)),"num"],[money(ckOf(r)),"num"],[r.payMethod==="mix"?money(cashOf(r)):"$0","num"],[money(amt(r)-ckOf(r)-cashOf(r)),"num"]]));
     const applied=c.used, un=c.left;
     ckRows.push({cls:"pfoot", grp:`<div class="pm"><span>${t("已分配","Applied")} <b>${money(applied)}</b></span><span>${t("未分配","Unapplied")} <b class="${un>0&&!c.note?"unp":""}">${money(Math.max(0,un))}</b></span>${un>0?`<span>${t("用途：","Purpose: ")}${c.note?esc(c.note):`<span class="unp">${t("還沒註記","not set")}</span>`}${noteBtn(c)}</span>`:""}${un<0?`<span class="unp">${t("分配超過支票金額","Applied more than the check amount")} ${money(-un)}</span>`:""}</div>`});
