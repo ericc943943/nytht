@@ -3,7 +3,7 @@
  * 改了 Code.gs 之後執行 python3 backend/build-demo.py 重新產生。 */
 window.DemoBackend = (function () {
   "use strict";
-  const KEY = "tsuhui-demo-v7";
+  const KEY = "tsuhui-demo-v8";
   let db = null;
   try { db = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
   if (!db || !db.sheets) db = { sheets: {}, order: [] };
@@ -826,9 +826,15 @@ function out_(obj) {
         { pid: "s3", name: "張雅婷", gender: "女", birth: B(1986, 11, 2, "午"), zodiac: "虎", age_xu: 42, lampTypes: ["財神燈"] },
         { pid: "s4", name: "陳柏宇", gender: "男", birth: B(2012, 6, 18), zodiac: "龍", age_xu: 16, lampTypes: ["文昌燈", "光明燈"] },
         { pid: "s5", name: "陳品妍", gender: "女", birth: B(2015, 1, 9), zodiac: "羊", age_xu: 13, lampTypes: ["文昌燈"] }] },
+      // 未繳費（測試收款用）：黃家兩張報名表，可以試一張支票付兩筆
+      { contact: { name: "黃志明", phone: "(718) 555-0263", address: "範例地址" }, lamps: [
+        { pid: "s6", name: "黃志明", gender: "男", birth: B(1969, 4, 21, "巳"), zodiac: "雞", age_xu: 59, lampTypes: ["光明燈", "財神燈"] },
+        { pid: "s7", name: "林淑芬", gender: "女", birth: B(1972, 9, 5), zodiac: "鼠", age_xu: 56, lampTypes: ["光明燈"] }] },
+      { contact: { name: "黃美華", phone: "(917) 555-0377", address: "範例地址" }, lamps: [
+        { pid: "s8", name: "黃美華", gender: "女", birth: B(1991, 7, 15), zodiac: "羊", age_xu: 37, lampTypes: ["太歲燈", "光明燈"] }] },
     ];
     const refs = samples.map(s => submit_(Object.assign({ form: "lamp", eventId: null, formTitle: "啟點光明燈暨安奉太歲", note: "", lang: "zh", chaodu: [], meals: [] }, s)).ref);
-    // 標成範例，第一筆設為已繳清（現金），第二筆用支票
+    // 標成範例，第一筆設為已繳清（現金），第二筆用支票，第三、四筆未繳費
     const sh = sheet_(SHEET.reg);
     for (let r = 2; r <= sh.getLastRow(); r++) { const d = JSON.parse(sh.getRange(r, C.json).getValue()); d.sample = true; sh.getRange(r, C.json).setValue(JSON.stringify(d)); }
     setPaid_({ id: "u-admin", name: "管理員" }, refs[0], true);
