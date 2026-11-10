@@ -500,7 +500,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
     </div>
   </main>
 
-  <footer>紐約花蓮慈惠堂 New York Hua Lian Tsu Hui Temple<br><span data-en="Phone: ">報名與洽詢電話：</span><span id="telNo"></span>｜<span data-en="Fax: ">傳真：</span><span id="faxNo"></span></footer>
+  <footer>紐約花蓮慈惠堂 New York Hua Lian Tsu Hui Temple<br><span data-en="Phone: ">報名與洽詢電話：</span><span id="telNo"></span>｜<span data-en="Fax: ">傳真：</span><span id="faxNo"></span><br><span id="kioskTag" hidden data-en="Shared device: nothing is kept on this tablet">共用裝置：這台平板不保存報名資料</span></footer>
 </div>
 
 <script>
@@ -605,6 +605,13 @@ function freshState(form, eventId){ return {form, eventId: eventId||null, contac
 let S = freshState("lamp");
 const draftKey = st => st.form==="lamp" ? "lamp" : "fahui-"+st.eventId;
 const KEY = k => "tsuhui-draft-"+k;
+// 共用裝置（堂裡的平板）：網址加 ?kiosk=1 打開一次就記住，?kiosk=0 取消。
+// 共用裝置不存草稿、不留「我的報名表」、不給存 PDF 檔，送出後按「下一位」或放著不動幾分鐘就清掉畫面
+const KIOSK = (()=>{ try{ const q=new URLSearchParams(location.search).get("kiosk");
+  if(q==="1") localStorage.setItem("tsuhui-kiosk","1"); if(q==="0") localStorage.removeItem("tsuhui-kiosk");
+  const on=localStorage.getItem("tsuhui-kiosk")==="1";
+  if(on) Object.keys(localStorage).filter(k=>k.indexOf("tsuhui-draft-")===0||k.indexOf("tsuhui-slips")===0).forEach(k=>localStorage.removeItem(k));
+  return on; }catch(e){ return false; } })();
 const keyToForm = k => k==="lamp" ? ["lamp",null] : ["fahui", k.slice(6)];
 // 報名項目狀態：open 開放報名／paused 顯示但不能報名／hidden 不顯示（法會場次）
 let SETTINGS = { lamp:{status:"open"}, events: CONFIG.events.map(e=>({id:e.id, name:e.name, date:e.date||"", status:e.open?"open":"hidden"})) };
@@ -628,7 +635,7 @@ const curEvent = () => EVENTS().find(e=>e.id===S.eventId) || {name:"法會", dat
 const isLampForm = () => S.form==="lamp";
 const formTitleZh = () => isLampForm() ? CONFIG.lampForm.title : curEvent().name;   // 存檔用，一律中文
 const formTitle = () => isLampForm() ? `${yearText(lampYear())} ${t(CONFIG.lampForm.title, CONFIG.lampForm.titleEn)}` : eventName(curEvent());
-function save(){ if(S.editRef) return; try{localStorage.setItem(KEY(draftKey(S)), JSON.stringify(S))}catch(e){} }   // 修改舊報名時不存草稿
+function save(){ if(S.editRef||KIOSK) return; try{localStorage.setItem(KEY(draftKey(S)), JSON.stringify(S))}catch(e){} }   // 修改舊報名時不存草稿
 function load(k){ const [f,ev]=keyToForm(k); try{const v=localStorage.getItem(KEY(k)); const d=v?JSON.parse(v):null; return d&&d.contact?Object.assign(freshState(f,ev),d,{form:f,eventId:ev}):null}catch(e){return null} }
 function clearSaved(k){ try{localStorage.removeItem(KEY(k))}catch(e){} }
 const lampTypeNames = p => CONFIG.lampForm.types.filter(t=>p.types&&p.types[t.k]).map(t=>t.name);
@@ -1190,7 +1197,7 @@ function pdfModal(state){
   msg.textContent = IOS ? t("列印檔做好了。按「列印」後，在出現的選單裡選「列印」。","Ready. Tap Print, then choose Print in the menu that appears.")
                         : t("列印檔做好了。","The file is ready to print.");
   pr.hidden=false; pr.textContent=t("列印","Print"); pr.dataset.mode="pdf";
-  sv.hidden=false; sv.textContent=t("存成 PDF 檔","Save as PDF"); sv.href=PDF_URL; sv.download=PDF_FILE.name;
+  sv.hidden=KIOSK; sv.textContent=t("存成 PDF 檔","Save as PDF"); sv.href=PDF_URL; sv.download=PDF_FILE.name;
 }
 async function printPDF(){
   pdfModal("busy");
@@ -1225,6 +1232,8 @@ function showRecord(r, mode){
   let m = r.cancelled ? t("這筆報名已經取消。","This registration has been cancelled.")
     : r.paid ? t("這筆報名已經繳費，謝謝您。燈號請看下方報名表。","This registration has been paid — thank you. Your lamp numbers are on the form below.")
     : CUR_MODE==="edited" ? t("已經儲存修改。請帶這張報名表到慈惠堂繳費（現金或支票）。","Your changes have been saved. Please bring this form to the temple and pay by cash or check.")
+    : CUR_MODE==="new" && KIOSK ? t("報名已送出。請按「列印報名表」，或用手機拍下來，交給義工繳費（現金或支票）。","Your registration has been submitted. Press Print form, or take a photo with your phone, and give it to a volunteer to pay by cash or check.")
+      + (r.code ? t("收執聯上的核對碼只會出現這一次。"," The code on the receipt is shown only this once.") : "")
     : CUR_MODE==="new" ? t("報名已送出。請把這張報名表印出來或截圖，帶到慈惠堂繳費（現金或支票）。","Your registration has been submitted. Please print this form or take a screenshot, and bring it to the temple to pay by cash or check.")
       + (r.code ? t("收執聯上的核對碼只會出現這一次，請列印或截圖保存。"," The code on the receipt is shown only this once — please print it or take a screenshot.") : "")
     : t("這是您的報名表。繳費前如果有資料要改，可以按下方「修改報名」。","Here is your registration form. If anything needs to change before you pay, press \"Make changes\" below.");
@@ -1256,10 +1265,10 @@ function recordToState(r){ normRec(r);
 // 送出或查到的報名表留在這台手機／電腦上，方便之後再打開
 const SLIPS="tsuhui-slips2";
 function getSlips(){ try{ return JSON.parse(localStorage.getItem(SLIPS)||"[]").filter(x=>x&&x.rec) }catch(e){ return [] } }
-function keepSlip(rec){ try{ rec=Object.assign({}, rec); delete rec.code;   // 核對碼不存在裝置上（堂裡的共用平板也一樣），只在送出當下顯示
+function keepSlip(rec){ if(KIOSK) return; try{ rec=Object.assign({}, rec); delete rec.code;   // 核對碼不存在裝置上（堂裡的共用平板也一樣），只在送出當下顯示
   const a=getSlips().filter(x=>x.ref!==rec.ref); a.unshift({ref:rec.ref, at:rec.submittedAt, phone:rec.contact.phone, rec}); localStorage.setItem(SLIPS, JSON.stringify(a.slice(0,10))); }catch(e){} }
 function renderMySlips(){
-  const a=getSlips(); $("mySlips").hidden=!a.length; if(!a.length) return;
+  const a=KIOSK?[]:getSlips(); $("mySlips").hidden=!a.length; if(!a.length) return;
   $("mySlips").innerHTML=`<h2>${t("我的報名表","My registration forms")}</h2>`+a.map(x=>
     `<div class="myslip"><div><b>${esc(x.ref)}</b><small>${esc(recTitle(x.rec))}・${new Date(x.at).toLocaleDateString(t("zh-TW","en-US"))}</small></div><button class="btn ghost" type="button" data-slip="${esc(x.ref)}">${t("打開","Open")}</button></div>`).join("");
 }
@@ -1304,7 +1313,18 @@ document.addEventListener("click", e=>{
 });
 $("homeLink").addEventListener("click", e=>{ e.preventDefault(); refreshResume(); renderMySlips(); show("home"); });
 $("printBtn").addEventListener("click", ()=>printPDF());
-$("againBtn").addEventListener("click", ()=>{ const f=CUR?CUR.form:"lamp", ev=CUR?CUR.eventId:null; const k=f==="lamp"?"lamp":"fahui-"+ev;
+// 共用裝置：清掉這一位的資料，回到首頁
+function nextPerson(){ S=freshState("lamp"); CUR=null; LOOKUP_PHONE=""; $("slip").innerHTML=""; $("doneMsg").textContent=""; closePdfModal&&closePdfModal();
+  ["lkRef","lkPhone"].forEach(id=>{ if($(id)) $(id).value=""; });
+  if(EN()){ LANG="zh"; try{ localStorage.setItem("tsuhui-lang","zh"); }catch(e){} applyLang(); }   // 下一位從中文開始
+  refreshResume(); renderMySlips(); show("home"); }
+// 共用裝置放著不動：完成畫面 3 分鐘、填到一半 15 分鐘，就清掉回首頁
+let idleT=null;
+function kioskIdle(){ if(!KIOSK) return; clearTimeout(idleT); if(!$("home").hidden) return;
+  idleT=setTimeout(nextPerson, (!$("done").hidden ? 3 : 15)*60*1000); }
+if(KIOSK){ ["click","keydown","input","touchstart","scroll"].forEach(ev=>document.addEventListener(ev, kioskIdle, {passive:true, capture:true}));
+  new MutationObserver(kioskIdle).observe(document.body, {subtree:true, attributes:true, attributeFilter:["hidden"]}); }
+$("againBtn").addEventListener("click", ()=>{ if(KIOSK){ nextPerson(); return; } const f=CUR?CUR.form:"lamp", ev=CUR?CUR.eventId:null; const k=f==="lamp"?"lamp":"fahui-"+ev;
   if(!isOpen(k)){ refreshResume(); renderMySlips(); show("home"); return; } S=load(k)||freshState(f==="lamp"?"lamp":"fahui",ev); show("form"); render(); });
 $("addBtn").addEventListener("click", ()=>{ if(!CUR) return;
   const lamp=CUR.form==="lamp", key=lamp?"lamp":"fahui-"+CUR.eventId; if(!isOpen(key)) return;
@@ -1452,6 +1472,7 @@ $("helper").addEventListener("click", e=>{ if(e.target.id!=="hpStart") return;
   S.step = S.contact.name ? 1 : 0;   // 聯絡人還沒填就從第一步開始
   save(); show("form"); render(); });
 function renderStatic(){
+  if(KIOSK){ $("againBtn").textContent=t("下一位","Next person"); $("kioskTag").hidden=false; }
   $("lampTitle").innerHTML = `<span class="yr">${esc(yearText(lampYear()))}</span>` + (EN() ? `${esc(CONFIG.lampForm.titleEn)}<span class="en-sub">${esc(CONFIG.lampForm.title)}</span>` : esc(CONFIG.lampForm.title));
   const TT=CONFIG.lampForm.types, same=TT.every(x=>x.price&&x.price===TT[0].price);
   $("lampPrice").textContent = same ? t(`每盞 $${TT[0].price}`,`$${TT[0].price} per lamp`) : "";
