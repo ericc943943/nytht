@@ -558,7 +558,10 @@ function setPaid_(me, ref, paid, pay) {
     else { ckAmt = Math.round(Number(pay.checkAmount) * 100) / 100; if (!(ckAmt > 0)) return { ok: false, error: "check-amount" }; }
     const left = same ? same.left : ckAmt;
     if (!(left > 0)) return { ok: false, error: "check-used" };
-    ckPart = Math.min(left, amount); cashPart = Math.round((amount - ckPart) * 100) / 100;
+    // 使用金額：這筆從支票扣多少（不能超過支票剩下的錢、也不能超過應繳）；沒給就盡量用支票付
+    const want = Math.round(Number(pay.checkPart) * 100) / 100;
+    ckPart = want > 0 ? Math.min(want, left, amount) : Math.min(left, amount);
+    cashPart = Math.round((amount - ckPart) * 100) / 100;
   }
   const method = !paid ? "" : !check ? "現金" : cashPart > 0 ? "支票＋現金" : "支票";
   f.sh.getRange(f.row, C.paid, 1, 3).setValues([[paid, paid ? now : "", paid ? me.name : ""]]);
