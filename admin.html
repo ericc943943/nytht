@@ -68,7 +68,16 @@ input[type=password],input[type=search],select{width:100%;min-height:3rem;paddin
 /* 搜尋列 */
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
 .bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);padding:8px 0 12px;display:grid;gap:10px;border-bottom:1px solid var(--line)}
-.searchbox{position:relative}
+.searchbox{position:relative;flex:1}
+.searchrow{display:flex;gap:8px;align-items:stretch}
+.scanbtn{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:4.2rem;border:2px solid var(--ink);border-radius:10px;background:var(--surface);color:var(--ink);font-weight:700;font-size:.85rem;cursor:pointer}
+.scanbtn svg{width:26px;height:26px}
+.scanmodal{position:fixed;inset:0;z-index:50;background:rgba(20,18,15,.82);display:flex;align-items:center;justify-content:center;padding:16px}
+.scanbox{background:var(--surface);border-radius:14px;padding:14px;width:min(440px,100%);text-align:center}
+.scanview{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:1/1}
+.scanview video{width:100%;height:100%;object-fit:cover;display:block}
+.scanframe{position:absolute;inset:18%;border:3px solid #fff;border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
+#scanMsg{margin:12px 0;font-size:1.05rem;font-weight:700}
 .searchbox input{font-size:1.15rem;min-height:3.4rem;padding-right:3rem;border-width:2px;border-color:var(--ink)}
 .searchbox .clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:var(--line);border-radius:50%;width:2rem;height:2rem;cursor:pointer;font-size:1rem;line-height:1}
 .filters{display:grid;grid-template-columns:1fr;gap:10px}
@@ -405,9 +414,13 @@ details.log li{margin:2px 0}
     <div class="demo" id="demoBar" hidden data-en="Demo: showing sample data plus test registrations sent from the signup page on this computer. Payment marks are saved on this computer only.">示範版：目前顯示的是範例資料，加上這台電腦上用報名頁送出的測試報名。標記繳費只會存在這台電腦。</div>
     <div class="bar">
       <div class="tabs" id="tabs" role="tablist" aria-label="報名表單與法會場次"></div>
-      <div class="searchbox">
-        <input type="search" id="q" placeholder="輸入電話、報名編號或姓名" data-en-ph="Phone, reg. no. or name" aria-label="搜尋電話、報名編號或姓名" autocomplete="off" enterkeyhint="search">
+      <div class="searchrow"><div class="searchbox">
+        <input type="search" id="q" placeholder="電話、報名編號或姓名" data-en-ph="Phone, reg. no. or name" aria-label="搜尋電話、報名編號或姓名" autocomplete="off" enterkeyhint="search">
         <button class="clear" id="clearQ" type="button" aria-label="清除搜尋" hidden>✕</button>
+      </div><button class="scanbtn" id="scanBtn" type="button" aria-label="掃描 QR code"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3M7 12h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span data-en="Scan">掃描</span></button></div>
+      <div class="scanmodal" id="scanModal" hidden role="dialog" aria-modal="true" aria-labelledby="scanMsg">
+        <div class="scanbox"><div class="scanview"><video id="scanVideo" playsinline muted></video><i class="scanframe"></i></div>
+          <p id="scanMsg"></p><button class="btn ghost" id="scanClose" type="button" data-en="Close">關閉</button></div>
       </div>
       <div class="filters">
         <div class="seg" role="group" aria-label="繳費狀態" id="segPaid">
@@ -729,6 +742,40 @@ function renderTabs(){
 
 /* ================= 事件 ================= */
 $("q").addEventListener("input", e=>{ F.q=e.target.value; $("clearQ").hidden=!F.q; confirming=null; render(); });
+/* ---------- 掃描 QR code：收執聯（連到查詢頁）或報名表上半（連到後台）都讀得出報名編號 ---------- */
+const refFromQR = txt => { const m=String(txt||"").toUpperCase().match(/[LF]\d{6}-\d{3,}/); return m?m[0]:""; };
+let SCAN=null;
+function loadJsQR(){ return window.jsQR ? Promise.resolve() : new Promise((ok,no)=>{ const s=document.createElement("script"); s.src="jsqr.min.js"; s.onload=ok; s.onerror=no; document.head.appendChild(s); }); }
+function stopScan(){ if(SCAN){ SCAN.stop=true; (SCAN.stream?.getTracks()||[]).forEach(x=>x.stop()); } SCAN=null; $("scanVideo").srcObject=null; $("scanModal").hidden=true; }
+async function startScan(){
+  const msg=$("scanMsg"), v=$("scanVideo"); $("scanModal").hidden=false; msg.textContent=t("開啟鏡頭中…","Opening camera…");
+  const me={stop:false}; SCAN=me;
+  try{
+    if(!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error("nocam"),{name:"NoCam"});
+    const [stream]=await Promise.all([navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false}), loadJsQR()]);
+    if(me.stop){ stream.getTracks().forEach(x=>x.stop()); return; }
+    me.stream=stream; v.srcObject=stream; await v.play();
+    msg.textContent=t("對準收執聯或報名表上的 QR code","Point at the QR code on the receipt or form");
+    const c=document.createElement("canvas"), ctx=c.getContext("2d",{willReadFrequently:true});
+    const tick=()=>{ if(me.stop) return;
+      if(v.readyState>=2 && v.videoWidth){ const k=Math.min(1,640/v.videoWidth); c.width=Math.round(v.videoWidth*k); c.height=Math.round(v.videoHeight*k);
+        ctx.drawImage(v,0,0,c.width,c.height); const img=ctx.getImageData(0,0,c.width,c.height);
+        const q=window.jsQR(img.data,c.width,c.height,{inversionAttempts:"dontInvert"});
+        if(q && q.data){ const ref=refFromQR(q.data);
+          if(ref){ try{ navigator.vibrate&&navigator.vibrate(60); }catch(e){} stopScan(); F.q=ref; $("q").value=ref; $("clearQ").hidden=false; confirming=null; render(); return; }
+          msg.textContent=t("這不是報名表的 QR code","This isn't a registration QR code"); } }
+      requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  }catch(err){
+    if(me.stop) return;
+    msg.textContent = err && err.name==="NotAllowedError" ? t("沒有權限使用相機。請在瀏覽器設定允許這個網站使用相機，或直接輸入報名編號。","No permission to use the camera. Allow camera access for this site in your browser settings, or type the registration number.")
+      : t("這台裝置打不開相機，請直接輸入報名編號。","The camera can't be opened on this device. Please type the registration number.");
+  }
+}
+$("scanBtn").addEventListener("click", startScan);
+$("scanClose").addEventListener("click", stopScan);
+$("scanModal").addEventListener("click", e=>{ if(e.target.id==="scanModal") stopScan(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && SCAN) stopScan(); });
 $("clearQ").addEventListener("click", ()=>{ $("q").value=""; F.q=""; $("clearQ").hidden=true; render(); $("q").focus(); });
 $("segPaid").addEventListener("click", e=>{ const b=e.target.closest("[data-paid]"); if(!b) return; F.paid=b.dataset.paid;
   $("segPaid").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x===b)); render(); });
