@@ -123,6 +123,9 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 2px}
 .ckrow input:disabled{background:var(--paper);color:var(--muted);border-style:dashed}
 .ckplan{flex:1 1 100%;font-size:.92rem}
 .ckextra{flex:1 1 100%;display:flex;flex-direction:column;font-size:.85rem;font-weight:700;gap:3px}
+.ckextra label{display:flex;flex-direction:column;gap:3px}
+.ckextra .ckdone{flex-direction:row;align-items:flex-start;gap:8px;font-weight:500}
+.ckextra .ckdone input{width:auto;margin-top:3px;transform:scale(1.3)}
 .ckextra input{font-size:1rem;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);width:100%}.ckplan div{margin:2px 0}
 .cknote{font-size:.85rem}
 .ckrow label{flex:1 1 9em;display:flex;flex-direction:column;font-size:.85rem;font-weight:700;gap:3px}
@@ -654,7 +657,7 @@ function cardHTML(r, m){
       : k==="void" ? `確定要取消 ${esc(r.ref)}？燈位會放出來給別人用。`
       : `確定要恢復 ${esc(r.ref)}？會重新分配燈位（原位還空著就用原位）。`;
     const payPick = k!=="pay" || !payOK() ? "" : `<div class="seg paym" role="group" aria-label="${t("付款方式","Payment method")}"><button type="button" data-pm="cash" aria-pressed="${!ck}">${t("現金","Cash")}</button><button type="button" data-pm="check" aria-pressed="${ck}">${t("支票","Check")}</button></div>
-      ${ck?`<div class="ckrow"><label>${t("支票戶名","Name on check")}<input id="ckName" value="${esc(confirming.checkName??"")}" placeholder="${t("例：CHEN DA WEN","e.g. CHEN DA WEN")}" autocomplete="off"></label><label>${t("支票號碼","Check no.")}<input id="ckNo" value="${esc(confirming.checkNo||"")}" inputmode="numeric" autocomplete="off"></label><label id="ckAmtWrap">${t("支票金額","Check amount")}<input id="ckAmt" value="${esc(confirming.checkAmount??total??"")}" inputmode="decimal" autocomplete="off"></label><label>${t("使用金額","Amount used")}<input id="ckUse" value="${esc(confirming.useTouched?confirming.checkUse:ckUseDefault(r))}" inputmode="decimal" autocomplete="off"></label></div><div class="ckplan" id="ckPlan">${ckPlanHTML(r)}</div><label class="ckextra" id="ckExtraWrap" ${ckExtraShow(r)?"":"hidden"}>${t("多出來的錢用途（選填，信眾怎麼說就怎麼記）","Purpose of the extra amount (optional — as the devotee says)")}<input id="ckExtra" value="${esc(confirming.checkNote??ckMatch()?.note??"")}" placeholder="${t("例：香油錢","e.g. donation")}" autocomplete="off"></label>`:""}`;
+      ${ck?`<div class="ckrow"><label>${t("支票戶名","Name on check")}<input id="ckName" value="${esc(confirming.checkName??"")}" placeholder="${t("例：CHEN DA WEN","e.g. CHEN DA WEN")}" autocomplete="off"></label><label>${t("支票號碼","Check no.")}<input id="ckNo" value="${esc(confirming.checkNo||"")}" inputmode="numeric" autocomplete="off"></label><label id="ckAmtWrap">${t("支票金額","Check amount")}<input id="ckAmt" value="${esc(confirming.checkAmount??total??"")}" inputmode="decimal" autocomplete="off"></label><label>${t("使用金額","Amount used")}<input id="ckUse" value="${esc(confirming.useTouched?confirming.checkUse:ckUseDefault(r))}" inputmode="decimal" autocomplete="off"></label></div><div class="ckplan" id="ckPlan">${ckPlanHTML(r)}</div><div class="ckextra" id="ckExtraWrap" ${ckExtraShow(r)?"":"hidden"}><label class="ckdone"><input type="checkbox" id="ckDone" ${confirming.ckDone?"checked":""}> ${t("這張支票不會再付其他報名表，記下多出來的錢的用途","This check won't pay any other registration — record what the extra amount is for")}</label><label id="ckExtraIn" ${confirming.ckDone?"":"hidden"}>${t("多出來的錢用途（信眾怎麼說就怎麼記）","Purpose of the extra amount (as the devotee says)")}<input id="ckExtra" value="${esc(confirming.checkNote??ckMatch()?.note??"")}" placeholder="${t("例：香油錢","e.g. donation")}" autocomplete="off"></label></div>`:""}`;
     action = `<div class="confirm">${payPick}<span class="cmsg">${msg}</span>
       <button class="btn ${k==="pay"||k==="card"?"okb":"primary"} small" data-do="${k}" data-ref="${esc(r.ref)}" type="button">${t("確定","Confirm")}</button>
       <button class="btn ghost small" data-do="back" type="button">${t("返回","Back")}</button></div>`;
@@ -746,7 +749,7 @@ $("list").addEventListener("click", async e=>{
       if(bad){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("請填支票戶名、支票號碼和支票金額。","Please enter the name on the check, the check number and the amount.")}</b>`; bad.focus(); return; }
       const rr=ROWS.find(x=>x.ref===ref), use=ckUse(rr), lf=ckLeft(), du=rr.totals?.all||0;
       if(!(use>0) || use>lf || use>du){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("請確認使用金額。","Please check the amount used.")}</b>`; $("ckUse").focus(); return; }
-      pay.checkPart=use; if(ckExtraShow(rr) && (confirming.checkNote||"").trim()) pay.checkNote=confirming.checkNote.trim();
+      pay.checkPart=use; if(ckExtraShow(rr) && confirming.ckDone && (confirming.checkNote||"").trim()) pay.checkNote=confirming.checkNote.trim();
       if(ckPending()){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("請先確認是不是同一張支票。","Please confirm whether it's the same check first.")}</b>`; return; }
       const m=ckMatch(); if(m && m.left<=0){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("這張支票已經用完了。","This check has been fully used.")}</b>`; return; } } }
   btn.disabled=true; btn.textContent=t("處理中…","Working…");
@@ -788,6 +791,7 @@ function ckPlanHTML(r){
   const left = m ? m.left : amt;
   const usedTxt = c => c.refs.map(x=>`${esc(x.ref)}（${money(x.part)}）`).join("、"), usedTxtEn = c => c.refs.map(x=>`${esc(x.ref)} (${money(x.part)})`).join(", ");
   let html = "";
+  if(m && m.note) html += `<div><b class="unp">${t(`注意：這張支票多出來的錢已記為「${esc(m.note)}」。確定還要用它付這筆，再按確定。`,`Note: the extra on this check was recorded as "${esc(m.note)}". Only continue if it should also pay this registration.`)}</b></div>`;
   if(m) html += `<div>${t(`支票 #${no} 之前已登記（${esc(m.name)}，金額 ${money(m.amount)}），已付 ${usedTxt(m)}，尚餘 <b>${money(m.left)}</b>。這筆也從這張支票扣。`,`Check #${no} is already recorded (${esc(m.name)}, ${money(m.amount)}), used for ${usedTxtEn(m)}, <b>${money(m.left)}</b> left. This registration will also be paid from it.`)}</div>`;
   else (confirming.found||[]).forEach(c=>{
     const typed = (confirming.checkName||"").trim(), sim = ckSimilar(c.name, typed), dismissed = (confirming.notSame||[]).includes(c.name);
@@ -802,7 +806,7 @@ function ckPlanHTML(r){
   if(!(use>0)) return html + `<div><b class="unp">${t("請填使用金額。","Please enter the amount used.")}</b></div>`;
   if(use > left) return html + `<div><b class="unp">${t(`使用金額不能超過支票剩下的 ${money(left)}。`,`The amount used can't be more than the ${money(left)} left on the check.`)}</b></div>`;
   if(use > due) return html + `<div><b class="unp">${t(`使用金額不能超過這筆應繳的 ${money(due)}。`,`The amount used can't be more than the ${money(due)} due.`)}</b></div>`;
-  html += `<div>${t(`這筆應繳 ${money(due)}：支票付 <b>${money(use)}</b>`,`Due ${money(due)}: <b>${money(use)}</b> by check`)}${use<due?`<b class="unp">${t(`＋另收現金 ${money(due-use)}`,` + ${money(due-use)} in cash`)}</b>`:""}${t("。","." )}${left-use>0?t(`支票尚餘 ${money(left-use)}，可以用在其他報名表（輸入同一個支票號碼）；如果信眾說多的另有用途，記在下面。`,` ${money(left-use)} remains on the check — use it for another registration (same check number), or if the devotee says what the extra is for, note it below.`):""}</div>`;
+  html += `<div>${t(`這筆應繳 ${money(due)}：支票付 <b>${money(use)}</b>`,`Due ${money(due)}: <b>${money(use)}</b> by check`)}${use<due?`<b class="unp">${t(`＋另收現金 ${money(due-use)}`,` + ${money(due-use)} in cash`)}</b>`:""}${t("。","." )}${left-use>0?t(`支票尚餘 ${money(left-use)}，可以用在其他報名表（輸入同一個支票號碼）；如果不會再用，勾下面那格、記下用途。`,` ${money(left-use)} remains on the check — use it for another registration (same check number), or if it won't be used again, tick the box below and record what it's for.`):""}</div>`;
   return html;
 }
 // 已登記過的支票：金額欄顯示原本的支票金額（不能改）
@@ -814,10 +818,12 @@ function ckSync(r){
   keepCheck(); const u=$("ckUse"); if(u && !confirming.useTouched){ u.value=ckUseDefault(r); confirming.checkUse=u.value; }
   if($("ckPlan")) $("ckPlan").innerHTML=ckPlanHTML(r);
   const w=$("ckExtraWrap"); if(w){ w.hidden=!ckExtraShow(r); const m=ckMatch(), x=$("ckExtra"); if(m && m.note && x && !x.value) { x.value=m.note; confirming.checkNote=m.note; } }
+  if($("ckExtraIn")) $("ckExtraIn").hidden=!confirming.ckDone;
 }
 let ckTimer=null;
 $("list").addEventListener("input", e=>{
   if(confirming && e.target.id==="ckExtra"){ keepCheck(); return; }
+  if(confirming && e.target.id==="ckDone"){ confirming.ckDone=e.target.checked; if($("ckExtraIn")) $("ckExtraIn").hidden=!confirming.ckDone; if(confirming.ckDone) $("ckExtra")?.focus(); return; }
   if(!confirming || !["ckName","ckNo","ckAmt","ckUse"].includes(e.target.id)) return;
   if(e.target.id==="ckUse") confirming.useTouched = e.target.value.trim()!=="";
   keepCheck(); const r=ROWS.find(x=>x.ref===confirming.ref); if(!r) return;
