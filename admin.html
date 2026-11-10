@@ -1103,17 +1103,16 @@ function sheetMoney(rs){
   // 支票明細：存支票時對照用
   // 支票明細：一張支票一組，每一個用途一列（付了哪幾張報名表、多出來的錢＝其他收入），金額加起來就是支票金額
   const noteBtn = c => canMoney() ? ` <button class="linkbtn cknote" data-cknote="${esc(c.no)}" data-ckname="${esc(c.name)}" data-ckcur="${esc(c.note)}" type="button">${c.note?t("改用途","Edit"):t("註記用途","Set purpose")}</button>` : "";
-  const otherLabel = c => c.note ? `${t("其他收入：","Other income: ")}${esc(c.note)}` : `<span class="unp">${t("多出來的錢・還沒註記用途","Extra amount — purpose not set")}</span>`;
-  const ckRows = [];
-  checks.forEach((c,i)=>{
-    const lines = c.rs.map(r=>[`${esc(r.ref)}${r.payMethod==="mix"?` <small>${t(`（另收現金 ${money(cashOf(r))}）`,`(plus cash ${money(cashOf(r))})`)}</small>`:""}`, money(ckOf(r))]);
-    if(c.left>0) lines.push([otherLabel(c)+noteBtn(c), money(c.left)]);
-    if(c.left<0) lines.push([`<span class="unp">${t("超用（請檢查）","Over-applied (please check)")}</span>`, `<span class="unp">−${money(-c.left)}</span>`]);
-    lines.forEach((l,j)=>ckRows.push(j===0
-      ? [[i+1,"num"],[esc(c.no||""),"mono"],[esc(c.name||""),"nm"],[money(c.amount),"num"],[l[0],""],[l[1],"num"],[c.first.paidAt?fmtDate(c.first.paidAt):"","nw"],[esc(c.first.paidBy||""),"nw"]]
-      : ["","","","",[l[0],""],[l[1],"num"],"",""]));
+  const otherLabel = c => c.note ? `${t("其他收入・","Other income: ")}${esc(c.note)}` : `<span class="unp">${t("多出來的錢・還沒註記用途","Extra amount — purpose not set")}</span>`;
+  // 一列一筆：哪張支票付了哪一筆（收據編號＝報名編號），多出來的錢另列「其他收入」。每一列都完整列出支票資料，不留空格
+  const ckRows = []; let ckN = 0;
+  checks.forEach(c=>{
+    const base = [[esc(c.name||""),"nm"],[esc(c.no||""),"mono"],[money(c.amount),"num"]], tail = [[c.first.paidAt?fmtDate(c.first.paidAt):"","nw"],[esc(c.first.paidBy||""),"nw"]];
+    c.rs.forEach(r=>ckRows.push([[++ckN,"num"], ...base, [esc(r.ref),"mono"], [r.payMethod==="mix"?t(`報名費（另收現金 ${money(cashOf(r))}）`,`Registration fee (plus cash ${money(cashOf(r))})`):t("報名費","Registration fee"),"nw"], [money(ckOf(r)),"num"], ...tail]));
+    if(c.left>0) ckRows.push([[++ckN,"num"], ...base, ["—","c"], [otherLabel(c)+(noteBtn(c)?"<br>"+noteBtn(c):""),"nw"], [money(c.left),"num"], ...tail]);
+    if(c.left<0) ckRows.push([[++ckN,"num"], ...base, ["—","c"], [`<span class="unp">${t("超用（請檢查）","Over-applied (please check)")}</span>`,""], [`<span class="unp">−${money(-c.left)}</span>`,"num"], ...tail]);
   });
-  const ckSec = cks.length ? `<div class="rsec"><h3>${R.date?t(`${mdText(R.date)} 支票明細`,`Checks received on ${mdText(R.date)}`):t("支票明細","Checks received")}<small>${t(`共 ${cks.length} 張・${money(ckSum)}，存支票時請對照`,`${cks.length} ${pl(cks.length,"check")} · ${money(ckSum)} — use this when depositing`)}</small></h3>${table(["",[t("支票號碼","Check no."),""],[t("支票人","From"),""],[t("支票金額","Check amount"),"num"],t("用在哪裡","Applied to"),[t("金額","Amount"),"num"],t("收款日","Received"),t("經手","Handled by")], ckRows, `<tfoot><tr><td></td><td colspan="2">${t("合計","Total")}</td><td class="num">${money(ckSum)}</td><td colspan="4"></td></tr></tfoot>`)}</div>` : "";
+  const ckSec = cks.length ? `<div class="rsec"><h3>${R.date?t(`${mdText(R.date)} 支票明細`,`Checks received on ${mdText(R.date)}`):t("支票明細","Checks received")}<small>${t(`共 ${cks.length} 張・${money(ckSum)}，存支票時請對照`,`${cks.length} ${pl(cks.length,"check")} · ${money(ckSum)} — use this when depositing`)}</small></h3>${table([[t("編號","No."),"num"],[t("支票人","From"),""],[t("支票號碼","Check no."),""],[t("支票金額","Check amount"),"num"],t("收據編號","Receipt no."),t("項目","Item"),[t("金額","Amount"),"num"],t("收款日","Received"),t("經手","Handled by")], ckRows, `<tfoot><tr><td colspan="6">${t(`合計（${cks.length} 張支票）`,`Total (${cks.length} ${pl(cks.length,"check")})`)}</td><td class="num">${money(ckSum)}</td><td colspan="2"></td></tr></tfoot>`)}</div>` : "";
   // 其他收入：支票多開的錢（註記了用途就是那個用途，例如香油錢）
   const others = checks.filter(c=>c.left>0);
   const oSec = others.length ? `<div class="rsec"><h3>${t("其他收入","Other income")}<small>${t("支票比報名費多開的錢","Check amounts beyond registration fees")}</small></h3>${table([[t("用途","Purpose"),""],t("來源","Source"),[t("金額","Amount"),"num"]],
