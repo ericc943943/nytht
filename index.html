@@ -417,7 +417,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
 
     <section class="formcard lookupcard" style="margin-bottom:24px">
       <h2 data-en="Already registered?">已經報名過了？</h2>
-      <p class="desc" data-en="Use your registration number and phone number to print your form again or check your lamp numbers. You can also make changes before you pay.">用報名編號和電話，可以再列印報名表、查詢燈位；繳費前也可以修改資料。</p>
+      <p class="desc" data-en="Look up or reprint with your registration number and phone. You can make changes before paying.">用報名編號和電話查詢、重印；繳費前可以修改。</p>
       <button class="btn ghost block" id="lookupBtn" type="button" data-en="Look up / change my registration">查詢／修改報名</button>
     </section>
 
@@ -426,8 +426,8 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
       <ol>
         <li data-en="Enter the contact person's name, phone number and address.">填寫聯絡人的姓名、電話、住址。</li>
         <li data-en="Fill in the details for each person.">依序填寫每一位的資料。</li>
-        <li data-en="Review and submit. Your registration form, with lamp numbers, will appear — print it or take a screenshot.">核對無誤後送出，畫面會出現報名表和燈號，可以列印或截圖。</li>
-        <li data-en="Pay at the temple by cash or check. A volunteer will sign the receipt at the bottom of the form and give it to you.">到慈惠堂繳費（現金或支票），義工簽名後，撕下報名表下半部的收執聯給您。</li>
+        <li data-en="After you submit, your form and lamp numbers appear — print it or take a screenshot.">送出後會出現報名表和燈號，可以列印或截圖。</li>
+        <li data-en="Pay at the temple by cash or check. A volunteer will give you the receipt.">到慈惠堂繳費（現金或支票），義工會撕下收執聯給您。</li>
       </ol>
       <a class="btn ghost block guidebtn" id="guideLink" href="/guide" data-en="Step-by-step guide with pictures">看圖解使用說明</a>
     </section>
@@ -465,7 +465,7 @@ footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:v
   <main id="findref" hidden>
     <section class="panel" style="margin-top:22px">
       <h2 data-en="Find my registration number">找回報名編號</h2>
-      <p class="lead" data-en="Enter the phone number you registered with and the name of anyone on the form, written the same way as when you registered.">請輸入報名時填的電話，和報名表上任何一位的姓名（要和報名時寫的一樣）。</p>
+      <p class="lead" data-en="Enter the phone number you registered with and the name of anyone on the form.">請輸入報名時的電話，和報名表上任何一位的姓名。</p>
       <div class="field"><label for="frPhone" data-en="Phone number">電話</label>
         <input id="frPhone" type="tel" inputmode="tel" autocomplete="tel"></div>
       <div class="field"><label for="frName" data-en="Name">姓名</label>
@@ -682,7 +682,7 @@ function render(){
   $("prevBtn").textContent = S.step===0 ? t("回首頁","Home") : t("上一步","Back");
   $("nextBtn").disabled = false;
   $("nextBtn").textContent = cur.k==="review" ? (S.editRef ? t("儲存修改","Save changes") : t("確認送出","Submit")) : t("下一步","Next");
-  const addNote = S.addTo && !S.editRef ? `<div class="addnote">${t(`追加報名（原報名編號 ${S.addTo}）。聯絡人已經幫您填好了，只要填要追加的人和燈，會另外產生一個新的報名編號。`,`Adding to registration ${S.addTo}. Your contact details are already filled in — just add the new people and lamps. This will get its own registration number.`)}</div>` : "";
+  const addNote = S.addTo && !S.editRef ? `<div class="addnote">${t(`追加報名（原編號 ${S.addTo}）。聯絡人已填好，只要填追加的人和燈，會產生新的報名編號。`,`Adding to ${S.addTo}. Contact details are filled in — just add the people and lamps. It gets a new registration number.`)}</div>` : "";
   $("panel").innerHTML = `<section class="panel">${addNote}${VIEWS[cur.k]()}</section>`;
   if(cur.k==="lamp") S.lamps.forEach(p=>updDerived("lamp",p.id));
   if(cur.k==="chaodu") S.souls.forEach(p=>updDerived("soul",p.id));
@@ -928,7 +928,7 @@ const ERR_MSG = code => ({
   cancelled:t(`這筆報名已經取消。有問題請洽堂裡：${CONFIG.phone}`,`This registration has been cancelled. Please call the temple: ${CONFIG.phone}`),
   "not-found": t("找不到這筆報名，請確認報名編號和電話是否正確。","We couldn't find this registration. Please check the registration number and phone number."),
   locked:   t(`嘗試太多次了，請 15 分鐘後再試，或打電話到堂裡：${CONFIG.phone}`,`Too many tries. Please wait 15 minutes, or call the temple: ${CONFIG.phone}`),
-}[code] || t("網路連線有問題，資料還沒送出。請稍等一下再按一次，已填的資料不會不見。","Connection problem — nothing has been sent yet. Please wait a moment and try again. Nothing you entered will be lost."));
+}[code] || t("網路有問題，還沒送出。請稍後再按一次，填好的資料不會不見。","Connection problem — not sent yet. Please try again shortly. Nothing you entered will be lost."));
 async function submit(){
   const btn=$("nextBtn"); btn.disabled=true; btn.textContent=t("送出中…","Submitting…");
   // clientId：同一份報名重按「送出」時不變，後端靠它避免重複建立
@@ -1234,12 +1234,12 @@ function showRecord(r, mode){
   const wl = (r.lamps||[]).some(p=>Object.values(p.seats||{}).some(v=>!v));
   let m = r.cancelled ? t("這筆報名已經取消。","This registration has been cancelled.")
     : r.paid ? t("這筆報名已經繳費，謝謝您。燈號請看下方報名表。","This registration has been paid — thank you. Your lamp numbers are on the form below.")
-    : CUR_MODE==="edited" ? t("已經儲存修改。請帶這張報名表到慈惠堂繳費（現金或支票）。","Your changes have been saved. Please bring this form to the temple and pay by cash or check.")
-    : CUR_MODE==="new" && KIOSK ? t("報名已送出。請按「列印報名表」，或用手機拍下來，交給義工繳費（現金或支票）。","Your registration has been submitted. Press Print form, or take a photo with your phone, and give it to a volunteer to pay by cash or check.")
-      + (r.code ? t("收執聯上的核對碼只會出現這一次。"," The code on the receipt is shown only this once.") : "")
-    : CUR_MODE==="new" ? t("報名已送出。請把這張報名表印出來或截圖，帶到慈惠堂繳費（現金或支票）。","Your registration has been submitted. Please print this form or take a screenshot, and bring it to the temple to pay by cash or check.")
-      + (r.code ? t("收執聯上的核對碼只會出現這一次，請列印或截圖保存。"," The code on the receipt is shown only this once — please print it or take a screenshot.") : "")
-    : t("這是您的報名表。繳費前如果有資料要改，可以按下方「修改報名」。","Here is your registration form. If anything needs to change before you pay, press \"Make changes\" below.");
+    : CUR_MODE==="edited" ? t("已儲存修改。請帶報名表到慈惠堂繳費（現金或支票）。","Changes saved. Bring the form to the temple and pay by cash or check.")
+    : CUR_MODE==="new" && KIOSK ? t("報名已送出。請列印或用手機拍下，交給義工繳費（現金或支票）。","Submitted. Print it or take a photo with your phone, and pay a volunteer by cash or check.")
+      + (r.code ? t("收執聯上的核對碼只顯示這一次。"," The receipt code is shown only this once.") : "")
+    : CUR_MODE==="new" ? t("報名已送出。請列印或截圖，帶到慈惠堂繳費（現金或支票）。","Submitted. Print it or take a screenshot, and pay at the temple by cash or check.")
+      + (r.code ? t("收執聯上的核對碼只顯示這一次。"," The receipt code is shown only this once.") : "")
+    : t("這是您的報名表。繳費前可以按「修改報名」。","Here is your registration form. Before paying, you can press \"Make changes\".");
   if(wl && !r.cancelled) m += t("　標示「候補」的燈目前已額滿，堂裡會另外安排，再與您聯絡。"," Lamps marked \"Waitlist\" are currently full; the temple will arrange a spot and contact you.");
   msg.textContent = m; msg.classList.toggle("warn", !!r.cancelled);
   $("editBtn").hidden = !!(r.paid || r.cancelled);
@@ -1329,7 +1329,7 @@ if(KIOSK){ ["click","keydown","input","touchstart","scroll"].forEach(ev=>documen
   new MutationObserver(kioskIdle).observe(document.body, {subtree:true, attributes:true, attributeFilter:["hidden"]}); }
 // 首頁最下面：把這台裝置設成（或取消）堂裡的共用裝置
 $("kioskLink").addEventListener("click", e=>{ e.preventDefault();
-  const ok = confirm(t("把這台裝置設成堂裡的共用裝置？\n之後這台不保存報名表和草稿，已經存的也會清除。\n（自己的手機請不要設）","Set this as the temple's shared device?\nForms and drafts will no longer be kept on it, and saved ones will be cleared.\n(Don't do this on your own phone.)"));
+  const ok = confirm(t("設成堂裡的共用裝置？\n之後不保存報名表，已存的會清除。\n（自己的手機請不要設）","Set as the temple's shared device?\nForms won't be kept, and saved ones will be cleared.\n(Not on your own phone.)"));
   if(ok) location.href = location.pathname + "?kiosk=1"; });
 $("againBtn").addEventListener("click", ()=>{ if(KIOSK){ nextPerson(); return; } const f=CUR?CUR.form:"lamp", ev=CUR?CUR.eventId:null; const k=f==="lamp"?"lamp":"fahui-"+ev;
   if(!isOpen(k)){ refreshResume(); renderMySlips(); show("home"); return; } S=load(k)||freshState(f==="lamp"?"lamp":"fahui",ev); show("form"); render(); });
