@@ -120,6 +120,7 @@ mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 2px}
 .confirm span{flex:1 1 12em;font-weight:500}
 .confirm .paym{flex:1 1 100%}
 .ckrow{flex:1 1 100%;display:flex;gap:8px;flex-wrap:wrap}
+.ckrow input:disabled{background:var(--paper);color:var(--muted);border-style:dashed}
 .ckplan{flex:1 1 100%;font-size:.92rem}.ckplan div{margin:2px 0}
 .cknote{font-size:.85rem}
 .ckrow label{flex:1 1 9em;display:flex;flex-direction:column;font-size:.85rem;font-weight:700;gap:3px}
@@ -726,7 +727,9 @@ $("subtabs").addEventListener("click", e=>{ const b=e.target.closest("[data-item
 $("list").addEventListener("click", async e=>{
   const ask=e.target.closest("[data-ask]"); if(ask){ confirming={ref:ask.dataset.ref, kind:ask.dataset.ask, method:"cash"}; render(); return; }
   const same=e.target.closest("[data-cksame]");
-  if(same && confirming){ $("ckName").value=same.dataset.cksame; keepCheck(); const r=ROWS.find(x=>x.ref===confirming.ref); $("ckPlan").innerHTML=ckPlanHTML(r); $("ckAmtWrap").hidden=!!ckMatch(); return; }
+  if(same && confirming){ $("ckName").value=same.dataset.cksame; keepCheck(); ckSync(ROWS.find(x=>x.ref===confirming.ref)); return; }
+  const not=e.target.closest("[data-cknot]");
+  if(not && confirming){ confirming.notSame=[...(confirming.notSame||[]), not.dataset.cknot]; ckSync(ROWS.find(x=>x.ref===confirming.ref)); return; }
   const pm=e.target.closest("[data-pm]");
   if(pm && confirming){ keepCheck(); confirming.method=pm.dataset.pm; render(); if(pm.dataset.pm==="check") $("ckNo")?.focus(); return; }
   const seat=e.target.closest("[data-seat]");
@@ -739,6 +742,7 @@ $("list").addEventListener("click", async e=>{
     if(pay.method==="check"){ pay.checkName=(confirming.checkName||"").trim(); pay.checkNo=(confirming.checkNo||"").trim(); pay.checkAmount=Number(String(confirming.checkAmount||"").replace(/[$,\s]/g,""));
       const bad = !pay.checkName ? $("ckName") : !pay.checkNo ? $("ckNo") : !ckMatch() && !(pay.checkAmount>0) ? $("ckAmt") : null;
       if(bad){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("請填支票戶名、支票號碼和支票金額。","Please enter the name on the check, the check number and the amount.")}</b>`; bad.focus(); return; }
+      if(ckPending()){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("請先確認是不是同一張支票。","Please confirm whether it's the same check first.")}</b>`; return; }
       const m=ckMatch(); if(m && m.left<=0){ btn.closest(".confirm").querySelector(".cmsg").innerHTML=`<b class="unp">${t("這張支票已經用完了。","This check has been fully used.")}</b>`; return; } } }
   btn.disabled=true; btn.textContent=t("處理中…","Working…");
   try{
@@ -759,23 +763,45 @@ $("list").addEventListener("click", async e=>{
 function keepCheck(){ if(!confirming) return; if($("ckName")) confirming.checkName=$("ckName").value; if($("ckNo")) confirming.checkNo=$("ckNo").value; if($("ckAmt")) confirming.checkAmount=$("ckAmt").value; }
 // 支票：輸入號碼後查這張支票是不是已經用在別的報名表（同號碼＋同戶名＝同一張）
 const ckMatch = () => (confirming?.found||[]).find(c=>ckSame(c.name, confirming.checkName));
+// 戶名很像（大小寫、空格、標點不算；差一兩個字母，或一個包含另一個）→ 提醒是不是同一張
+const ckNorm = x => String(x||"").toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]/g,"");
+function ckSimilar(a,b){ a=ckNorm(a); b=ckNorm(b); if(!a||!b) return false; if(a===b||a.includes(b)||b.includes(a)) return true;
+  if(Math.abs(a.length-b.length)>2) return false; const d=[...Array(b.length+1).keys()];
+  for(let i=1;i<=a.length;i++){ let prev=d[0]; d[0]=i; for(let j=1;j<=b.length;j++){ const tmp=d[j]; d[j]=Math.min(d[j]+1,d[j-1]+1,prev+(a[i-1]===b[j-1]?0:1)); prev=tmp; } }
+  return d[b.length]<=2; }
+const ckPending = () => !ckMatch() && (confirming?.found||[]).some(c=>ckSimilar(c.name, confirming.checkName) && !(confirming.notSame||[]).includes(c.name));
 function ckPlanHTML(r){
-  const due = r.totals?.all||0, m = ckMatch();
+  const due = r.totals?.all||0, m = ckMatch(), no = esc((confirming.checkNo||"").trim());
   const amt = m ? m.amount : Number(String(confirming.checkAmount||"").replace(/[$,\s]/g,""));
   const left = m ? m.left : amt;
+  const usedTxt = c => c.refs.map(x=>`${esc(x.ref)}（${money(x.part)}）`).join("、"), usedTxtEn = c => c.refs.map(x=>`${esc(x.ref)} (${money(x.part)})`).join(", ");
   let html = "";
-  if(m) html += `<div>${t(`這張支票已經記過：${esc(m.name)} ${money(m.amount)}，已付 ${m.refs.map(x=>`${esc(x.ref)}（${money(x.part)}）`).join("、")}，還剩 <b>${money(m.left)}</b>。這筆也用這張支票付。`,`This check is already recorded: ${esc(m.name)} ${money(m.amount)}, used for ${m.refs.map(x=>`${esc(x.ref)} (${money(x.part)})`).join(", ")}, <b>${money(m.left)}</b> left. This registration will use it too.`)}</div>`;
-  else if((confirming.found||[]).length) html += (confirming.found).map(c=>`<div>${t(`這個號碼已經記過一張支票：<b>${esc(c.name)}</b> ${money(c.amount)}，還剩 ${money(c.left)}。`,`A check with this number is already recorded: <b>${esc(c.name)}</b> ${money(c.amount)}, ${money(c.left)} left.`)} <button class="btn ghost small" type="button" data-cksame="${esc(c.name)}">${t("是同一張","Same check")}</button></div>`).join("") + `<div class="hint">${t("不是同一張的話，照這張支票的戶名填，會當成另一張支票。","If it's a different check, enter the name on this check and it will be recorded separately.")}</div>`;
+  if(m) html += `<div>${t(`支票 #${no} 之前已登記（${esc(m.name)}，金額 ${money(m.amount)}），已付 ${usedTxt(m)}，尚餘 <b>${money(m.left)}</b>。這筆也從這張支票扣。`,`Check #${no} is already recorded (${esc(m.name)}, ${money(m.amount)}), used for ${usedTxtEn(m)}, <b>${money(m.left)}</b> left. This registration will also be paid from it.`)}</div>`;
+  else (confirming.found||[]).forEach(c=>{
+    const typed = (confirming.checkName||"").trim(), sim = ckSimilar(c.name, typed), dismissed = (confirming.notSame||[]).includes(c.name);
+    const btns = `<button class="btn ghost small" type="button" data-cksame="${esc(c.name)}">${t("是同一張","Same check")}</button>`;
+    if(!typed) html += `<div>${t(`支票 #${no} 之前已登記：<b>${esc(c.name)}</b>（金額 ${money(c.amount)}，尚餘 ${money(c.left)}）。`,`Check #${no} is already recorded: <b>${esc(c.name)}</b> (${money(c.amount)}, ${money(c.left)} left).`)} ${btns}</div><div class="hint">${t("不是同一張的話，照手上這張支票填戶名，會分開登記。","If it's a different check, enter the name on this check and it will be recorded separately.")}</div>`;
+    else if(sim && !dismissed) html += `<div><b class="unp">${t(`戶名很像：支票 #${no} 已登記為 ${esc(c.name)}（金額 ${money(c.amount)}，尚餘 ${money(c.left)}）。是同一張支票嗎？`,`Similar name: check #${no} is already recorded as ${esc(c.name)} (${money(c.amount)}, ${money(c.left)} left). Is it the same check?`)}</b> ${btns} <button class="btn ghost small" type="button" data-cknot="${esc(c.name)}">${t("不是，另一張","No, a different one")}</button></div>`;
+    else html += `<div class="hint">${t(`支票 #${no} 另有一張已登記的（${esc(c.name)}），戶名不同，這張會分開登記。`,`Another check #${no} is recorded (${esc(c.name)}) with a different name; this one will be recorded separately.`)}</div>`;
+  });
+  if(ckPending()) return html;
   if(!(left>0)) return html + (m ? `<div><b class="unp">${t("這張支票已經用完了。","This check has been fully used.")}</b></div>` : "");
   if(left < due) html += `<div><b class="unp">${t(`支票只夠付 ${money(left)}，還差 ${money(due-left)}，請另外收現金 ${money(due-left)}。`,`The check covers only ${money(left)}. Please collect the remaining ${money(due-left)} in cash.`)}</b></div>`;
   else if(left > due) html += `<div>${t(`支票比這筆多 ${money(left-due)}。如果這張支票也要付其他報名表，到那一筆收款時輸入同一個支票號碼；多出來的也可以在收款總表註記用途。`,`The check is ${money(left-due)} more than this registration. If it also pays for another registration, enter the same check number there; otherwise note the purpose in the payment summary.`)}</div>`;
   return html;
 }
+// 已登記過的支票：金額欄顯示原本的支票金額（不能改）
+function ckSync(r){
+  if($("ckPlan")) $("ckPlan").innerHTML=ckPlanHTML(r);
+  const a=$("ckAmt"); if(!a) return; const m=ckMatch();
+  if(m){ if(!a.disabled) confirming.amtTyped=a.value; a.value=m.amount; a.disabled=true; }
+  else if(a.disabled){ a.disabled=false; a.value=confirming.amtTyped ?? (r.totals?.all||""); }
+}
 let ckTimer=null;
 $("list").addEventListener("input", e=>{
   if(!confirming || !["ckName","ckNo","ckAmt"].includes(e.target.id)) return;
   keepCheck(); const r=ROWS.find(x=>x.ref===confirming.ref); if(!r) return;
-  const upd=()=>{ if($("ckPlan")) $("ckPlan").innerHTML=ckPlanHTML(r); if($("ckAmtWrap")) $("ckAmtWrap").hidden=!!ckMatch(); };
+  const upd=()=>ckSync(r);
   if(e.target.id==="ckNo"){ clearTimeout(ckTimer); const no=confirming.checkNo.trim(); confirming.found=[];
     if(no) ckTimer=setTimeout(async()=>{ try{ const f=await API.findCheck(no); if(confirming && confirming.checkNo.trim()===no){ confirming.found=f; upd(); } }catch(err){} }, 400); }
   upd();
