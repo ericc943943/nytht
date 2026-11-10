@@ -644,20 +644,20 @@ function cardHTML(r, m){
     const k=confirming.kind;
     const who = esc(sess()?.name||"");
     const ck = k==="pay" && confirming.method==="check";
-    const msg = EN() ? (k==="pay" ? (ck ? `Received a check? Copy the name, number and amount from the check; "Amount used" is how much of it pays this registration. It will be recorded as handled by ${who}.` : `Have you received ${money(total)} in cash? It will be recorded as handled by ${who}.`)
+    const msg = EN() ? (k==="pay" ? (ck ? `Copy from the check. Handled by ${who}.` : `Have you received ${money(total)} in cash? It will be recorded as handled by ${who}.`)
       : k==="unpay" ? `Change ${esc(r.ref)} back to unpaid?`
       : k==="card" ? `Have you given the lamp card to the devotee? It will be recorded as handled by ${who}.`
       : k==="uncard" ? `Change ${esc(r.ref)} back to "card not collected"?`
       : k==="void" ? `Cancel ${esc(r.ref)}? Its lamp numbers will be released for others.`
       : `Restore ${esc(r.ref)}? Lamp numbers will be assigned again (the same ones if still free).`)
-      : k==="pay" ? (ck ? `收到支票？支票戶名、號碼、金額照支票上印的填；使用金額是這筆要從支票扣多少。會記錄為「${who}」經手。` : `確定已收到現金 ${money(total)}？會記錄為「${who}」經手。`)
+      : k==="pay" ? (ck ? `照支票上印的填。經手：${who}` : `確定已收到現金 ${money(total)}？會記錄為「${who}」經手。`)
       : k==="unpay" ? `確定要把 ${esc(r.ref)} 改回「未繳費」？`
       : k==="card" ? `確定已把點燈卡交給信眾？會記錄為「${esc(sess()?.name||"")}」經手。`
       : k==="uncard" ? `確定要把 ${esc(r.ref)} 改回「未領點燈卡」？`
       : k==="void" ? `確定要取消 ${esc(r.ref)}？燈位會放出來給別人用。`
       : `確定要恢復 ${esc(r.ref)}？會重新分配燈位（原位還空著就用原位）。`;
     const payPick = k!=="pay" || !payOK() ? "" : `<div class="seg paym" role="group" aria-label="${t("付款方式","Payment method")}"><button type="button" data-pm="cash" aria-pressed="${!ck}">${t("現金","Cash")}</button><button type="button" data-pm="check" aria-pressed="${ck}">${t("支票","Check")}</button></div>
-      ${ck?`<div class="ckrow"><label>${t("支票戶名","Name on check")}<input id="ckName" value="${esc(confirming.checkName??"")}" placeholder="${t("例：CHEN DA WEN","e.g. CHEN DA WEN")}" autocomplete="off"></label><label>${t("支票號碼","Check no.")}<input id="ckNo" value="${esc(confirming.checkNo||"")}" inputmode="numeric" autocomplete="off"></label><label id="ckAmtWrap">${t("支票金額","Check amount")}<input id="ckAmt" value="${esc(confirming.checkAmount??total??"")}" inputmode="decimal" autocomplete="off"></label><label>${t("使用金額","Amount used")}<input id="ckUse" value="${esc(confirming.useTouched?confirming.checkUse:ckUseDefault(r))}" inputmode="decimal" autocomplete="off"></label></div><div class="ckplan" id="ckPlan">${ckPlanHTML(r)}</div><div class="ckextra" id="ckExtraWrap" ${ckExtraShow(r)?"":"hidden"}><label class="ckdone"><input type="checkbox" id="ckDone" ${confirming.ckDone?"checked":""}> ${t("這張支票不會再付其他報名表，記下多出來的錢的用途","This check won't pay any other registration — record what the extra amount is for")}</label><label id="ckExtraIn" ${confirming.ckDone?"":"hidden"}>${t("多出來的錢用途（信眾怎麼說就怎麼記）","Purpose of the extra amount (as the devotee says)")}<input id="ckExtra" value="${esc(confirming.checkNote??ckMatch()?.note??"")}" placeholder="${t("例：香油錢","e.g. donation")}" autocomplete="off"></label></div>`:""}`;
+      ${ck?`<div class="ckrow"><label>${t("支票戶名","Name on check")}<input id="ckName" value="${esc(confirming.checkName??"")}" placeholder="${t("例：CHEN DA WEN","e.g. CHEN DA WEN")}" autocomplete="off"></label><label>${t("支票號碼","Check no.")}<input id="ckNo" value="${esc(confirming.checkNo||"")}" inputmode="numeric" autocomplete="off"></label><label id="ckAmtWrap">${t("支票金額","Check amount")}<input id="ckAmt" value="${esc(confirming.checkAmount??total??"")}" inputmode="decimal" autocomplete="off"></label><label>${t("使用金額","Amount used")}<input id="ckUse" value="${esc(confirming.useTouched?confirming.checkUse:ckUseDefault(r))}" inputmode="decimal" autocomplete="off"></label></div><div class="ckplan" id="ckPlan">${ckPlanHTML(r)}</div><div class="ckextra" id="ckExtraWrap" ${ckExtraShow(r)?"":"hidden"}><label class="ckdone"><input type="checkbox" id="ckDone" ${confirming.ckDone?"checked":""}> ${t("不會再用這張支票，記下剩餘金額用途","Check won't be used again — record what the rest is for")}</label><label id="ckExtraIn" ${confirming.ckDone?"":"hidden"}>${t("用途","Purpose")}<input id="ckExtra" value="${esc(confirming.checkNote??ckMatch()?.note??"")}" placeholder="${t("例：香油錢","e.g. donation")}" autocomplete="off"></label></div>`:""}`;
     action = `<div class="confirm">${payPick}<span class="cmsg">${msg}</span>
       <button class="btn ${k==="pay"||k==="card"?"okb":"primary"} small" data-do="${k}" data-ref="${esc(r.ref)}" type="button">${t("確定","Confirm")}</button>
       <button class="btn ghost small" data-do="back" type="button">${t("返回","Back")}</button></div>`;
@@ -785,28 +785,23 @@ function ckSimilar(a,b){ a=ckNorm(a); b=ckNorm(b); if(!a||!b) return false; if(a
   for(let i=1;i<=a.length;i++){ let prev=d[0]; d[0]=i; for(let j=1;j<=b.length;j++){ const tmp=d[j]; d[j]=Math.min(d[j]+1,d[j-1]+1,prev+(a[i-1]===b[j-1]?0:1)); prev=tmp; } }
   return d[b.length]<=2; }
 const ckPending = () => !ckMatch() && (confirming?.found||[]).some(c=>ckSimilar(c.name, confirming.checkName) && !(confirming.notSame||[]).includes(c.name));
+// 支票的說明文字：盡量短，一件事一行
 function ckPlanHTML(r){
   const due = r.totals?.all||0, m = ckMatch(), no = esc((confirming.checkNo||"").trim());
-  const amt = m ? m.amount : Number(String(confirming.checkAmount||"").replace(/[$,\s]/g,""));
-  const left = m ? m.left : amt;
-  const usedTxt = c => c.refs.map(x=>`${esc(x.ref)}（${money(x.part)}）`).join("、"), usedTxtEn = c => c.refs.map(x=>`${esc(x.ref)} (${money(x.part)})`).join(", ");
+  const left = m ? m.left : num(confirming.checkAmount);
+  const same = c => `<button class="btn ghost small" type="button" data-cksame="${esc(c.name)}">${t("是同一張","Same check")}</button>`;
   let html = "";
-  if(m && m.note) html += `<div><b class="unp">${t(`注意：這張支票多出來的錢已記為「${esc(m.note)}」。確定還要用它付這筆，再按確定。`,`Note: the extra on this check was recorded as "${esc(m.note)}". Only continue if it should also pay this registration.`)}</b></div>`;
-  if(m) html += `<div>${t(`支票 #${no} 之前已登記（${esc(m.name)}，金額 ${money(m.amount)}），已付 ${usedTxt(m)}，尚餘 <b>${money(m.left)}</b>。這筆也從這張支票扣。`,`Check #${no} is already recorded (${esc(m.name)}, ${money(m.amount)}), used for ${usedTxtEn(m)}, <b>${money(m.left)}</b> left. This registration will also be paid from it.`)}</div>`;
+  if(m) html += `<div>${t(`#${no} 已登記：${money(m.amount)}，已用 ${money(m.amount-m.left)}，剩 <b>${money(m.left)}</b>`,`#${no} on file: ${money(m.amount)}, ${money(m.amount-m.left)} used, <b>${money(m.left)}</b> left`)}${m.note?`<b class="unp">${t(`（多的已記為「${esc(m.note)}」）`,` (extra recorded as "${esc(m.note)}")`)}</b>`:""}</div>`;
   else (confirming.found||[]).forEach(c=>{
-    const typed = (confirming.checkName||"").trim(), sim = ckSimilar(c.name, typed), dismissed = (confirming.notSame||[]).includes(c.name);
-    const btns = `<button class="btn ghost small" type="button" data-cksame="${esc(c.name)}">${t("是同一張","Same check")}</button>`;
-    if(!typed) html += `<div>${t(`支票 #${no} 之前已登記：<b>${esc(c.name)}</b>（金額 ${money(c.amount)}，尚餘 ${money(c.left)}）。`,`Check #${no} is already recorded: <b>${esc(c.name)}</b> (${money(c.amount)}, ${money(c.left)} left).`)} ${btns}</div><div class="hint">${t("不是同一張的話，照手上這張支票填戶名，會分開登記。","If it's a different check, enter the name on this check and it will be recorded separately.")}</div>`;
-    else if(sim && !dismissed) html += `<div><b class="unp">${t(`戶名很像：支票 #${no} 已登記為 ${esc(c.name)}（金額 ${money(c.amount)}，尚餘 ${money(c.left)}）。是同一張支票嗎？`,`Similar name: check #${no} is already recorded as ${esc(c.name)} (${money(c.amount)}, ${money(c.left)} left). Is it the same check?`)}</b> ${btns} <button class="btn ghost small" type="button" data-cknot="${esc(c.name)}">${t("不是，另一張","No, a different one")}</button></div>`;
-    else html += `<div class="hint">${t(`支票 #${no} 另有一張已登記的（${esc(c.name)}），戶名不同，這張會分開登記。`,`Another check #${no} is recorded (${esc(c.name)}) with a different name; this one will be recorded separately.`)}</div>`;
+    const typed=(confirming.checkName||"").trim(), dismissed=(confirming.notSame||[]).includes(c.name);
+    if(!typed) html += `<div>${t(`#${no} 已登記：${esc(c.name)}，剩 ${money(c.left)}`,`#${no} on file: ${esc(c.name)}, ${money(c.left)} left`)} ${same(c)}</div>`;
+    else if(ckSimilar(c.name, typed) && !dismissed) html += `<div><b class="unp">${t(`戶名很像 ${esc(c.name)}，同一張嗎？`,`Similar to ${esc(c.name)} — same check?`)}</b> ${same(c)} <button class="btn ghost small" type="button" data-cknot="${esc(c.name)}">${t("不是","No")}</button></div>`;
   });
   if(ckPending()) return html;
-  if(!(left>0)) return html + (m ? `<div><b class="unp">${t("這張支票已經用完了。","This check has been fully used.")}</b></div>` : "");
+  if(!(left>0)) return html + (m ? `<div><b class="unp">${t("這張支票已用完","This check is used up")}</b></div>` : "");
   const use = ckUse(r);
-  if(!(use>0)) return html + `<div><b class="unp">${t("請填使用金額。","Please enter the amount used.")}</b></div>`;
-  if(use > left) return html + `<div><b class="unp">${t(`使用金額不能超過支票剩下的 ${money(left)}。`,`The amount used can't be more than the ${money(left)} left on the check.`)}</b></div>`;
-  if(use > due) return html + `<div><b class="unp">${t(`使用金額不能超過這筆應繳的 ${money(due)}。`,`The amount used can't be more than the ${money(due)} due.`)}</b></div>`;
-  html += `<div>${t(`這筆應繳 ${money(due)}：支票付 <b>${money(use)}</b>`,`Due ${money(due)}: <b>${money(use)}</b> by check`)}${use<due?`<b class="unp">${t(`＋另收現金 ${money(due-use)}`,` + ${money(due-use)} in cash`)}</b>`:""}${t("。","." )}${left-use>0?t(`支票尚餘 ${money(left-use)}，可以用在其他報名表（輸入同一個支票號碼）；如果不會再用，勾下面那格、記下用途。`,` ${money(left-use)} remains on the check — use it for another registration (same check number), or if it won't be used again, tick the box below and record what it's for.`):""}</div>`;
+  if(!(use>0) || use>left || use>due) return html + `<div><b class="unp">${t(`使用金額最多 ${money(Math.min(left,due))}`,`Amount used: at most ${money(Math.min(left,due))}`)}</b></div>`;
+  html += `<div>${t("應繳","Due")} ${money(due)}：${t("支票","check")} <b>${money(use)}</b>${use<due?`<b class="unp">＋${t("現金","cash")} ${money(due-use)}（${t("請另收","collect in cash")}）</b>`:""}${left-use>0?`　${t("支票剩","Check left")} ${money(left-use)}`:""}</div>`;
   return html;
 }
 // 已登記過的支票：金額欄顯示原本的支票金額（不能改）
