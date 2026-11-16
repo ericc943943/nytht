@@ -303,7 +303,7 @@ details.log li{margin:2px 0}
       <p data-en="Please tap your name.">請點選您的名字。</p>
       <div class="who" id="whoList"></div>
     </div>
-    <p class="manualrow"><a class="manuallink" target="_blank" rel="noopener" href="/guide/volunteer.pdf" data-en="📖 Volunteer manual (PDF)">📖 義工操作手冊（PDF）</a></p>
+    <p class="manualrow"><a class="manuallink" target="_blank" rel="noopener" href="/guide/volunteer" data-en="📖 Volunteer manual">📖 義工操作手冊</a></p>
     <div id="pinStep" hidden>
       <p><span data-en="Hello, ">您好，</span><b id="whoName"></b><span data-en=". Please enter your PIN.">。請輸入您的 PIN 碼。</span></p>
       <input type="password" id="pw" inputmode="numeric" autocomplete="current-password" aria-label="PIN 碼" placeholder="PIN 碼" data-en-ph="PIN" maxlength="12">
@@ -324,7 +324,7 @@ details.log li{margin:2px 0}
 
   <!-- 密碼設定（只有管理員看得到） -->
   <section id="settingsView" hidden>
-    <p class="manualrow"><a class="manuallink" target="_blank" rel="noopener" href="/guide/volunteer.pdf" data-en="📖 Volunteer manual (PDF)">📖 義工操作手冊（PDF）</a></p>
+    <p class="manualrow"><a class="manuallink" target="_blank" rel="noopener" href="/guide/volunteer" data-en="📖 Volunteer manual">📖 義工操作手冊</a></p>
     <div class="settings" id="adminOnly">
      <div id="setItemsBox">
       <h2 data-en="Registration settings">報名項目設定</h2>
@@ -1453,7 +1453,7 @@ function applyLang(){
   document.querySelectorAll("[data-en]").forEach(el=>{ if(el.dataset.zh===undefined) el.dataset.zh=el.innerHTML; el.innerHTML = EN() ? el.dataset.en : el.dataset.zh; });
   document.querySelectorAll("[data-en-ph]").forEach(el=>{ if(el.dataset.zhPh===undefined) el.dataset.zhPh=el.placeholder; el.placeholder = EN() ? el.dataset.enPh : el.dataset.zhPh; });
   $("langBtn").textContent = t("EN","中文"); $("langBtn").lang = t("en","zh-Hant");
-  document.querySelectorAll(".manuallink").forEach(a=>a.href = t("/guide/volunteer.pdf","/guide/volunteer-en.pdf"));
+  document.querySelectorAll(".manuallink").forEach(a=>a.href = t("/guide/volunteer","/guide/volunteer-en"));
   $("langBtn").setAttribute("aria-label", t("Switch to English","切換成中文"));
   setBig(document.documentElement.classList.contains("big"));
   if(!$("mainView").hidden && ROWS.length) render(); else if(!$("mainView").hidden) renderTabs();
